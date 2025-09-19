@@ -323,7 +323,7 @@ const MapControls = ({
   setShowNames,
   showOnlyApproved,
   setShowOnlyApproved,
-zoomLevel: number
+  zoomLevel
 } : {
   mapType: "roadmap" | "hybrid",
   setMapType: (type: "roadmap" | "hybrid") => void,
