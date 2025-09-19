@@ -28,6 +28,7 @@ import { useAuth } from '@/context/auth-provider';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { translateText } from '@/ai/flows/translate-text';
 import html2canvas from 'html2canvas';
+import { PinNameLabel } from './pin-name-label';
 import { updateReport } from '@/app/actions';
 import { format, formatDistanceToNow } from 'date-fns';
 import { Timestamp } from 'firebase/firestore';
@@ -138,33 +139,12 @@ const Markers = memo(({
                                     borderColor={isClicking ? '#64748b' : '#ffffff'}
                                     scale={isClicking ? 1.2 : 1.0}
                                 />
-                                {/* Name Label positioned below pin */}
-                                {zoomLevel >= 15 && (
-                                    <div 
-                                        className="absolute pointer-events-none z-10"
-                                        style={{
-                                            top: '100%',
-                                            left: '50%',
-                                            transform: 'translateX(-50%)',
-                                            marginTop: '4px',
-                                            fontSize: '11px',
-                                            fontWeight: '700',
-                                            color: '#000000',
-                                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                                            padding: '3px 8px',
-                                            borderRadius: '6px',
-                                            border: '2px solid rgba(0, 0, 0, 0.2)',
-                                            whiteSpace: 'nowrap',
-                                            maxWidth: '150px',
-                                            overflow: 'hidden',
-                                            textOverflow: 'ellipsis',
-                                            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
-                                            textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)'
-                                        }}
-                                    >
-                                        {report.thaiLanguage || report.englishLanguage || report.nativeKhmerLanguage || `Report #${report.reportNumber}`}
-                                    </div>
-                                )}
+                                {/* Pin Name Label - Fresh Implementation */}
+                                <PinNameLabel 
+                                    report={report} 
+                                    zoomLevel={zoomLevel} 
+                                    minZoomLevel={12}
+                                />
                             </div>
                         </AdvancedMarker>
                     </div>
