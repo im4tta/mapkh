@@ -141,7 +141,7 @@ const Markers = memo(({
                                 {report.thaiLanguage && showNames && (
                                     <div 
                                         className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none transition-opacity duration-300 ${
-                                            zoomLevel >= 10 ? 'opacity-100' : 'opacity-0'
+                                            zoomLevel >= 18 && zoomLevel <= 22 ? 'opacity-100' : 'opacity-0'
                                         }`}
                                         style={{
                                             fontSize: '10px',
@@ -598,13 +598,13 @@ const MapControls = ({
             <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                 <span className="text-xs">Zoom:</span>
                 <span className={`text-xs font-mono px-2 py-1 rounded ${
-                    zoomLevel >= 10 ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' : 
+                    zoomLevel >= 18 && zoomLevel <= 22 ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' : 
                     'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300'
                 }`}>
                     {zoomLevel.toFixed(1)}
                 </span>
-                {zoomLevel < 10 && (
-                    <span className="text-xs text-muted-foreground">(zoom ≥10 for names)</span>
+                {(zoomLevel < 18 || zoomLevel > 22) && (
+                    <span className="text-xs text-muted-foreground">(zoom 18-22 for names)</span>
                 )}
             </div>
         </div>
