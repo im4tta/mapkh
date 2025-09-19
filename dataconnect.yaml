@@ -1,0 +1,30 @@
+
+# Connector configuration for the Data Connect service.
+# For more information, see the documentation:
+# https://firebase.google.com/docs/data-connect
+connectorId: "cloudsdk"
+# The location where this connector will be deployed.
+location: "us-central1"
+
+# The data source for this connector.
+# This must be a Cloud SQL for PostgreSQL instance.
+# The instance must be in the same location as the connector.
+# The instance must have a database named 'dataconnect'.
+# The database must have a user named 'dataconnect' with a password.
+# The user must have the 'cloudsql.client' role.
+# The instance must have the SQL Admin API enabled.
+# The instance must have public IP enabled.
+dataSource:
+  # The type of data source.
+  type: "CloudSQL"
+  cloudSQL:
+    # The Cloud SQL instance ID.
+    instanceId: "mapcorrect-z5n3v-sql"
+    # The database name.
+    databaseName: "dataconnect"
+    # The database user.
+    user: "dataconnect"
+    # The database password.
+    # This should be stored in Secret Manager.
+    password:
+      secret: "dataconnect-db-password"

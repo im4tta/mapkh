@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Heatmap Test</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        #map { height: 400px; width: 100%; }
+        .legend {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            font-size: 12px;
+            z-index: 1000;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 2px 0;
+        }
+        .legend-color {
+            width: 15px;
+            height: 10px;
+            margin-right: 5px;
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+    <h1>Heatmap Functionality Test</h1>
+    <div id="map"></div>
+    
+    <div class="legend">
+        <div style="font-weight: bold; margin-bottom: 5px;">Report Density</div>
+        <div class="legend-item">
+            <div class="legend-color" style="background-color: #8b0000;"></div>
+            <span>150+ reports</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background-color: #dc143c;"></div>
+            <span>101-150 reports</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background-color: #ff4500;"></div>
+            <span>76-100 reports</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background-color: #ff6347;"></div>
+            <span>51-75 reports</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background-color: #ffa500;"></div>
+            <span>31-50 reports</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background-color: #ffd700;"></div>
+            <span>16-30 reports</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background-color: #9acd32;"></div>
+            <span>6-15 reports</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background-color: #32cd32;"></div>
+            <span>1-5 reports</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background-color: #f8f9fa;"></div>
+            <span>No reports</span>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script>
+        // Initialize map
+        var map = L.map('map').setView([12.5657, 104.9910], 7);
+        
+        // Add tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+        
+        // Sample province data with different report counts
+        var sampleData = {
+            'Phnom Penh': 200,
+            'Siem Reap': 85,
+            'Battambang': 45,
+            'Kampong Cham': 12,
+            'Kandal': 3
+        };
+        
+        // Color function
+        function getColor(count) {
+            if (count > 150) return '#8b0000';
+            if (count > 100) return '#dc143c';
+            if (count > 75) return '#ff4500';
+            if (count > 50) return '#ff6347';
+            if (count > 30) return '#ffa500';
+            if (count > 15) return '#ffd700';
+            if (count > 5) return '#9acd32';
+            if (count > 0) return '#32cd32';
+            return '#f8f9fa';
+        }
+        
+        console.log('Heatmap test loaded successfully!');
+        console.log('Legend positioned at bottom-right');
+        console.log('Color coding implemented');
+    </script>
+</body>
+</html>

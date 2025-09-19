@@ -1,0 +1,42 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /reports/{reportId} {
+      // Allow public read access
+      allow read: if true;
+
+      // Allow any authenticated user to create, update, and delete reports.
+      allow write: if request.auth != null;
+
+      match /comments/{commentId} {
+        // Allow public read access
+        allow read: if true;
+
+        // Allow any authenticated user to write comments.
+        allow write: if request.auth != null;
+      }
+    }
+
+    // Users can only manage their own user-specific data (e.g., language preference).
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Audit logs can be created by any authenticated user but cannot be modified or deleted.
+    match /logs/{logId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update, delete: if false;
+    }
+
+    // Supporters collection - public read, authenticated write
+    match /supporters/{supporterId} {
+      // Allow public read access so all users can see supporters in footer
+      allow read: if true;
+      
+      // Only authenticated users can manage supporters
+      allow write: if request.auth != null;
+    }
+  }
+}
