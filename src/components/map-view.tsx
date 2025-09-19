@@ -175,13 +175,6 @@ const Markers = memo(({
                                      <span className="text-muted-foreground font-mono text-[10px]">{selectedReport.placeId}</span>
                                  </div>
                              )}
-                             {selectedReport.placeType && (
-                                 <div className="flex items-center gap-2 text-xs">
-                                     <Flag className="h-3 w-3 text-orange-500" />
-                                     <span className="font-medium">Type:</span>
-                                     <span className="text-muted-foreground">{selectedReport.placeType}</span>
-                                 </div>
-                             )}
                              {selectedReport.createdAt && (
                                  <div className="flex items-center gap-2 text-xs">
                                      <Calendar className="h-3 w-3 text-indigo-500" />
