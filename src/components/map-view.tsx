@@ -652,6 +652,7 @@ function MapContent({ initialReports }: { initialReports: Report[] }) {
   // New toggle states
   const [showNames, setShowNames] = useState(true);
   const [showOnlyApproved, setShowOnlyApproved] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(initialZoom);
 
   const handlePinApprove = useCallback(async (report: Report) => {
      if (!user) {
@@ -722,6 +723,15 @@ function MapContent({ initialReports }: { initialReports: Report[] }) {
         placesService.current = new google.maps.places.PlacesService(map);
     }
   }, [map]);
+
+  useEffect(() => {
+    if (map) {
+      const listener = map.addListener('zoom_changed', () => {
+        setZoomLevel(map.getZoom() || initialZoom);
+      });
+      return () => listener.remove();
+    }
+  }, [map, initialZoom]);
 
   useEffect(() => {
     setIsLoading(true);
