@@ -141,31 +141,30 @@ const Markers = memo(({
                                     scale={isClicking ? 1.2 : 1.0}
                                 />
                                 {/* Thai Name Label positioned below pin */}
-                                {report.thaiLanguage && showNames && (
+                                {(report.thaiLanguage || report.englishLanguage || report.nativeKhmerLanguage) && showNames && zoomLevel >= 15 && (
                                     <div 
-                                        className={`absolute pointer-events-none transition-opacity duration-300 ${
-                                            zoomLevel >= 18 && zoomLevel <= 22 ? 'opacity-100' : 'opacity-0'
-                                        }`}
+                                        className="absolute pointer-events-none z-10"
                                         style={{
                                             top: '100%',
                                             left: '50%',
                                             transform: 'translateX(-50%)',
-                                            marginTop: '2px',
-                                            fontSize: '10px',
-                                            fontWeight: '600',
-                                            color: '#1f2937',
-                                            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                                            padding: '2px 6px',
-                                            borderRadius: '4px',
-                                            border: '1px solid rgba(0, 0, 0, 0.1)',
+                                            marginTop: '4px',
+                                            fontSize: '11px',
+                                            fontWeight: '700',
+                                            color: '#000000',
+                                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                            padding: '3px 8px',
+                                            borderRadius: '6px',
+                                            border: '2px solid rgba(0, 0, 0, 0.2)',
                                             whiteSpace: 'nowrap',
-                                            maxWidth: '120px',
+                                            maxWidth: '150px',
                                             overflow: 'hidden',
                                             textOverflow: 'ellipsis',
-                                            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+                                            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+                                            textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)'
                                         }}
                                     >
-                                        {report.thaiLanguage}
+                                        {report.thaiLanguage || report.englishLanguage || report.nativeKhmerLanguage || `Report #${report.reportNumber}`}
                                     </div>
                                 )}
                             </div>
