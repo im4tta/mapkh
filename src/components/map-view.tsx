@@ -322,7 +322,8 @@ const MapControls = ({
   showNames,
   setShowNames,
   showOnlyApproved,
-  setShowOnlyApproved
+  setShowOnlyApproved,
+  zoomLevel
 } : {
   mapType: "roadmap" | "hybrid",
   setMapType: (type: "roadmap" | "hybrid") => void,
@@ -332,6 +333,7 @@ const MapControls = ({
   setShowNames: (show: boolean) => void;
   showOnlyApproved: boolean;
   setShowOnlyApproved: (show: boolean) => void;
+  zoomLevel: number;
 }) => {
   const [mapUrl, setMapUrl] = useState('');
   const [isResolvingUrl, setIsResolvingUrl] = useState(false);

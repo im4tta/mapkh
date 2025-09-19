@@ -221,7 +221,7 @@ export async function submitReport(data: z.infer<typeof reportSchema>, userId: s
                 lat: lat,
                 lng: lng,
             },
-            status: 'submitted',
+            status: 'not-submitted',
             createdAt: serverTimestamp(),
             progress: reportData.progress || 0,
             targetDate: reportData.targetDate ? Timestamp.fromDate(reportData.targetDate) : null,
