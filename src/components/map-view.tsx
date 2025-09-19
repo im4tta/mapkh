@@ -55,7 +55,8 @@ const Markers = memo(({
     onEditClick,
     onPinApprove,
     showNames,
-    showOnlyApproved
+    showOnlyApproved,
+    zoomLevel
 }: { 
     reports: Report[], 
     onMarkerClick: (report: Report) => void,
@@ -65,28 +66,12 @@ const Markers = memo(({
     onPinApprove: (report: Report) => void,
     showNames: boolean,
     showOnlyApproved: boolean,
+    zoomLevel: number,
 }) => {
     const { showActivityDialog } = useActivityDialog();
     const [clickingReportId, setClickingReportId] = useState<string | null>(null);
     const [showApproveButton, setShowApproveButton] = useState<string | null>(null);
-    const [zoomLevel, setZoomLevel] = useState<number>(10);
     const map = useMap();
-    
-    // Track zoom level changes
-    useEffect(() => {
-        if (!map) return;
-        
-        const zoomListener = map.addListener('zoom_changed', () => {
-            const currentZoom = map.getZoom() || 10;
-            setZoomLevel(currentZoom);
-        });
-        
-        // Set initial zoom
-        const initialZoom = map.getZoom() || 10;
-        setZoomLevel(initialZoom);
-        
-        return () => google.maps.event.removeListener(zoomListener);
-    }, [map]);
     
     const getPinColor = (status: Report['status']) => {
         switch (status) {
@@ -354,12 +339,29 @@ const MapControls = ({
   const [isSearching, setIsSearching] = useState(false);
   const [predictions, setPredictions] = useState<google.maps.places.AutocompletePrediction[]>([]);
   const [showPredictions, setShowPredictions] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState<number>(10);
   const { toast } = useToast();
   const { t } = useTranslation();
   const map = useMap();
   const places = useMapsLibrary('places');
   const autocompleteService = useRef<google.maps.places.AutocompleteService | null>(null);
   const placesService = useRef<google.maps.places.PlacesService | null>(null);
+
+  // Track zoom level changes
+  useEffect(() => {
+    if (!map) return;
+    
+    const zoomListener = map.addListener('zoom_changed', () => {
+      const currentZoom = map.getZoom() || 10;
+      setZoomLevel(currentZoom);
+    });
+    
+    // Set initial zoom
+    const initialZoom = map.getZoom() || 10;
+    setZoomLevel(initialZoom);
+    
+    return () => google.maps.event.removeListener(zoomListener);
+  }, [map]);
 
   // Initialize Places services
   useEffect(() => {
@@ -607,6 +609,19 @@ const MapControls = ({
              <Label htmlFor="satellite-switch" className="flex items-center gap-2 cursor-pointer text-sm font-medium shrink-0">
                 <Satellite className="h-5 w-5" />
             </Label>
+            <Separator orientation="vertical" className="h-6" />
+            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <span className="text-xs">Zoom:</span>
+                <span className={`text-xs font-mono px-2 py-1 rounded ${
+                    zoomLevel >= 10 ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' : 
+                    'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300'
+                }`}>
+                    {zoomLevel.toFixed(1)}
+                </span>
+                {zoomLevel < 10 && (
+                    <span className="text-xs text-muted-foreground">(zoom ≥10 for names)</span>
+                )}
+            </div>
         </div>
       </div>
     </div>
@@ -901,6 +916,7 @@ function MapContent({ initialReports }: { initialReports: Report[] }) {
               onPinApprove={handlePinApprove}
               showNames={showNames}
               showOnlyApproved={showOnlyApproved}
+              zoomLevel={zoomLevel}
             />
             {temporaryPin && (
               <InfoWindow
@@ -942,6 +958,7 @@ function MapContent({ initialReports }: { initialReports: Report[] }) {
             setShowNames={setShowNames}
             showOnlyApproved={showOnlyApproved}
             setShowOnlyApproved={setShowOnlyApproved}
+            zoomLevel={zoomLevel}
         />
       </div>
       {(clickedPosition || editingReport) && (
