@@ -54,7 +54,6 @@ const Markers = memo(({
     onCloseClick,
     onEditClick,
     onPinApprove,
-    showNames,
     showOnlyApproved,
     zoomLevel
 }: { 
@@ -64,7 +63,6 @@ const Markers = memo(({
     onCloseClick: () => void,
     onEditClick: (report: Report) => void,
     onPinApprove: (report: Report) => void,
-    showNames: boolean,
     showOnlyApproved: boolean,
     zoomLevel: number,
 }) => {
@@ -140,8 +138,8 @@ const Markers = memo(({
                                     borderColor={isClicking ? '#64748b' : '#ffffff'}
                                     scale={isClicking ? 1.2 : 1.0}
                                 />
-                                {/* Thai Name Label positioned below pin */}
-                                {(report.thaiLanguage || report.englishLanguage || report.nativeKhmerLanguage) && showNames && zoomLevel >= 15 && (
+                                {/* Name Label positioned below pin */}
+                                {zoomLevel >= 15 && (
                                     <div 
                                         className="absolute pointer-events-none z-10"
                                         style={{
@@ -329,8 +327,6 @@ const MapControls = ({
   setMapType,
   onUrlOrSearch,
   onScreenshot,
-  showNames,
-  setShowNames,
   showOnlyApproved,
   setShowOnlyApproved,
   zoomLevel
@@ -339,8 +335,6 @@ const MapControls = ({
   setMapType: (type: "roadmap" | "hybrid") => void,
   onUrlOrSearch: (coords: google.maps.LatLngLiteral) => void;
   onScreenshot: () => void;
-  showNames: boolean;
-  setShowNames: (show: boolean) => void;
   showOnlyApproved: boolean;
   setShowOnlyApproved: (show: boolean) => void;
   zoomLevel: number;
@@ -579,15 +573,6 @@ const MapControls = ({
             </Button>
             <Separator orientation="vertical" className="h-6" />
             <Switch
-                id="names-switch"
-                checked={showNames}
-                onCheckedChange={setShowNames}
-            />
-             <Label htmlFor="names-switch" className="flex items-center gap-2 cursor-pointer text-sm font-medium shrink-0">
-                {showNames ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
-            </Label>
-            <Separator orientation="vertical" className="h-6" />
-            <Switch
                 id="approved-switch"
                 checked={showOnlyApproved}
                 onCheckedChange={setShowOnlyApproved}
@@ -608,13 +593,13 @@ const MapControls = ({
             <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                 <span className="text-xs">Zoom:</span>
                 <span className={`text-xs font-mono px-2 py-1 rounded ${
-                    zoomLevel >= 18 && zoomLevel <= 22 ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' : 
+                    zoomLevel >= 15 ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' : 
                     'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300'
                 }`}>
                     {zoomLevel.toFixed(1)}
                 </span>
-                {(zoomLevel < 18 || zoomLevel > 22) && (
-                    <span className="text-xs text-muted-foreground">(zoom 18-22 for names)</span>
+                {zoomLevel < 15 && (
+                    <span className="text-xs text-muted-foreground">(zoom 15+ for names)</span>
                 )}
             </div>
         </div>
@@ -645,7 +630,6 @@ function MapContent({ initialReports }: { initialReports: Report[] }) {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   
   // New toggle states
-  const [showNames, setShowNames] = useState(true);
   const [showOnlyApproved, setShowOnlyApproved] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(initialZoom);
 
@@ -919,7 +903,6 @@ function MapContent({ initialReports }: { initialReports: Report[] }) {
               onCloseClick={handleInfoWindowClose}
               onEditClick={handleEditClick}
               onPinApprove={handlePinApprove}
-              showNames={showNames}
               showOnlyApproved={showOnlyApproved}
               zoomLevel={zoomLevel}
             />
@@ -959,8 +942,6 @@ function MapContent({ initialReports }: { initialReports: Report[] }) {
             setMapType={setMapType}
             onUrlOrSearch={handleUrlOrSearch}
             onScreenshot={handleScreenshot}
-            showNames={showNames}
-            setShowNames={setShowNames}
             showOnlyApproved={showOnlyApproved}
             setShowOnlyApproved={setShowOnlyApproved}
             zoomLevel={zoomLevel}

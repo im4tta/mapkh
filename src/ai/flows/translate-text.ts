@@ -29,11 +29,25 @@ const prompt = ai.definePrompt({
     name: 'translateTextPrompt',
     input: { schema: TranslateTextInputSchema },
     output: { schema: TranslateTextOutputSchema },
-    prompt: `Translate the following text to {{targetLanguage}}.
+    prompt: `You are a professional translator specializing in Southeast Asian languages. Your task is to translate the given text to the specified target language.
 
-Text: {{{text}}}
+Source text: {{{text}}}
+Target language code: {{targetLanguage}}
 
-Only return the translated text.`,
+CRITICAL TRANSLATION RULES:
+- If targetLanguage is "en": Translate to ENGLISH only. Do not provide Thai, Khmer, or any other language.
+- If targetLanguage is "km": Translate to KHMER (Cambodian) only. Do not provide Thai, English, or any other language.
+- If targetLanguage is "th": Translate to THAI only. Do not provide Khmer, English, or any other language.
+
+IMPORTANT:
+- Return ONLY the translated text in the target language
+- Do NOT include the original text
+- Do NOT include explanations or notes
+- Do NOT mix languages in your response
+- For place names, use the most commonly recognized name in the target language
+- Ensure the translation is accurate and contextually appropriate
+
+Provide the translation in {{targetLanguage}} language only:`,
 });
 
 const translateTextFlow = ai.defineFlow(
