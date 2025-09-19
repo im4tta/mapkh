@@ -115,19 +115,35 @@ const Markers = memo(({
                 const pinColor = isClicking ? '#94a3b8' : getPinColor(report.status); // gray-400 when loading
                 
                 return (
-                    <AdvancedMarker 
-                        key={report.id} 
-                        position={report.position} 
-                        onClick={(e) => handlePinClick(e, report)}
-                        className={isClicking ? 'animate-pulse' : ''}
-                    >
-                        <Pin 
-                            background={pinColor} 
-                            glyphColor={'#ffffff'} 
-                            borderColor={isClicking ? '#64748b' : '#ffffff'}
-                            scale={isClicking ? 1.2 : 1.0}
-                        />
-                    </AdvancedMarker>
+                    <div key={report.id} className="relative">
+                        <AdvancedMarker 
+                            position={report.position} 
+                            onClick={(e) => handlePinClick(e, report)}
+                            className={isClicking ? 'animate-pulse' : ''}
+                        >
+                            <Pin 
+                                background={pinColor} 
+                                glyphColor={'#ffffff'} 
+                                borderColor={isClicking ? '#64748b' : '#ffffff'}
+                                scale={isClicking ? 1.2 : 1.0}
+                            />
+                        </AdvancedMarker>
+                        
+                        {/* Hovering Thai Name Label */}
+                        {report.thaiLanguage && (
+                            <AdvancedMarker 
+                                position={{
+                                    lat: report.position.lat + 0.0008, // Slightly above the pin
+                                    lng: report.position.lng
+                                }}
+                                className="pointer-events-none"
+                            >
+                                <div className="bg-white/90 backdrop-blur-sm text-gray-800 px-2 py-1 rounded-md shadow-lg text-xs font-medium border border-gray-200 whitespace-nowrap">
+                                    {report.thaiLanguage}
+                                </div>
+                            </AdvancedMarker>
+                        )}
+                    </div>
                 );
             })}
             {selectedReport && (
@@ -211,6 +227,18 @@ const Markers = memo(({
                                     <ListChecks className="mr-2 h-4 w-4"/>
                                     View Details
                                 </Link>
+                            </Button>
+                            <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="w-full h-8 text-xs justify-start" 
+                                onClick={() => {
+                                    const url = `https://www.google.com/maps?q=${selectedReport.position.lat},${selectedReport.position.lng}`;
+                                    window.open(url, '_blank');
+                                }}
+                            >
+                                <MapPin className="mr-2 h-4 w-4"/>
+                                View on Maps
                             </Button>
                             <Button size="sm" variant="outline" className="w-full h-8 text-xs justify-start" onClick={() => onEditClick(selectedReport)}>
                                 <Edit className="mr-2 h-4 w-4"/>
