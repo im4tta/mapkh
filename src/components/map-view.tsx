@@ -156,7 +156,7 @@ const Markers = memo(({
                                 {report.thaiLanguage && showNames && (
                                     <div 
                                         className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none transition-opacity duration-300 ${
-                                            zoomLevel >= 14 ? 'opacity-100' : 'opacity-0'
+                                            zoomLevel >= 10 ? 'opacity-100' : 'opacity-0'
                                         }`}
                                         style={{
                                             fontSize: '10px',
