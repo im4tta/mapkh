@@ -606,7 +606,7 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
                                 <FormControl>
                                     <Input placeholder={t('report_dialog.english_name_placeholder')} {...field} value={field.value ?? ''}/>
                                 </FormControl>
-                                <Button type="button" size="icon" variant="outline" onClick={handleSuggestEnglishName} disabled={isTranslating}>
+                                <Button type="button" size="icon" variant="outline" onClick={handleSuggestEnglishName} disabled={isTranslating} title="Suggest English name from Thai">
                                     {isTranslating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Languages className="h-4 w-4" />}
                                 </Button>
                                 <Button type="button" size="icon" variant="outline" onClick={handleFindPlaceId} disabled={isFindingPlaceId}>
@@ -617,41 +617,38 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
                             </FormItem>
                         )}
                       />
-                       <div>
-                            <FormField
-                                control={form.control}
-                                name="thaiLanguage"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>{t('report_dialog.thai_name_label')}</FormLabel>
-                                        <div className="flex items-center gap-2">
-                                            <FormControl>
-                                                <Input placeholder={t('report_dialog.thai_name_placeholder')} {...field} value={field.value ?? ''} />
-                                            </FormControl>
-                                            <Button type="button" size="sm" onClick={handleSuggestKhmerName} disabled={isTranslating}>
-                                                {isTranslating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Languages className="h-4 w-4" />}
-                                                Suggest
-                                            </Button>
-                                        </div>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </div>
-                    </div>
-                     <FormField
+                       <FormField
                         control={form.control}
                         name="nativeKhmerLanguage"
                         render={({ field }) => (
                             <FormItem>
                             <FormLabel>{t('report_dialog.khmer_name_label')}</FormLabel>
-                            <FormControl>
-                                <Input placeholder="ឈ្មោះជាភាសាខ្មែរ" {...field} className="font-khmer" value={field.value ?? ''} />
-                            </FormControl>
+                            <div className="flex items-center gap-2">
+                                <FormControl>
+                                    <Input placeholder="ឈ្មោះជាភាសាខ្មែរ" {...field} className="font-khmer" value={field.value ?? ''} />
+                                </FormControl>
+                                <Button type="button" size="icon" variant="outline" onClick={handleSuggestKhmerName} disabled={isTranslating} title="Suggest Khmer name from Thai">
+                                    {isTranslating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Languages className="h-4 w-4" />}
+                                </Button>
+                            </div>
                             <FormMessage />
                             </FormItem>
                         )}
                         />
+                    </div>
+                     <FormField
+                        control={form.control}
+                        name="thaiLanguage"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>{t('report_dialog.thai_name_label')}</FormLabel>
+                                <FormControl>
+                                    <Input placeholder={t('report_dialog.thai_name_placeholder')} {...field} value={field.value ?? ''} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
                      <FormField
                         control={form.control}
                         name="placeId"

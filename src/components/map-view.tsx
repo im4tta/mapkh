@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback, memo, useRef } from 'react';
 import { APIProvider, Map, AdvancedMarker, Pin, useMap, InfoWindow, useMapsLibrary } from '@vis.gl/react-google-maps';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Satellite, Waypoints, MessageSquare, Edit, ListChecks, ClipboardPaste, X, Search, Flag, Languages, Camera, MapPin, Calendar, Clock } from 'lucide-react';
+import { Loader2, Satellite, Waypoints, MessageSquare, Edit, ListChecks, ClipboardPaste, X, Search, Flag, Languages, Camera, MapPin, Calendar, Clock, Eye, EyeOff, Filter } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from './ui/input';
@@ -53,7 +53,9 @@ const Markers = memo(({
     selectedReport,
     onCloseClick,
     onEditClick,
-    onPinApprove
+    onPinApprove,
+    showNames,
+    showOnlyApproved
 }: { 
     reports: Report[], 
     onMarkerClick: (report: Report) => void,
@@ -61,10 +63,30 @@ const Markers = memo(({
     onCloseClick: () => void,
     onEditClick: (report: Report) => void,
     onPinApprove: (report: Report) => void,
+    showNames: boolean,
+    showOnlyApproved: boolean,
 }) => {
     const { showActivityDialog } = useActivityDialog();
     const [clickingReportId, setClickingReportId] = useState<string | null>(null);
     const [showApproveButton, setShowApproveButton] = useState<string | null>(null);
+    const [zoomLevel, setZoomLevel] = useState<number>(10);
+    const map = useMap();
+    
+    // Track zoom level changes
+    useEffect(() => {
+        if (!map) return;
+        
+        const zoomListener = map.addListener('zoom_changed', () => {
+            const currentZoom = map.getZoom() || 10;
+            setZoomLevel(currentZoom);
+        });
+        
+        // Set initial zoom
+        const initialZoom = map.getZoom() || 10;
+        setZoomLevel(initialZoom);
+        
+        return () => google.maps.event.removeListener(zoomListener);
+    }, [map]);
     
     const getPinColor = (status: Report['status']) => {
         switch (status) {
@@ -110,7 +132,9 @@ const Markers = memo(({
 
     return (
         <>
-            {reports.map((report) => {
+            {reports
+                .filter(report => showOnlyApproved ? report.status === 'approved' : true)
+                .map((report) => {
                 const isClicking = clickingReportId === report.id;
                 const pinColor = isClicking ? '#94a3b8' : getPinColor(report.status); // gray-400 when loading
                 
@@ -121,28 +145,35 @@ const Markers = memo(({
                             onClick={(e) => handlePinClick(e, report)}
                             className={isClicking ? 'animate-pulse' : ''}
                         >
-                            <Pin 
-                                background={pinColor} 
-                                glyphColor={'#ffffff'} 
-                                borderColor={isClicking ? '#64748b' : '#ffffff'}
-                                scale={isClicking ? 1.2 : 1.0}
-                            />
+                            <div className="relative">
+                                <Pin 
+                                    background={pinColor} 
+                                    glyphColor={'#ffffff'} 
+                                    borderColor={isClicking ? '#64748b' : '#ffffff'}
+                                    scale={isClicking ? 1.2 : 1.0}
+                                />
+                                {/* Thai Name Label directly on pin */}
+                                {report.thaiLanguage && showNames && (
+                                    <div 
+                                        className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none transition-opacity duration-300 ${
+                                            zoomLevel >= 14 ? 'opacity-100' : 'opacity-0'
+                                        }`}
+                                        style={{
+                                            fontSize: '10px',
+                                            fontWeight: '600',
+                                            color: '#ffffff',
+                                            textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+                                            whiteSpace: 'nowrap',
+                                            maxWidth: '80px',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis'
+                                        }}
+                                    >
+                                        {report.thaiLanguage}
+                                    </div>
+                                )}
+                            </div>
                         </AdvancedMarker>
-                        
-                        {/* Hovering Thai Name Label */}
-                        {report.thaiLanguage && (
-                            <AdvancedMarker 
-                                position={{
-                                    lat: report.position.lat + 0.0008, // Slightly above the pin
-                                    lng: report.position.lng
-                                }}
-                                className="pointer-events-none"
-                            >
-                                <div className="bg-white/90 backdrop-blur-sm text-gray-800 px-2 py-1 rounded-md shadow-lg text-xs font-medium border border-gray-200 whitespace-nowrap">
-                                    {report.thaiLanguage}
-                                </div>
-                            </AdvancedMarker>
-                        )}
                     </div>
                 );
             })}
@@ -302,12 +333,20 @@ const MapControls = ({
   mapType,
   setMapType,
   onUrlOrSearch,
-  onScreenshot
+  onScreenshot,
+  showNames,
+  setShowNames,
+  showOnlyApproved,
+  setShowOnlyApproved
 } : {
   mapType: "roadmap" | "hybrid",
   setMapType: (type: "roadmap" | "hybrid") => void,
   onUrlOrSearch: (coords: google.maps.LatLngLiteral) => void;
   onScreenshot: () => void;
+  showNames: boolean;
+  setShowNames: (show: boolean) => void;
+  showOnlyApproved: boolean;
+  setShowOnlyApproved: (show: boolean) => void;
 }) => {
   const [mapUrl, setMapUrl] = useState('');
   const [isResolvingUrl, setIsResolvingUrl] = useState(false);
@@ -541,6 +580,25 @@ const MapControls = ({
              <Button onClick={onScreenshot} size="icon" variant="ghost" className="h-9 w-9 shrink-0" aria-label="Take Screenshot">
                 <Camera className="h-5 w-5" />
             </Button>
+            <Separator orientation="vertical" className="h-6" />
+            <Switch
+                id="names-switch"
+                checked={showNames}
+                onCheckedChange={setShowNames}
+            />
+             <Label htmlFor="names-switch" className="flex items-center gap-2 cursor-pointer text-sm font-medium shrink-0">
+                {showNames ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
+            </Label>
+            <Separator orientation="vertical" className="h-6" />
+            <Switch
+                id="approved-switch"
+                checked={showOnlyApproved}
+                onCheckedChange={setShowOnlyApproved}
+            />
+             <Label htmlFor="approved-switch" className="flex items-center gap-2 cursor-pointer text-sm font-medium shrink-0">
+                <Filter className="h-5 w-5" />
+            </Label>
+            <Separator orientation="vertical" className="h-6" />
             <Switch
                 id="satellite-switch"
                 checked={mapType === 'hybrid'}
@@ -575,6 +633,10 @@ function MapContent({ initialReports }: { initialReports: Report[] }) {
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  
+  // New toggle states
+  const [showNames, setShowNames] = useState(true);
+  const [showOnlyApproved, setShowOnlyApproved] = useState(false);
 
   const handlePinApprove = useCallback(async (report: Report) => {
      if (!user) {
@@ -837,6 +899,8 @@ function MapContent({ initialReports }: { initialReports: Report[] }) {
               onCloseClick={handleInfoWindowClose}
               onEditClick={handleEditClick}
               onPinApprove={handlePinApprove}
+              showNames={showNames}
+              showOnlyApproved={showOnlyApproved}
             />
             {temporaryPin && (
               <InfoWindow
@@ -874,6 +938,10 @@ function MapContent({ initialReports }: { initialReports: Report[] }) {
             setMapType={setMapType}
             onUrlOrSearch={handleUrlOrSearch}
             onScreenshot={handleScreenshot}
+            showNames={showNames}
+            setShowNames={setShowNames}
+            showOnlyApproved={showOnlyApproved}
+            setShowOnlyApproved={setShowOnlyApproved}
         />
       </div>
       {(clickedPosition || editingReport) && (
