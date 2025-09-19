@@ -33,7 +33,7 @@ import { findDuplicateReports, FindDuplicateReportsOutput } from '@/ai/flows/fin
 import { translateText } from '@/ai/flows/translate-text';
 import { geocodeAddress } from '@/ai/flows/geocode-address';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Calendar as CalendarIcon, AlertTriangle, Check, ChevronsUpDown, X, ChevronDown, ListChecks, MapPin, UploadCloud, File, Image as ImageIcon, Languages, Search, Pencil } from 'lucide-react';
+import { Loader2, Calendar as CalendarIcon, AlertTriangle, Check, ChevronsUpDown, X, ChevronDown, ListChecks, MapPin, UploadCloud, File, Image as ImageIcon, Languages, Search, Pencil, Globe } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
@@ -299,11 +299,19 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
             form.setValue('nativeKhmerLanguage', result.translatedText);
             toast({ title: "Khmer name suggested." });
         } else {
-            throw new Error("Translation returned empty.");
+            toast({ 
+                variant: 'destructive', 
+                title: "Translation Failed", 
+                description: "Could not suggest a Khmer name. The Thai text has been preserved." 
+            });
         }
     } catch (error) {
         console.error("Translation failed:", error);
-        toast({ variant: 'destructive', title: "Translation Failed", description: "Could not suggest a Khmer name." });
+        toast({ 
+            variant: 'destructive', 
+            title: "Translation Failed", 
+            description: "Could not suggest a Khmer name. The Thai text has been preserved." 
+        });
     } finally {
         setIsTranslating(false);
     }
@@ -329,11 +337,171 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
             form.setValue('englishLanguage', result.translatedText);
             toast({ title: "English name suggested." });
         } else {
-            throw new Error("Translation returned empty.");
+            toast({ 
+                variant: 'destructive', 
+                title: "Translation Failed", 
+                description: "Could not suggest an English name. The Thai text has been preserved." 
+            });
         }
     } catch (error) {
         console.error("Translation failed:", error);
-        toast({ variant: 'destructive', title: "Translation Failed", description: "Could not suggest an English name." });
+        toast({ 
+            variant: 'destructive', 
+            title: "Translation Failed", 
+            description: "Could not suggest an English name. The Thai text has been preserved." 
+        });
+    } finally {
+        setIsTranslating(false);
+    }
+  };
+
+  const handleSuggestEnglishFromKhmer = async () => {
+    const khmerNameValue = form.getValues('nativeKhmerLanguage');
+    if (!khmerNameValue) {
+        toast({
+            variant: 'destructive',
+            title: "No Khmer name to translate",
+            description: "Please enter a name in the Khmer Language field first.",
+        });
+        return;
+    }
+    setIsTranslating(true);
+    try {
+        const result = await translateText({
+            text: khmerNameValue,
+            targetLanguage: 'en',
+        });
+        if (result.translatedText) {
+            form.setValue('englishLanguage', result.translatedText);
+            toast({ title: "English name suggested from Khmer." });
+        } else {
+            toast({ 
+                variant: 'destructive', 
+                title: "Translation Failed", 
+                description: "Could not suggest an English name. The Khmer text has been preserved." 
+            });
+        }
+    } catch (error) {
+        console.error("Translation failed:", error);
+        toast({ 
+            variant: 'destructive', 
+            title: "Translation Failed", 
+            description: "Could not suggest an English name. The Khmer text has been preserved." 
+        });
+    } finally {
+        setIsTranslating(false);
+    }
+  };
+
+  const handleSuggestKhmerFromEnglish = async () => {
+    const englishNameValue = form.getValues('englishLanguage');
+    if (!englishNameValue) {
+        toast({
+            variant: 'destructive',
+            title: "No English name to translate",
+            description: "Please enter a name in the English Language field first.",
+        });
+        return;
+    }
+    setIsTranslating(true);
+    try {
+        const result = await translateText({
+            text: englishNameValue,
+            targetLanguage: 'km',
+        });
+        if (result.translatedText) {
+            form.setValue('nativeKhmerLanguage', result.translatedText);
+            toast({ title: "Khmer name suggested from English." });
+        } else {
+            toast({ 
+                variant: 'destructive', 
+                title: "Translation Failed", 
+                description: "Could not suggest a Khmer name. The English text has been preserved." 
+            });
+        }
+    } catch (error) {
+        console.error("Translation failed:", error);
+        toast({ 
+            variant: 'destructive', 
+            title: "Translation Failed", 
+            description: "Could not suggest a Khmer name. The English text has been preserved." 
+        });
+    } finally {
+        setIsTranslating(false);
+    }
+  };
+
+  const handleSuggestThaiFromEnglish = async () => {
+    const englishNameValue = form.getValues('englishLanguage');
+    if (!englishNameValue) {
+        toast({
+            variant: 'destructive',
+            title: "No English name to translate",
+            description: "Please enter a name in the English Language field first.",
+        });
+        return;
+    }
+    setIsTranslating(true);
+    try {
+        const result = await translateText({
+            text: englishNameValue,
+            targetLanguage: 'th',
+        });
+        if (result.translatedText) {
+            form.setValue('thaiLanguage', result.translatedText);
+            toast({ title: "Thai name suggested from English." });
+        } else {
+            toast({ 
+                variant: 'destructive', 
+                title: "Translation Failed", 
+                description: "Could not suggest a Thai name. The English text has been preserved." 
+            });
+        }
+    } catch (error) {
+        console.error("Translation failed:", error);
+        toast({ 
+            variant: 'destructive', 
+            title: "Translation Failed", 
+            description: "Could not suggest a Thai name. The English text has been preserved." 
+        });
+    } finally {
+        setIsTranslating(false);
+    }
+  };
+
+  const handleSuggestThaiFromKhmer = async () => {
+    const khmerNameValue = form.getValues('nativeKhmerLanguage');
+    if (!khmerNameValue) {
+        toast({
+            variant: 'destructive',
+            title: "No Khmer name to translate",
+            description: "Please enter a name in the Khmer Language field first.",
+        });
+        return;
+    }
+    setIsTranslating(true);
+    try {
+        const result = await translateText({
+            text: khmerNameValue,
+            targetLanguage: 'th',
+        });
+        if (result.translatedText) {
+            form.setValue('thaiLanguage', result.translatedText);
+            toast({ title: "Thai name suggested from Khmer." });
+        } else {
+            toast({ 
+                variant: 'destructive', 
+                title: "Translation Failed", 
+                description: "Could not suggest a Thai name. The Khmer text has been preserved." 
+            });
+        }
+    } catch (error) {
+        console.error("Translation failed:", error);
+        toast({ 
+            variant: 'destructive', 
+            title: "Translation Failed", 
+            description: "Could not suggest a Thai name. The Khmer text has been preserved." 
+        });
     } finally {
         setIsTranslating(false);
     }
@@ -365,6 +533,20 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
     } finally {
         setIsFindingPlaceId(false);
     }
+  };
+
+  const handleGoogleTranslate = (text: string, sourceLang: string = 'auto', targetLang: string = 'en') => {
+    if (!text.trim()) {
+      toast({
+        variant: 'destructive',
+        title: "No text to translate",
+        description: "Please enter some text first.",
+      });
+      return;
+    }
+    
+    const googleTranslateUrl = `https://translate.google.com/?sl=${sourceLang}&tl=${targetLang}&text=${encodeURIComponent(text)}&op=translate`;
+    window.open(googleTranslateUrl, '_blank', 'noopener,noreferrer');
   };
 
   const proceedWithSubmission = async (values: ReportFormValues) => {
@@ -609,6 +791,12 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
                                 <Button type="button" size="icon" variant="outline" onClick={handleSuggestEnglishName} disabled={isTranslating} title="Suggest English name from Thai">
                                     {isTranslating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Languages className="h-4 w-4" />}
                                 </Button>
+                                <Button type="button" size="icon" variant="outline" onClick={handleSuggestEnglishFromKhmer} disabled={isTranslating} title="Suggest English name from Khmer">
+                                    {isTranslating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Languages className="h-4 w-4" />}
+                                </Button>
+                                <Button type="button" size="icon" variant="outline" onClick={() => handleGoogleTranslate(field.value || '', 'auto', 'en')} title="Translate with Google Translate">
+                                    <Globe className="h-4 w-4" />
+                                </Button>
                                 <Button type="button" size="icon" variant="outline" onClick={handleFindPlaceId} disabled={isFindingPlaceId}>
                                     {isFindingPlaceId ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                                 </Button>
@@ -630,6 +818,12 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
                                 <Button type="button" size="icon" variant="outline" onClick={handleSuggestKhmerName} disabled={isTranslating} title="Suggest Khmer name from Thai">
                                     {isTranslating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Languages className="h-4 w-4" />}
                                 </Button>
+                                <Button type="button" size="icon" variant="outline" onClick={handleSuggestKhmerFromEnglish} disabled={isTranslating} title="Suggest Khmer name from English">
+                                    {isTranslating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Languages className="h-4 w-4" />}
+                                </Button>
+                                <Button type="button" size="icon" variant="outline" onClick={() => handleGoogleTranslate(field.value || '', 'auto', 'km')} title="Translate with Google Translate">
+                                    <Globe className="h-4 w-4" />
+                                </Button>
                             </div>
                             <FormMessage />
                             </FormItem>
@@ -642,9 +836,20 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>{t('report_dialog.thai_name_label')}</FormLabel>
+                                <div className="flex items-center gap-2">
                                 <FormControl>
                                     <Input placeholder={t('report_dialog.thai_name_placeholder')} {...field} value={field.value ?? ''} />
                                 </FormControl>
+                                <Button type="button" size="icon" variant="outline" onClick={handleSuggestThaiFromEnglish} disabled={isTranslating} title="Suggest Thai name from English">
+                                    {isTranslating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Languages className="h-4 w-4" />}
+                                </Button>
+                                <Button type="button" size="icon" variant="outline" onClick={handleSuggestThaiFromKhmer} disabled={isTranslating} title="Suggest Thai name from Khmer">
+                                    {isTranslating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Languages className="h-4 w-4" />}
+                                </Button>
+                                <Button type="button" size="icon" variant="outline" onClick={() => handleGoogleTranslate(field.value || '', 'auto', 'th')} title="Translate with Google Translate">
+                                    <Globe className="h-4 w-4" />
+                                </Button>
+                                </div>
                                 <FormMessage />
                             </FormItem>
                         )}

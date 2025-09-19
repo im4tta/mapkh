@@ -55,7 +55,7 @@ const Markers = memo(({
     onCloseClick,
     onEditClick,
     onPinApprove,
-    showOnlyApproved,
+    pinFilter,
     zoomLevel
 }: { 
     reports: Report[], 
@@ -64,7 +64,7 @@ const Markers = memo(({
     onCloseClick: () => void,
     onEditClick: (report: Report) => void,
     onPinApprove: (report: Report) => void,
-    showOnlyApproved: boolean,
+    pinFilter: 'all' | 'approved' | 'not-approved',
     zoomLevel: number,
 }) => {
     const { showActivityDialog } = useActivityDialog();
@@ -117,7 +117,11 @@ const Markers = memo(({
     return (
         <>
             {reports
-                .filter(report => showOnlyApproved ? report.status === 'approved' : true)
+                .filter(report => {
+                    if (pinFilter === 'approved') return report.status === 'approved';
+                    if (pinFilter === 'not-approved') return report.status !== 'approved';
+                    return true; // 'all' - show all reports
+                })
                 .map((report) => {
                 const isClicking = clickingReportId === report.id;
                 const pinColor = isClicking ? '#94a3b8' : getPinColor(report.status); // gray-400 when loading
@@ -307,16 +311,16 @@ const MapControls = ({
   setMapType,
   onUrlOrSearch,
   onScreenshot,
-  showOnlyApproved,
-  setShowOnlyApproved,
+  pinFilter,
+  setPinFilter,
   zoomLevel
 } : {
   mapType: "roadmap" | "hybrid",
   setMapType: (type: "roadmap" | "hybrid") => void,
   onUrlOrSearch: (coords: google.maps.LatLngLiteral) => void;
   onScreenshot: () => void;
-  showOnlyApproved: boolean;
-  setShowOnlyApproved: (show: boolean) => void;
+  pinFilter: 'all' | 'approved' | 'not-approved';
+  setPinFilter: (filter: 'all' | 'approved' | 'not-approved') => void;
   zoomLevel: number;
 }) => {
   const [mapUrl, setMapUrl] = useState('');
@@ -552,14 +556,35 @@ const MapControls = ({
                 <Camera className="h-5 w-5" />
             </Button>
             <Separator orientation="vertical" className="h-6" />
-            <Switch
-                id="approved-switch"
-                checked={showOnlyApproved}
-                onCheckedChange={setShowOnlyApproved}
-            />
-             <Label htmlFor="approved-switch" className="flex items-center gap-2 cursor-pointer text-sm font-medium shrink-0">
-                <Filter className="h-5 w-5" />
-            </Label>
+            <div className="flex items-center gap-1">
+                <Button
+                    size="sm"
+                    variant={pinFilter === 'all' ? 'default' : 'outline'}
+                    onClick={() => setPinFilter('all')}
+                    className="h-8 px-2 text-xs"
+                >
+                    <Eye className="h-3 w-3 mr-1" />
+                    All
+                </Button>
+                <Button
+                    size="sm"
+                    variant={pinFilter === 'approved' ? 'default' : 'outline'}
+                    onClick={() => setPinFilter('approved')}
+                    className="h-8 px-2 text-xs"
+                >
+                    <Eye className="h-3 w-3 mr-1" />
+                    Approved
+                </Button>
+                <Button
+                    size="sm"
+                    variant={pinFilter === 'not-approved' ? 'default' : 'outline'}
+                    onClick={() => setPinFilter('not-approved')}
+                    className="h-8 px-2 text-xs"
+                >
+                    <EyeOff className="h-3 w-3 mr-1" />
+                    Pending
+                </Button>
+            </div>
             <Separator orientation="vertical" className="h-6" />
             <Switch
                 id="satellite-switch"
@@ -610,7 +635,7 @@ function MapContent({ initialReports }: { initialReports: Report[] }) {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   
   // New toggle states
-  const [showOnlyApproved, setShowOnlyApproved] = useState(false);
+  const [pinFilter, setPinFilter] = useState<'all' | 'approved' | 'not-approved'>('all');
   const [zoomLevel, setZoomLevel] = useState(initialZoom);
 
   const handlePinApprove = useCallback(async (report: Report) => {
@@ -883,7 +908,7 @@ function MapContent({ initialReports }: { initialReports: Report[] }) {
               onCloseClick={handleInfoWindowClose}
               onEditClick={handleEditClick}
               onPinApprove={handlePinApprove}
-              showOnlyApproved={showOnlyApproved}
+              pinFilter={pinFilter}
               zoomLevel={zoomLevel}
             />
             {temporaryPin && (
@@ -922,8 +947,8 @@ function MapContent({ initialReports }: { initialReports: Report[] }) {
             setMapType={setMapType}
             onUrlOrSearch={handleUrlOrSearch}
             onScreenshot={handleScreenshot}
-            showOnlyApproved={showOnlyApproved}
-            setShowOnlyApproved={setShowOnlyApproved}
+            pinFilter={pinFilter}
+            setPinFilter={setPinFilter}
             zoomLevel={zoomLevel}
         />
       </div>
