@@ -323,7 +323,7 @@ const MapControls = ({
   setShowNames,
   showOnlyApproved,
   setShowOnlyApproved,
-  zoomLevel
+zoomLevel: number
 } : {
   mapType: "roadmap" | "hybrid",
   setMapType: (type: "roadmap" | "hybrid") => void,
@@ -341,29 +341,12 @@ const MapControls = ({
   const [isSearching, setIsSearching] = useState(false);
   const [predictions, setPredictions] = useState<google.maps.places.AutocompletePrediction[]>([]);
   const [showPredictions, setShowPredictions] = useState(false);
-  const [zoomLevel, setZoomLevel] = useState<number>(10);
   const { toast } = useToast();
   const { t } = useTranslation();
   const map = useMap();
   const places = useMapsLibrary('places');
   const autocompleteService = useRef<google.maps.places.AutocompleteService | null>(null);
   const placesService = useRef<google.maps.places.PlacesService | null>(null);
-
-  // Track zoom level changes
-  useEffect(() => {
-    if (!map) return;
-    
-    const zoomListener = map.addListener('zoom_changed', () => {
-      const currentZoom = map.getZoom() || 10;
-      setZoomLevel(currentZoom);
-    });
-    
-    // Set initial zoom
-    const initialZoom = map.getZoom() || 10;
-    setZoomLevel(initialZoom);
-    
-    return () => google.maps.event.removeListener(zoomListener);
-  }, [map]);
 
   // Initialize Places services
   useEffect(() => {
