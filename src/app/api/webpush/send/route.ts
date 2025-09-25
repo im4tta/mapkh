@@ -130,7 +130,12 @@ export async function POST(request: NextRequest) {
         
         // If subscription is invalid, mark it as inactive
         if (error.statusCode === 410 || error.statusCode === 404) {
-          // TODO: Mark subscription as inactive in Firestore
+          // Mark subscription as inactive in Firestore
+          await updateDoc(doc.ref, { 
+            active: false, 
+            lastError: error instanceof Error ? error.message : 'Unknown error',
+            lastErrorAt: new Date()
+          });
           console.log(`Marking subscription ${doc.id} as inactive`);
         }
         

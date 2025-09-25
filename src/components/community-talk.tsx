@@ -15,7 +15,7 @@ import { useAuth } from '@/context/auth-provider';
 import { addPost, updatePost, deletePost } from '@/app/actions';
 import { CommunityPost, UserInfo } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Send, MoreHorizontal, Pencil, Trash2, Reply, X, AtSign } from 'lucide-react';
+import { Loader2, Send, MoreHorizontal, Pencil, Trash2, Reply, X, AtSign, MessageSquare } from 'lucide-react';
 import { UserMentionInput, extractMentions, renderTextWithMentions } from '@/components/user-mention-input';
 import { sendMentionNotifications, sendReplyNotification } from '@/lib/notification-utils';
 import { collection, onSnapshot, query, orderBy, limit, Timestamp } from 'firebase/firestore';
@@ -52,28 +52,33 @@ const PostItem = memo(({ post, onEdit, onReply }: { post: CommunityPost, onEdit:
     }, [post.createdAt]);
 
     return (
-        <div className="group flex items-start gap-3">
-            <Avatar>
+        <div className="group flex items-start gap-4 p-4 rounded-xl bg-gradient-to-r from-background/50 to-muted/20 border border-border/30 hover:border-border/50 transition-all duration-200 hover:shadow-md backdrop-blur-sm">
+            <Avatar className="ring-2 ring-primary/10 hover:ring-primary/20 transition-all duration-200">
                 <AvatarImage src={post.user.avatar || undefined} />
-                <AvatarFallback>{post.user.name?.charAt(0) || 'U'}</AvatarFallback>
+                <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/10 text-primary font-semibold">
+                    {post.user.name?.charAt(0) || 'U'}
+                </AvatarFallback>
             </Avatar>
-            <div className="flex-1">
-                <div className="flex items-center gap-2">
-                    <span className="font-semibold text-sm">{post.user.name}</span>
-                    <span className="text-xs text-muted-foreground">
+            <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-2">
+                    <span className="font-semibold text-sm text-foreground">{post.user.name}</span>
+                    <span className="text-xs text-muted-foreground/70 bg-muted/50 px-2 py-1 rounded-full">
                         {formattedDate}
                         {post.updatedAt && " (edited)"}
                     </span>
                 </div>
                 
                  {post.replyTo && (
-                    <div className="text-xs text-muted-foreground bg-muted p-2 rounded-md mt-1 border-l-2 border-primary">
-                        <p className="font-semibold">Replying to {post.replyTo.user.name}</p>
-                        <p className="line-clamp-1">{post.replyTo.text}</p>
+                    <div className="text-xs bg-gradient-to-r from-muted/40 to-muted/20 p-3 rounded-lg mt-2 mb-3 border-l-3 border-primary/50 backdrop-blur-sm">
+                        <div className="flex items-center gap-2 mb-1">
+                            <Reply className="h-3 w-3 text-primary" />
+                            <p className="font-semibold text-primary">Replying to {post.replyTo.user.name}</p>
+                        </div>
+                        <p className="line-clamp-2 text-muted-foreground">{post.replyTo.text}</p>
                     </div>
                 )}
                 
-                <div className="text-sm text-foreground bg-muted p-2 rounded-md mt-1 whitespace-pre-wrap">
+                <div className="text-sm text-foreground bg-gradient-to-r from-muted/30 to-muted/10 p-4 rounded-lg border border-border/20 whitespace-pre-wrap leading-relaxed">
                     {renderTextWithMentions(post.text)}
                 </div>
             </div>
@@ -81,37 +86,59 @@ const PostItem = memo(({ post, onEdit, onReply }: { post: CommunityPost, onEdit:
                 <>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100">
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-muted/50 rounded-lg"
+                            >
                                 <MoreHorizontal className="h-4 w-4" />
                             </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent>
-                             <DropdownMenuItem onClick={() => onReply(post)}>
-                                <Reply className="mr-2 h-4 w-4" /> Reply
+                        <DropdownMenuContent align="end" className="w-48 bg-background/95 backdrop-blur-md border-border/50">
+                            <DropdownMenuItem 
+                                onClick={() => onReply(post)}
+                                className="flex items-center gap-2 hover:bg-primary/10 focus:bg-primary/10 cursor-pointer"
+                            >
+                                <Reply className="h-4 w-4 text-primary" />
+                                Reply
                             </DropdownMenuItem>
                             {user.uid === post.user.uid && (
                                 <>
-                                    <DropdownMenuItem onClick={() => onEdit(post)}>
-                                        <Pencil className="mr-2 h-4 w-4" /> Edit
+                                    <DropdownMenuItem 
+                                        onClick={() => onEdit(post)}
+                                        className="flex items-center gap-2 hover:bg-primary/10 focus:bg-primary/10 cursor-pointer"
+                                    >
+                                        <Pencil className="h-4 w-4 text-primary" />
+                                        Edit
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => setIsDeleting(true)} className="text-destructive">
-                                        <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                    <DropdownMenuItem 
+                                        onClick={() => setIsDeleting(true)}
+                                        className="flex items-center gap-2 hover:bg-destructive/10 focus:bg-destructive/10 text-destructive cursor-pointer"
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                        Delete
                                     </DropdownMenuItem>
                                 </>
                             )}
                         </DropdownMenuContent>
                     </DropdownMenu>
+                    
                     <AlertDialog open={isDeleting} onOpenChange={setIsDeleting}>
-                        <AlertDialogContent>
+                        <AlertDialogContent className="bg-background/95 backdrop-blur-md border-border/50">
                             <AlertDialogHeader>
-                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    This will permanently delete your message.
+                                <AlertDialogTitle className="text-lg font-semibold">Delete Message</AlertDialogTitle>
+                                <AlertDialogDescription className="text-muted-foreground">
+                                    Are you sure you want to delete this message? This action cannot be undone.
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+                                <AlertDialogCancel className="hover:bg-muted/50">Cancel</AlertDialogCancel>
+                                <AlertDialogAction 
+                                    onClick={handleDelete}
+                                    className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                                >
+                                    Delete
+                                </AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>
                     </AlertDialog>
@@ -175,7 +202,7 @@ export function CommunityTalk() {
   useEffect(() => {
     setIsLoading(true);
     // Reduce limit for better mobile performance
-    const q = query(collection(db, "posts"), orderBy("createdAt", "asc"), limit(30));
+    const q = query(collection(db, "posts"), orderBy("createdAt", "desc"), limit(30));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const postsData = snapshot.docs.map(doc => {
         const data = doc.data();
@@ -265,43 +292,95 @@ export function CommunityTalk() {
   }, [posts, handleReply]);
 
   return (
-    <Card className="h-full flex flex-col flex-1">
-      <CardHeader>
-        <CardTitle>{t('contributions.talk.title')}</CardTitle>
-        <CardDescription>{t('contributions.talk.description')}</CardDescription>
-      </CardHeader>
-      <CardContent className="flex-1 flex flex-col min-h-0">
-        <ScrollArea className="flex-1 pr-4 -mr-4" ref={scrollAreaRef}>
-          <div className="space-y-4">
-            {isLoading ? (
-                <>
-                    <Skeleton className="h-16 w-full" />
-                    <Skeleton className="h-16 w-full" />
-                    <Skeleton className="h-16 w-full" />
-                </>
-            ) : posts.length > 0 ? (
-              renderedPosts
-            ) : (
-                <div className="text-center text-muted-foreground p-8">{t('contributions.talk.no_messages')}</div>
-            )}
+    <Card className="h-full flex flex-col flex-1 bg-gradient-to-br from-background via-background to-muted/20 border-border/50 shadow-xl">
+      <CardHeader className="bg-gradient-to-r from-primary/5 via-primary/3 to-transparent border-b border-border/30">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center border border-primary/20">
+            <MessageSquare className="h-5 w-5 text-primary" />
           </div>
-        </ScrollArea>
-        <div className="mt-4 pt-4 border-t">
+          <div>
+            <CardTitle className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">
+              {t('contributions.talk.title')}
+            </CardTitle>
+            <CardDescription className="text-sm text-muted-foreground/80">
+              {t('contributions.talk.description')}
+            </CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="flex-1 flex flex-col min-h-0 p-0">
+        {/* Messages Container */}
+        <div className="flex-1 relative overflow-hidden">
+          <div 
+            className="h-full overflow-y-auto overflow-x-hidden px-6 py-4 scroll-smooth"
+            ref={scrollAreaRef}
+            style={{
+              scrollbarWidth: 'thin',
+              scrollbarColor: 'hsl(var(--primary) / 0.3) transparent'
+            }}
+          >
+            <div className="space-y-4 min-h-full">
+              {isLoading ? (
+                  <div className="space-y-4 animate-pulse">
+                      <Skeleton className="h-16 w-full rounded-xl" />
+                      <Skeleton className="h-16 w-full rounded-xl" />
+                      <Skeleton className="h-16 w-full rounded-xl" />
+                  </div>
+              ) : posts.length > 0 ? (
+                <div className="space-y-4">
+                  {renderedPosts}
+                </div>
+              ) : (
+                  <div className="flex-1 flex items-center justify-center min-h-[300px]">
+                    <div className="text-center space-y-4 animate-fade-in">
+                      <div className="h-20 w-20 mx-auto bg-gradient-to-br from-primary/20 to-primary/10 rounded-2xl flex items-center justify-center border border-primary/20">
+                        <MessageSquare className="h-10 w-10 text-primary/70" />
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-lg font-semibold text-foreground">Start the conversation</p>
+                        <p className="text-muted-foreground max-w-sm mx-auto">
+                          {t('contributions.talk.no_messages')}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+              )}
+            </div>
+          </div>
+        </div>
+        
+        {/* Input Form */}
+        <div className="border-t border-border/30 bg-gradient-to-r from-muted/20 via-background to-muted/20 p-6">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="flex items-start gap-2">
-              <Avatar className="mt-1">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="flex items-start gap-3">
+              <Avatar className="mt-1 ring-2 ring-primary/10">
                 <AvatarImage src={user?.photoURL || undefined} />
-                <AvatarFallback>{user?.displayName?.charAt(0) || 'U'}</AvatarFallback>
+                <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/10 text-primary font-semibold">
+                  {user?.displayName?.charAt(0) || 'U'}
+                </AvatarFallback>
               </Avatar>
-              <div className="flex-1 space-y-2">
+              <div className="flex-1 space-y-3">
                  {(editingPost || replyingTo) && (
-                    <div className="text-xs text-muted-foreground bg-muted p-2 rounded-md flex justify-between items-center">
+                    <div className="text-xs bg-gradient-to-r from-muted/50 to-muted/30 p-3 rounded-xl border border-border/30 flex justify-between items-center backdrop-blur-sm">
                         {editingPost ? (
-                             <p>Editing message...</p>
+                             <div className="flex items-center gap-2">
+                               <Pencil className="h-3 w-3 text-primary" />
+                               <p className="text-muted-foreground font-medium">Editing message...</p>
+                             </div>
                         ) : (
-                            <p className="line-clamp-1">Replying to {replyingTo?.user.name}</p>
+                            <div className="flex items-center gap-2">
+                              <Reply className="h-3 w-3 text-primary" />
+                              <p className="text-muted-foreground font-medium line-clamp-1">
+                                Replying to {replyingTo?.user.name}
+                              </p>
+                            </div>
                         )}
-                        <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => { setEditingPost(null); setReplyingTo(null); }}>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-6 w-6 hover:bg-destructive/10 hover:text-destructive transition-colors" 
+                          onClick={() => { setEditingPost(null); setReplyingTo(null); }}
+                        >
                             <X className="h-3 w-3" />
                         </Button>
                     </div>
@@ -319,7 +398,7 @@ export function CommunityTalk() {
                               setMentionedUsers(prev => [...prev, user]);
                             }}
                             placeholder={t('contributions.talk.placeholder')}
-                            className="resize-none border rounded-md p-3 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="resize-none border-border/50 rounded-xl p-4 w-full focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 bg-background/50 backdrop-blur-sm transition-all duration-200 hover:border-primary/30"
                             disabled={isSubmitting || authLoading}
                           />
                         </FormControl>
@@ -328,8 +407,17 @@ export function CommunityTalk() {
                     )}
                   />
               </div>
-              <Button type="submit" size="icon" disabled={isSubmitting || authLoading}>
-                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              <Button 
+                type="submit" 
+                size="icon" 
+                disabled={isSubmitting || authLoading}
+                className="mt-1 h-10 w-10 rounded-xl bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:scale-100"
+              >
+                {isSubmitting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
               </Button>
             </form>
           </Form>

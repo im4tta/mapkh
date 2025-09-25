@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation';
 import { getReportByNumericId, uploadReportFile, verifyPlaceId, getViolationTerms, getSubViolationTypes } from '@/app/actions';
 import { Report, ViolationTerm, SubViolationType } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Loader2, MapPin, CheckCircle, Clock, XCircle, AlertCircle, ShieldCheck, Link2, Download, UploadCloud, Globe, User, Satellite, Key } from 'lucide-react';
+import { Loader2, MapPin, CheckCircle, Clock, XCircle, AlertCircle, ShieldCheck, Link2, Download, UploadCloud, Globe, User, Satellite, Key, Info, FileText } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { format, formatDistanceToNow, isValid } from 'date-fns';
 import { Timestamp } from 'firebase/firestore';
@@ -576,67 +576,120 @@ export default function VerificationReportPage() {
                         </div>
                     </CardContent>
                 </Card>
-                <Card className="shadow-2xl" ref={printRef}>
-                    <CardHeader className={`text-center rounded-t-lg ${found ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'} p-6`}>
+                <Card className="shadow-2xl border-2" ref={printRef}>
+                    <CardHeader className={`text-center rounded-t-lg ${found ? 'bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/40 dark:to-emerald-900/40 border-green-200 dark:border-green-700' : 'bg-gradient-to-r from-red-100 to-rose-100 dark:from-red-900/40 dark:to-rose-900/40 border-red-200 dark:border-red-700'} p-6 border-b-2`}>
                         <div className="flex items-center justify-center gap-4">
                             {found ? 
-                                <ShieldCheck className="h-12 w-12 text-green-600" /> :
-                                <XCircle className="h-12 w-12 text-red-600" />
+                                <div className="p-3 rounded-full bg-green-500/20 border-2 border-green-500">
+                                    <ShieldCheck className="h-12 w-12 text-green-600 dark:text-green-400" />
+                                </div> :
+                                <div className="p-3 rounded-full bg-red-500/20 border-2 border-red-500">
+                                    <XCircle className="h-12 w-12 text-red-600 dark:text-red-400" />
+                                </div>
                             }
                             <div className="text-left">
-                                <CardTitle className="text-2xl">{found ? "Location Found" : "Location Not Found"}</CardTitle>
-                                <CardDescription className="text-base">{found ? "This location has been verified." : "This location could not be verified."}</CardDescription>
+                                <CardTitle className={`text-2xl font-bold ${found ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200'}`}>
+                                    {found ? "✓ Location Verified" : "✗ Location Not Found"}
+                                </CardTitle>
+                                <CardDescription className={`text-base ${found ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
+                                    {found ? "This location has been successfully verified." : "This location could not be verified."}
+                                </CardDescription>
                             </div>
                         </div>
                     </CardHeader>
-                    <CardContent className="p-6 space-y-6">
-                        <div className="text-center pb-4 border-b">
-                            <p className="text-xl font-bold">Report #{report.reportNumber}</p>
-                            <p className="text-sm text-muted-foreground font-mono mt-1">{report.placeId || 'No Place ID'}</p>
+                    <CardContent className="p-6 space-y-6 bg-gradient-to-b from-slate-50/50 to-white dark:from-slate-900/50 dark:to-slate-800">
+                        <div className="text-center pb-4 border-b-2 border-dashed border-slate-200 dark:border-slate-700">
+                            <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-100 dark:bg-blue-900/30 rounded-full border border-blue-200 dark:border-blue-700">
+                                <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                                <p className="text-xl font-bold text-blue-800 dark:text-blue-200">
+                                    Report #{report?.reportNumber || 'N/A'}
+                                </p>
+                            </div>
+                            <div className="mt-3 space-y-2">
+                                <p className="text-sm text-muted-foreground font-semibold">Place ID</p>
+                                <p className="text-sm font-mono px-3 py-2 bg-slate-100 dark:bg-slate-800 rounded-md inline-block border">
+                                    {report?.placeId || 'No Place ID Available'}
+                                </p>
+                            </div>
                         </div>
 
                         <div className="space-y-4">
-                            <div>
-                                <h3 className="font-semibold text-lg mb-3 border-b pb-2">Location & Details</h3>
+                            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/50 dark:to-indigo-950/50 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                                <h3 className="font-semibold text-lg mb-3 flex items-center gap-2 text-blue-800 dark:text-blue-200">
+                                    <MapPin className="h-5 w-5" />
+                                    Location & Details
+                                </h3>
                                 <div className="space-y-3 text-sm text-foreground">
-                                    <div className="flex items-start gap-3"><MapPin className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" /><p><strong className="font-medium">Location Name:</strong> {report.englishLanguage || report.description}</p></div>
-                                    <div className="flex items-start gap-3"><Link2 className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" /><p><strong className="font-medium">Full URL:</strong> <a href={fullUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-all">{fullUrl}</a></p></div>
-                                    <div className="flex items-start gap-3"><Globe className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" /><p><strong className="font-medium">Lat, Long:</strong> {report.position.lat}, {report.position.lng}</p></div>
-                                    <div className="flex items-start gap-3"><MapPin className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" /><p><strong className="font-medium">Province:</strong> {report.province}</p></div>
-                                    <div className="flex items-start gap-3"><Clock className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" /><p><strong className="font-medium">Found Timestamp:</strong> {date ? format(date, 'PPP p') : 'N/A'}</p></div>
-                                    <div className="flex items-start gap-3"><User className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" /><p><strong className="font-medium">Reported By:</strong> {report.reportedByName}</p></div>
+                                    <div className="flex items-start gap-3 p-2 bg-white/60 dark:bg-slate-800/60 rounded-md">
+                                        <MapPin className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                                        <p><strong className="font-medium">Location Name:</strong> {report.englishLanguage || report.description}</p>
+                                    </div>
+                                    <div className="flex items-start gap-3 p-2 bg-white/60 dark:bg-slate-800/60 rounded-md">
+                                        <Link2 className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                                        <p><strong className="font-medium">Full URL:</strong> <a href={fullUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-all">{fullUrl}</a></p>
+                                    </div>
+                                    <div className="flex items-start gap-3 p-2 bg-white/60 dark:bg-slate-800/60 rounded-md">
+                                        <Globe className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                                        <p><strong className="font-medium">Lat, Long:</strong> {report.position.lat}, {report.position.lng}</p>
+                                    </div>
+                                    <div className="flex items-start gap-3 p-2 bg-white/60 dark:bg-slate-800/60 rounded-md">
+                                        <MapPin className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                                        <p><strong className="font-medium">Province:</strong> {report.province}</p>
+                                    </div>
+                                    <div className="flex items-start gap-3 p-2 bg-white/60 dark:bg-slate-800/60 rounded-md">
+                                        <Clock className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                                        <p><strong className="font-medium">Found Timestamp:</strong> {date ? format(date, 'PPP p') : 'N/A'}</p>
+                                    </div>
+                                    <div className="flex items-start gap-3 p-2 bg-white/60 dark:bg-slate-800/60 rounded-md">
+                                        <User className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                                        <p><strong className="font-medium">Reported By:</strong> {report.reportedByName}</p>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div>
-                                <h3 className="font-semibold text-lg mb-3 border-b pb-2">Translation Fields</h3>
+                            <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/50 dark:to-pink-950/50 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
+                                <h3 className="font-semibold text-lg mb-3 flex items-center gap-2 text-purple-800 dark:text-purple-200">
+                                    <Globe className="h-5 w-5" />
+                                    Translation Fields
+                                </h3>
                                 <div className="space-y-4">
-                                    <div className="space-y-4">
-                                        <div>
-                                            <Label htmlFor="english-translation" className="text-sm font-medium">English Translation</Label>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="english-translation" className="text-sm font-medium flex items-center gap-2">
+                                                <span className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold">EN</span>
+                                                English Translation
+                                            </Label>
                                             <Textarea
                                                 id="english-translation"
                                                 placeholder="Enter English translation..."
                                                 defaultValue={report.englishLanguage || ''}
-                                                className="mt-1 min-h-[100px] resize-y"
-                                                rows={4}
+                                                className="min-h-[80px] resize-y bg-white/80 dark:bg-slate-800/80 border-blue-200 dark:border-blue-700 focus:border-blue-400 dark:focus:border-blue-500"
+                                                rows={3}
                                             />
                                         </div>
-                                        <div>
-                                            <Label htmlFor="khmer-translation" className="text-sm font-medium">Khmer Translation</Label>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="khmer-translation" className="text-sm font-medium flex items-center gap-2">
+                                                <span className="w-4 h-4 rounded-full bg-red-500 flex items-center justify-center text-white text-xs font-bold">KH</span>
+                                                Khmer Translation
+                                            </Label>
                                             <Textarea
                                                 id="khmer-translation"
                                                 placeholder="បញ្ចូលការបកប្រែជាភាសាខ្មែរ..."
                                                 defaultValue={report.nativeKhmerLanguage || ''}
-                                                className="mt-1 font-khmer min-h-[100px] resize-y"
-                                                rows={4}
+                                                className="font-khmer min-h-[80px] resize-y bg-white/80 dark:bg-slate-800/80 border-red-200 dark:border-red-700 focus:border-red-400 dark:focus:border-red-500"
+                                                rows={3}
                                             />
                                         </div>
                                     </div>
-                                    <div className="flex flex-col gap-1 text-xs text-muted-foreground">
-                                        <p>• Translation fields are auto-filled from the original report</p>
-                                        <p>• You can edit these fields as needed for verification</p>
-                                        <p>• Text areas will expand to accommodate longer text</p>
+                                    <div className="bg-amber-50 dark:bg-amber-950/30 p-3 rounded-md border border-amber-200 dark:border-amber-800">
+                                        <div className="flex items-start gap-2">
+                                            <Info className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                                            <div className="text-xs text-amber-800 dark:text-amber-200 space-y-1">
+                                                <p>• Translation fields are auto-filled from the original report</p>
+                                                <p>• You can edit these fields as needed for verification</p>
+                                                <p>• Text areas are compact but will expand to show full content</p>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

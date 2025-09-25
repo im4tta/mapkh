@@ -375,7 +375,11 @@ export function AdminNotificationManager() {
   };
 
   const viewNotificationDetails = (id: string) => {
-    // TODO: Implement notification details modal
+    // Find the notification and show details
+    const notification = notifications.find(n => n.id === id);
+    if (notification) {
+      alert(`Notification Details:\n\nID: ${notification.id}\nTitle: ${notification.title}\nMessage: ${notification.message}\nType: ${notification.type}\nCreated: ${notification.createdAt?.toDate?.()?.toLocaleString() || 'Unknown'}\nSent to: ${notification.sentToCount || 0} users`);
+    }
     console.log('View details for notification:', id);
   };
 

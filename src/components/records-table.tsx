@@ -3,10 +3,10 @@
 'use client';
 
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { deleteReport, updateReport, toggleReportVerification, getSubViolationTypes, getUsers, createReportDriveFolder, getAndSetPlaceId } from '@/app/actions';
+import { deleteReport, updateReport, toggleReportVerification, getSubViolationTypes, getUsers, createReportDriveFolder, getAndSetPlaceId, getDriveFolderInfo } from '@/app/actions';
 import { Badge } from "@/components/ui/badge"
 import { Report, SubViolationType, UserInfo } from "@/lib/types"
-import { MoreHorizontal, Trash2, Pencil, Loader2, ArrowUpDown, LayoutGrid, List, Activity, Check, MapPin, Pin, PinOff, Folder, Clock, CalendarClock, ThumbsUp, Link as LinkIcon, User, View, MessageSquare, UploadCloud, FolderPlus, LocateFixed, FileText, ExternalLink, Copy, ShieldCheck, Save, XCircle, Tag, CopyPlus } from 'lucide-react';
+import { MoreHorizontal, Trash2, Pencil, Loader2, ArrowUpDown, LayoutGrid, List, Activity, Check, MapPin, Pin, PinOff, Folder, Clock, CalendarClock, ThumbsUp, Link as LinkIcon, User, View, MessageSquare, UploadCloud, FolderPlus, LocateFixed, FileText, ExternalLink, Copy, ShieldCheck, Save, XCircle, Tag, CopyPlus, CheckCircle } from 'lucide-react';
 import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -41,7 +41,7 @@ import Link from 'next/link';
 import { useActivityDialog } from '@/context/activity-dialog-provider';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
-import { Dialog, DialogContent, DialogHeader, DialogTitle as NormalDialogTitle } from './ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle as NormalDialogTitle, DialogDescription } from './ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { ScrollArea } from './ui/scroll-area';
 import { FileUploadDialog } from './file-upload-dialog';
@@ -292,29 +292,84 @@ const VerifiersDialog = ({ uids, onOpenChange }: { uids: string[], onOpenChange:
     }, [uids]);
 
     return (
-        <DialogContent>
-            <DialogHeader>
-                <NormalDialogTitle>Report Verifiers</NormalDialogTitle>
+        <DialogContent className="sm:max-w-md">
+            <DialogHeader className="pb-4">
+                <NormalDialogTitle className="flex items-center gap-2 text-lg font-semibold">
+                    <ThumbsUp className="h-5 w-5 text-primary" />
+                    Report Verifiers
+                    <Badge variant="secondary" className="ml-2 text-xs">
+                        {verifiers.length} {verifiers.length === 1 ? 'Verifier' : 'Verifiers'}
+                    </Badge>
+                </NormalDialogTitle>
+                <DialogDescription className="text-sm text-muted-foreground">
+                    Users who have verified this report
+                </DialogDescription>
             </DialogHeader>
-            <ScrollArea className="max-h-80">
-                <div className="space-y-4 pr-6">
-                    {isLoading ? (
-                        <div className="flex justify-center"><Loader2 className="animate-spin" /></div>
-                    ) : verifiers.length > 0 ? (
-                        verifiers.map(user => (
-                            <div key={user.uid} className="flex items-center gap-3">
-                                <Avatar className="h-8 w-8">
-                                    <AvatarImage src={user.avatar || undefined} />
-                                    <AvatarFallback>{user.name?.charAt(0) || 'U'}</AvatarFallback>
-                                </Avatar>
-                                <span className="text-sm font-medium">{user.name}</span>
-                            </div>
-                        ))
-                    ) : (
-                        <p className="text-sm text-muted-foreground text-center">No verifiers yet.</p>
-                    )}
+            
+            <div className="min-h-[120px]">
+                {isLoading ? (
+                    <div className="flex flex-col items-center justify-center py-8 space-y-3">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        <p className="text-sm text-muted-foreground font-medium">Loading verifiers...</p>
+                    </div>
+                ) : verifiers.length > 0 ? (
+                    <ScrollArea className="max-h-80 pr-4">
+                        <div className="space-y-3">
+                            {verifiers.map((user, index) => (
+                                <div 
+                                    key={user.uid} 
+                                    className="flex items-center gap-4 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                                >
+                                    <div className="relative">
+                                        <Avatar className="h-10 w-10 border-2 border-primary/20">
+                                            <AvatarImage src={user.avatar || undefined} />
+                                            <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                                                {user.name?.charAt(0)?.toUpperCase() || 'U'}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        <div className="absolute -bottom-1 -right-1 h-4 w-4 bg-green-500 rounded-full border-2 border-background flex items-center justify-center">
+                                            <CheckCircle className="h-2.5 w-2.5 text-white" />
+                                        </div>
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-medium text-foreground truncate">
+                                            {user.name || 'Unknown User'}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            Verifier #{index + 1}
+                                        </p>
+                                    </div>
+                                    <Badge variant="outline" className="text-xs">
+                                        <CheckCircle className="h-3 w-3 mr-1" />
+                                        Verified
+                                    </Badge>
+                                </div>
+                            ))}
+                        </div>
+                    </ScrollArea>
+                ) : (
+                    <div className="flex flex-col items-center justify-center py-8 space-y-3">
+                        <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
+                            <ThumbsUp className="h-6 w-6 text-muted-foreground" />
+                        </div>
+                        <div className="text-center space-y-1">
+                            <p className="font-medium text-foreground">No verifiers yet</p>
+                            <p className="text-sm text-muted-foreground">
+                                This report hasn't been verified by anyone
+                            </p>
+                        </div>
+                    </div>
+                )}
+            </div>
+            
+            {verifiers.length > 0 && (
+                <div className="pt-4 border-t">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>Total Verifications</span>
+                        <span className="font-medium">{verifiers.length}</span>
+                    </div>
                 </div>
-            </ScrollArea>
+            )}
         </DialogContent>
     );
 }
@@ -367,6 +422,7 @@ export function RecordsTable({
   const [uploadingReport, setUploadingReport] = useState<Report | null>(null);
   const [subViolationTypes, setSubViolationTypes] = useState<SubViolationType[]>([]);
   const [editingPlaceId, setEditingPlaceId] = useState<{ id: string, value: string } | null>(null);
+  const [evidenceCounts, setEvidenceCounts] = useState<Record<string, number>>({});
 
   const { toast } = useToast();
 
@@ -375,6 +431,32 @@ export function RecordsTable({
         if(result.success && result.data) setSubViolationTypes(result.data || []);
     });
   }, []);
+
+  // Fetch evidence counts for reports with driveLink
+  useEffect(() => {
+    const fetchEvidenceCounts = async () => {
+      const reportsWithDriveLink = data.filter(report => report.driveLink);
+      const counts: Record<string, number> = {};
+      
+      await Promise.all(
+        reportsWithDriveLink.map(async (report) => {
+          try {
+            const result = await getDriveFolderInfo(report.driveLink!);
+            counts[report.id] = result.fileCount;
+          } catch (error) {
+            console.error(`Failed to get evidence count for report ${report.id}:`, error);
+            counts[report.id] = 0;
+          }
+        })
+      );
+      
+      setEvidenceCounts(counts);
+    };
+
+    if (data.length > 0) {
+      fetchEvidenceCounts();
+    }
+  }, [data]);
   
   const handleEdit = (report: Report) => setEditingReport(report);
   
@@ -1064,6 +1146,21 @@ export function RecordsTable({
                                         </TooltipContent>
                                     </Tooltip>
                                 </TooltipProvider>
+                                {report.driveLink && (
+                                    <TooltipProvider>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <Badge variant="outline" className="h-7 px-2 flex items-center gap-1">
+                                                    <Folder className="h-3 w-3" />
+                                                    {evidenceCounts[report.id] || 0}
+                                                </Badge>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                                <p>{evidenceCounts[report.id] || 0} Evidence Files</p>
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
+                                )}
                                 <TooltipProvider>
                                     <Tooltip>
                                         <TooltipTrigger asChild>

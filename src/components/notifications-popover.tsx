@@ -128,6 +128,7 @@ const NotificationItem = ({ notification, onClose, onDismiss }: { notification: 
 export function NotificationsPopover() {
   const { user } = useAuth();
   const [communityNotifications, setCommunityNotifications] = useState<Notification[]>([]);
+  const [personalNotifications, setPersonalNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
@@ -140,6 +141,7 @@ export function NotificationsPopover() {
 
     setIsLoading(true);
     
+    // Fetch community notifications (userId is null)
     const communityQuery = query(collection(db, 'notifications'), where('userId', '==', null));
     const unsubCommunity = onSnapshot(communityQuery, 
         (snapshot) => {
@@ -155,23 +157,41 @@ export function NotificationsPopover() {
         }
     );
 
+    // Fetch personal notifications (userId matches current user)
+    const personalQuery = query(collection(db, 'notifications'), where('userId', '==', user.uid));
+    const unsubPersonal = onSnapshot(personalQuery, 
+        (snapshot) => {
+            let notifs = snapshot.docs.map((d: any) => ({ id: d.id, ...d.data() } as Notification));
+            notifs.sort((a, b) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime());
+            setPersonalNotifications(notifs);
+        }, 
+        (err) => {
+            console.error(`Error fetching personal notifications:`, err);
+            toast({ variant: 'destructive', title: `Failed to load personal notifications.` });
+        }
+    );
+
     return () => {
       unsubCommunity();
+      unsubPersonal();
     };
   }, [user, toast]);
 
   // Group notifications by action type
   const groupedNotifications = useMemo(() => {
+    // Combine community and personal notifications
+    const allNotifications = [...communityNotifications, ...personalNotifications];
+    
     const groups = {
-      all: communityNotifications,
-      comments: communityNotifications.filter(n => ['comment', 'mention', 'reply'].includes(n.type)),
-      verification: communityNotifications.filter(n => n.type === 'verification'),
-      creation: communityNotifications.filter(n => ['new_report', 'new_user'].includes(n.type)),
-      updates: communityNotifications.filter(n => ['report_edited', 'status_change', 'archived'].includes(n.type)),
-      achievements: communityNotifications.filter(n => n.type === 'new_badge')
+      all: allNotifications,
+      comments: allNotifications.filter(n => ['comment', 'mention', 'reply'].includes(n.type)),
+      verification: allNotifications.filter(n => n.type === 'verification'),
+      creation: allNotifications.filter(n => ['new_report', 'new_user'].includes(n.type)),
+      updates: allNotifications.filter(n => ['report_edited', 'status_change', 'archived'].includes(n.type)),
+      achievements: allNotifications.filter(n => n.type === 'new_badge')
     };
     return groups;
-  }, [communityNotifications]);
+  }, [communityNotifications, personalNotifications]);
 
   // Count unread notifications per tab
   const tabCounts = useMemo(() => {

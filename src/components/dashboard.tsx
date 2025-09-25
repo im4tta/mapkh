@@ -221,7 +221,7 @@ export function Dashboard() {
                             <CardContent>
                                 <Carousel opts={{ loop: true, align: "start" }} plugins={[Autoplay({ delay: 3000, stopOnInteraction: true })]}>
                                     <CarouselContent>
-                                        {Object.entries(reportsByStatus).map(([statusKey, reports]) => (
+                                        {Object.entries(reportsByStatus || {}).map(([statusKey, reports]) => (
                                             <CarouselItem key={statusKey} className="md:basis-1/2 lg:basis-1/3">
                                                  <button onClick={() => openDetailDialog(t(`statuses.${statusKey}`), reports)} className="w-full text-left p-3 rounded-lg hover:bg-muted transition-colors">
                                                     <p className="text-sm text-muted-foreground">{t(`statuses.${statusKey}`)}</p>
@@ -237,7 +237,7 @@ export function Dashboard() {
                              <CardContent>
                                 <Carousel opts={{ loop: true, align: "start" }} plugins={[Autoplay({ delay: 3500, stopOnInteraction: true })]}>
                                     <CarouselContent>
-                                        {Object.entries(reportsByPriority).map(([priorityKey, reports]) => (
+                                        {Object.entries(reportsByPriority || {}).map(([priorityKey, reports]) => (
                                             <CarouselItem key={priorityKey} className="md:basis-1/2 lg:basis-1/3">
                                                  <button onClick={() => openDetailDialog(t(`priorities.${priorityKey}`), reports)} className="w-full text-left p-3 rounded-lg hover:bg-muted transition-colors">
                                                     <p className="text-sm text-muted-foreground">{t(`priorities.${priorityKey}`)}</p>
@@ -253,7 +253,7 @@ export function Dashboard() {
                              <CardContent>
                                 <Carousel opts={{ loop: true, align: "start" }} plugins={[Autoplay({ delay: 4000, stopOnInteraction: true })]}>
                                     <CarouselContent>
-                                        {Object.entries(reportsByProvince).map(([provinceKey, reports]) => (
+                                        {Object.entries(reportsByProvince || {}).map(([provinceKey, reports]) => (
                                             <CarouselItem key={provinceKey} className="md:basis-1/2 lg:basis-1/3">
                                                  <button onClick={() => openDetailDialog(t(`provinces.${provinceKey.replace(/\s+/g, '_')}`, { defaultValue: provinceKey }), reports)} className="w-full text-left p-3 rounded-lg hover:bg-muted transition-colors">
                                                     <p className="text-sm text-muted-foreground flex items-center gap-1"><Globe className="h-3 w-3"/> {t(`provinces.${provinceKey.replace(/\s+/g, '_')}`, { defaultValue: provinceKey })}</p>

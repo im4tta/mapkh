@@ -310,7 +310,7 @@ export const OSMAnalyticsMap: React.FC<OSMAnalyticsMapProps> = ({
     const fillColor = externalGetHeatmapColor(reportCount, maxReports);
     
     // Debug logging (can be removed in production)
-    console.log(`Province: ${provinceName}, Reports: ${reportCount}, MaxReports: ${maxReports}, Color: ${fillColor}`);
+    // Debug: Province: ${provinceName}, Reports: ${reportCount}, MaxReports: ${maxReports}, Color: ${fillColor}
     
     // Dynamic styling based on report density
     const weight = reportCount > 50 ? 3 : reportCount > 10 ? 2 : 1;

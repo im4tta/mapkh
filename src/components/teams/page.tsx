@@ -545,7 +545,7 @@ export default function TeamsPage() {
                                             </CollapsibleTrigger>
                                             <CollapsibleContent>
                                                 <div className="mt-2 space-y-2 text-xs border-t pt-2">
-                                                     {teamStats[team.id] && Object.entries(teamStats[team.id].byProvince).map(([province, stats]) => (
+                                                     {teamStats[team.id] && Object.entries(teamStats[team.id].byProvince || {}).map(([province, stats]) => (
                                                         <div key={province} className="p-2 bg-muted/50 rounded-md">
                                                             <p className="font-semibold">{province}: {stats.total}</p>
                                                             <div className="flex justify-between items-center pl-2">

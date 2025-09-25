@@ -4,7 +4,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CommunityTalk } from '@/components/community-talk';
-import { TipsSection } from '@/components/tips-section';
+import { LazyLoadTips } from '@/components/lazy-load-tips';
 import { MessageSquare, Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -38,7 +38,7 @@ export function ChatDialog({ isOpen, onOpenChange, defaultTab }: ChatDialogProps
                 <CommunityTalk />
             </TabsContent>
             <TabsContent value="tips" className="flex-1 overflow-hidden data-[state=inactive]:hidden px-6 pb-6 mt-0">
-                <TipsSection />
+                <LazyLoadTips />
             </TabsContent>
         </Tabs>
       </DialogContent>

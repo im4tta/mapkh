@@ -254,7 +254,7 @@ export async function updateBadgeMobile(count: number): Promise<boolean> {
   const detection = detectMobileEnvironment();
   
   if (!detection.supportsBadging) {
-    console.log('Badge API not supported, skipping badge update');
+    // Badge API not supported, skip badge update silently
     return false;
   }
   

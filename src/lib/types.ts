@@ -156,6 +156,10 @@ export type LeaderboardEntry = {
   name: string;
   avatar: string | null;
   reports: number;
+  score: number;
+  approvedReports?: number;
+  verifications?: number;
+  recentActivity?: number; // Reports in last 30 days
 };
 
 export type CommunityPost = {

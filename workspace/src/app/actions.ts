@@ -1127,9 +1127,19 @@ export async function getLeaderboard(): Promise<{ success: boolean; data?: Leade
             }
         });
 
-
         // Third pass: Aggregate contributions using the now-enriched reports data
-        const userContributions: Record<string, { count: number, name: string, avatar: string | null, uid: string }> = {};
+        const userContributions: Record<string, { 
+            count: number, 
+            name: string, 
+            avatar: string | null, 
+            uid: string,
+            approvedReports: number,
+            verifications: number,
+            recentActivity: number
+        }> = {};
+
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
         reportsData.forEach(report => {
             const uid = report.reportedBy;
@@ -1146,20 +1156,67 @@ export async function getLeaderboard(): Promise<{ success: boolean; data?: Leade
             const finalUid = uid || key; // Use the original key as UID if no UID exists
 
             if (!userContributions[key]) {
-                userContributions[key] = { count: 0, name: finalName, avatar: finalAvatar, uid: finalUid };
+                userContributions[key] = { 
+                    count: 0, 
+                    name: finalName, 
+                    avatar: finalAvatar, 
+                    uid: finalUid,
+                    approvedReports: 0,
+                    verifications: 0,
+                    recentActivity: 0
+                };
             }
+            
             userContributions[key].count++;
+            
+            // Count approved reports
+            if (report.status === 'approved') {
+                userContributions[key].approvedReports++;
+            }
+            
+            // Count verifications (based on verifications array)
+            if (report.verifications && report.verifications.length > 0) {
+                userContributions[key].verifications++;
+            }
+            
+            // Count recent activity (reports within last 30 days)
+            let reportDate: Date;
+            if (report.createdAt && typeof report.createdAt === 'object' && 'toDate' in report.createdAt) {
+                reportDate = (report.createdAt as any).toDate();
+            } else if (report.createdAt) {
+                reportDate = new Date(report.createdAt as string);
+            } else {
+                reportDate = new Date(); // fallback to current date
+            }
+            
+            if (reportDate >= thirtyDaysAgo) {
+                userContributions[key].recentActivity++;
+            }
         });
 
         const leaderboard = Object.values(userContributions)
-            .map(data => ({
-                id: data.uid,
-                name: data.name,
-                avatar: data.avatar,
-                reports: data.count,
-                rank: 0, // will be set next
-            }))
-            .sort((a, b) => b.reports - a.reports)
+            .map(data => {
+                // Calculate comprehensive score
+                const baseScore = data.count; // 1 point per report
+                const approvedBonus = data.approvedReports * 2; // 2 additional points per approved report
+                const verificationBonus = data.verifications * 3; // 3 points per verification
+                const recentActivityBonus = data.recentActivity * 0.5; // 0.5 points per recent report
+                
+                const totalScore = baseScore + approvedBonus + verificationBonus + recentActivityBonus;
+                
+                return {
+                    id: data.uid,
+                    name: data.name,
+                    avatar: data.avatar,
+                    reports: data.count,
+                    score: Math.round(totalScore * 10) / 10, // Round to 1 decimal place
+                    approvedReports: data.approvedReports,
+                    verifications: data.verifications,
+                    recentActivity: data.recentActivity,
+                    rank: 0, // will be set next
+                };
+            })
+            .sort((a, b) => b.score - a.score) // Sort by score instead of just reports
             .map((entry, index) => ({ ...entry, rank: index + 1 }));
 
         return { success: true, data: leaderboard };

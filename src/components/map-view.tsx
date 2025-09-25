@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback, memo, useRef } from 'react';
 import { APIProvider, Map, AdvancedMarker, Pin, useMap, InfoWindow, useMapsLibrary } from '@vis.gl/react-google-maps';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Satellite, Waypoints, MessageSquare, Edit, ListChecks, ClipboardPaste, X, Search, Flag, Languages, Camera, MapPin, Calendar, Clock, Eye, EyeOff, Filter } from 'lucide-react';
+import { Loader2, Satellite, Waypoints, MessageSquare, Edit, ListChecks, ClipboardPaste, X, Search, Flag, Languages, Camera, MapPin, Calendar, Clock, Eye, EyeOff, Filter, Download } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from './ui/input';
@@ -235,6 +235,54 @@ const Markers = memo(({
                                     <ListChecks className="mr-2 h-4 w-4"/>
                                     View Details
                                 </Link>
+                            </Button>
+                            <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="w-full h-8 text-xs justify-start" 
+                                onClick={() => {
+                                    const reportData = {
+                                        reportNumber: selectedReport.reportNumber,
+                                        englishLanguage: selectedReport.englishLanguage || 'N/A',
+                                        thaiLanguage: selectedReport.thaiLanguage || 'N/A',
+                                        nativeKhmerLanguage: selectedReport.nativeKhmerLanguage || 'N/A',
+                                        description: selectedReport.description || 'N/A',
+                                        placeId: selectedReport.placeId || 'N/A',
+                                        position: `${selectedReport.position.lat}, ${selectedReport.position.lng}`,
+                                        createdAt: selectedReport.createdAt instanceof Timestamp 
+                                            ? format(selectedReport.createdAt.toDate(), 'MMM dd, yyyy HH:mm')
+                                            : format(new Date(selectedReport.createdAt), 'MMM dd, yyyy HH:mm'),
+                                        status: selectedReport.status || 'N/A',
+                                        province: selectedReport.province || 'N/A'
+                                    };
+                                    
+                                    const csvContent = [
+                                        'Field,Value',
+                                        `Report Number,${reportData.reportNumber}`,
+                                        `English Name,${reportData.englishLanguage}`,
+                                        `Thai Name,${reportData.thaiLanguage}`,
+                                        `Khmer Name,${reportData.nativeKhmerLanguage}`,
+                                        `Description,${reportData.description}`,
+                                        `Place ID,${reportData.placeId}`,
+                                        `Coordinates,${reportData.position}`,
+                                        `Created At,${reportData.createdAt}`,
+                                        `Status,${reportData.status}`,
+                                        `Province,${reportData.province}`
+                                    ].join('\n');
+                                    
+                                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                                    const link = document.createElement('a');
+                                    const url = URL.createObjectURL(blob);
+                                    link.setAttribute('href', url);
+                                    link.setAttribute('download', `report-${selectedReport.reportNumber}.csv`);
+                                    link.style.visibility = 'hidden';
+                                    document.body.appendChild(link);
+                                    link.click();
+                                    document.body.removeChild(link);
+                                }}
+                            >
+                                <Download className="mr-2 h-4 w-4"/>
+                                Export Data
                             </Button>
                             <Button 
                                 size="sm" 

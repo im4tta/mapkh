@@ -30,6 +30,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import html2canvas from 'html2canvas';
 import { APIProvider } from '@vis.gl/react-google-maps';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 
 
@@ -144,6 +145,7 @@ export default function AnalyticsPage() {
     const [geoJsonBoundaries, setGeoJsonBoundaries] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isLoadingBoundaries, setIsLoadingBoundaries] = useState(false);
+    const [selectedMonth, setSelectedMonth] = useState<string>('all');
     const { t } = useTranslation();
     const { user } = useAuth();
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
@@ -278,11 +280,35 @@ export default function AnalyticsPage() {
         };
     }, [fetchInitialData, fetchGeoJSONBoundaries]);
 
+    // Filter reports by selected month
+    const filteredReports = useMemo(() => {
+        if (selectedMonth === 'all') return reports;
+        
+        return reports.filter(report => {
+            const date = toDate(report.createdAt);
+            if (!date) return false;
+            const reportMonth = format(date, 'yyyy-MM');
+            return reportMonth === selectedMonth;
+        });
+    }, [reports, selectedMonth]);
+
+    // Get available months from reports
+    const availableMonths = useMemo(() => {
+        const months = new Set<string>();
+        reports.forEach(report => {
+            const date = toDate(report.createdAt);
+            if (date) {
+                months.add(format(date, 'yyyy-MM'));
+            }
+        });
+        return Array.from(months).sort().reverse(); // Most recent first
+    }, [reports]);
+
     const analyticsData = useMemo(() => {
-        if (reports.length === 0) return null;
+        if (filteredReports.length === 0) return null;
 
         // --- Overview Tab ---
-        const reportsByMonth = reports.reduce((acc, report) => {
+        const reportsByMonth = filteredReports.reduce((acc, report) => {
             const date = toDate(report.createdAt);
             if(date) {
                 const month = format(date, 'yyyy-MM');
@@ -299,7 +325,7 @@ export default function AnalyticsPage() {
 
         const reportsByProvince: Record<string, Report[]> = {};
         cambodiaProvinces.forEach(p => reportsByProvince[p] = []);
-        reports.forEach(report => {
+        filteredReports.forEach(report => {
             const province = report.province || 'Unknown';
             if (reportsByProvince[province]) {
               reportsByProvince[province].push(report);
@@ -309,7 +335,7 @@ export default function AnalyticsPage() {
         });
 
         const createDistributionData = (key: keyof Report, defaultLabel: string, translationPrefix?: string) => {
-             const dataMap = reports.reduce((acc, report) => {
+             const dataMap = filteredReports.reduce((acc, report) => {
                 let value: any = report[key];
                 if (key === 'status' && value === 'under-review') value = 'in-review';
 
@@ -337,7 +363,7 @@ export default function AnalyticsPage() {
         };
         
         // --- Advanced Tab ---
-        const resolvedReports = reports.filter(report => {
+        const resolvedReports = filteredReports.filter(report => {
             const createdAtDate = toDate(report.createdAt);
             const resolvedAtDate = toDate(report.resolvedAt);
             return (report.status === 'approved' || report.status === 'rejected') && createdAtDate && resolvedAtDate;
@@ -361,7 +387,7 @@ export default function AnalyticsPage() {
         });
 
         const teamStats = teams.map(team => {
-            const teamReports = reports.filter(report => team.provinces.includes(report.province as any));
+            const teamReports = filteredReports.filter(report => team.provinces.includes(report.province as any));
             const resolvedTeamReports = teamReports.filter(r => (r.status === 'approved' || r.status === 'rejected') && toDate(r.createdAt) && toDate(r.resolvedAt));
             const totalResolutionDays = resolvedTeamReports.reduce((acc, report) => {
                 const resolvedDate = toDate(report.resolvedAt)!;
@@ -377,7 +403,7 @@ export default function AnalyticsPage() {
             };
         });
         
-        const verificationAnalysis = reports.reduce((acc, report) => {
+        const verificationAnalysis = filteredReports.reduce((acc, report) => {
             const key = report.verifications?.length || 0;
             if (!acc[key]) acc[key] = { total: 0, approved: 0 };
             acc[key].total++;
@@ -393,7 +419,7 @@ export default function AnalyticsPage() {
             'Total Reports': data.total,
         }));
 
-        const subViolationTypeTrends = reports.reduce((acc, report) => {
+        const subViolationTypeTrends = filteredReports.reduce((acc, report) => {
             const date = toDate(report.createdAt);
             if (!date) return acc;
             const month = format(startOfMonth(date), 'yyyy-MM-dd');
@@ -409,7 +435,7 @@ export default function AnalyticsPage() {
             return acc;
         }, {} as Record<string, any>);
 
-        const placeTypeTrends = reports.reduce((acc, report) => {
+        const placeTypeTrends = filteredReports.reduce((acc, report) => {
             const date = toDate(report.createdAt);
             if (!date) return acc;
             const month = format(startOfMonth(date), 'yyyy-MM-dd');
@@ -428,7 +454,7 @@ export default function AnalyticsPage() {
             return acc;
         }, {} as Record<string, any>);
         
-        const groupTrends = reports.reduce((acc, report) => {
+        const groupTrends = filteredReports.reduce((acc, report) => {
             const date = toDate(report.createdAt);
             if (!date) return acc;
             const month = format(startOfMonth(date), 'yyyy-MM-dd');
@@ -454,7 +480,7 @@ export default function AnalyticsPage() {
         ) => {
             const provinceData: { [province: string]: { [category: string]: number } } = {};
 
-            reports.forEach(report => {
+            filteredReports.forEach(report => {
                 const province = report.province || 'Unknown';
                 if (!provinceData[province]) provinceData[province] = {};
 
@@ -483,14 +509,14 @@ export default function AnalyticsPage() {
             }));
         };
 
-        const allKeywords = [...new Set(reports.flatMap(r => r.keywords || []))];
+        const allKeywords = [...new Set(filteredReports.flatMap(r => r.keywords || []))];
         const keywordsByProvince = createBreakdownByProvince('keywords', allKeywords, 'No Keywords');
         const issueTypesForBreakdown = subViolationTypes.map(it => ({ id: it.id, label: getSubViolationTypeLabel(it.id) }));
         const placeTypesForBreakdown = placeTypes.map(pt => ({ name: pt.name }));
         const violationTermsForBreakdown = violationTerms.map(rg => ({ name: rg.name }));
         
         // Duplicate Place IDs
-        const placeIdCounts = reports.reduce((acc, report) => {
+        const placeIdCounts = filteredReports.reduce((acc, report) => {
             if (report.placeId) {
                 if (!acc[report.placeId]) {
                     acc[report.placeId] = [];
@@ -522,7 +548,7 @@ export default function AnalyticsPage() {
             return acc;
         }, 0);
         const avgResolutionTime = resolvedReports.length > 0 ? (totalResolutionDays / resolvedReports.length).toFixed(1) : '0';
-        const approvalRate = reports.length > 0 ? ((reports.filter(r => r.status === 'approved').length / reports.length) * 100).toFixed(1) : '0';
+        const approvalRate = filteredReports.length > 0 ? ((filteredReports.filter(r => r.status === 'approved').length / filteredReports.length) * 100).toFixed(1) : '0';
 
         const calculateAvgResolution = (groupingKey: 'priority' | 'province') => {
             const grouped: Record<string, { totalDays: number; count: number }> = {};
@@ -545,11 +571,11 @@ export default function AnalyticsPage() {
 
         const chartDataBySubViolationType = subViolationTypes.map(it => ({ 
             name: getSubViolationTypeLabel(it.id), 
-            value: reports.filter(r => Array.isArray(r.subViolationType) ? r.subViolationType.includes(it.id) : r.subViolationType === it.id).length 
+            value: filteredReports.filter(r => Array.isArray(r.subViolationType) ? r.subViolationType.includes(it.id) : r.subViolationType === it.id).length 
         }));
 
         return { 
-            totalReports: reports.length,
+            totalReports: filteredReports.length,
             chartDataByMonth, 
             chartDataByStatus: createDistributionData('status', 'not-submitted', 'statuses'), 
             chartDataByPriority: createDistributionData('priority', 'low', 'priorities'),
@@ -577,7 +603,7 @@ export default function AnalyticsPage() {
             duplicatePlaceIds,
         };
 
-    }, [reports, t, subViolationTypes, placeTypes, violationTerms, history, teams]);
+    }, [filteredReports, t, subViolationTypes, placeTypes, violationTerms, history, teams]);
     
      const openDetailDialog = (title: string, data: Report[]) => {
         setDialogTitle(title);
@@ -616,6 +642,25 @@ export default function AnalyticsPage() {
                         <p className="text-muted-foreground">
                             An overview of all report activities and trends.
                         </p>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                        <label htmlFor="month-select" className="text-sm font-medium">
+                            Filter by Month:
+                        </label>
+                        <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                            <SelectTrigger className="w-48">
+                                <SelectValue placeholder="Select month" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Months</SelectItem>
+                                {availableMonths.map((month) => (
+                                    <SelectItem key={month} value={month}>
+                                        {month}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
 
                      <Tabs defaultValue="overview">

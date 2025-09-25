@@ -9,6 +9,7 @@ export type ContributionTier = 'bronze' | 'silver' | 'gold' | 'platinum' | 'diam
 
 export interface ContributionBadgeProps {
   reports: number;
+  score?: number;
   className?: string;
   size?: 'sm' | 'md' | 'lg';
 }
@@ -96,7 +97,7 @@ export function getContributionTier(reports: number): ContributionTier | null {
 }
 
 // Modern Achievement Badge (like Profile section)
-export function ContributionBadge({ reports, className, size = 'md' }: ContributionBadgeProps) {
+export function ContributionBadge({ reports, score, className, size = 'md' }: ContributionBadgeProps) {
   const tier = getContributionTier(reports);
   
   if (!tier) return null;
@@ -129,6 +130,11 @@ export function ContributionBadge({ reports, className, size = 'md' }: Contribut
             )}
           >
             <Icon className={cn(iconSizes[size], config.colors.icon)} />
+            {score && (
+              <span className={cn("text-xs font-bold mt-1", config.colors.text)}>
+                {score}
+              </span>
+            )}
           </div>
         </TooltipTrigger>
         <TooltipContent>
@@ -136,6 +142,7 @@ export function ContributionBadge({ reports, className, size = 'md' }: Contribut
             <p className="font-semibold">{config.name}</p>
             <p className="text-sm text-muted-foreground">{config.description}</p>
             <p className="text-xs font-mono mt-1">{reports} reports</p>
+            {score && <p className="text-xs font-bold text-primary mt-1">Score: {score}</p>}
           </div>
         </TooltipContent>
       </Tooltip>
@@ -144,7 +151,7 @@ export function ContributionBadge({ reports, className, size = 'md' }: Contribut
 }
 
 // Compact inline badge for tables
-export function ContributionBadgeInline({ reports, className, size = 'md' }: { reports: number; className?: string; size?: 'sm' | 'md' | 'lg' }) {
+export function ContributionBadgeInline({ reports, score, className, size = 'md' }: { reports: number; score?: number; className?: string; size?: 'sm' | 'md' | 'lg' }) {
   const tier = getContributionTier(reports);
   
   if (!tier) return null;
@@ -168,12 +175,13 @@ export function ContributionBadgeInline({ reports, className, size = 'md' }: { r
     <div className={cn("flex items-center rounded-full border font-medium", config.colors.bg, config.colors.border, config.colors.text, sizeClasses[size], className)}>
       <Icon className={cn(config.colors.icon, iconSizes[size])} />
       <span>{config.name}</span>
+      {score && <span className="ml-1 font-bold">({score})</span>}
     </div>
   );
 }
 
 // Modern Achievement Grid Section (like Profile badges)
-export function ContributionAchievements({ reports, className }: { reports: number; className?: string }) {
+export function ContributionAchievements({ reports, score, className }: { reports: number; score?: number; className?: string }) {
   const allTiers: ContributionTier[] = ['bronze', 'silver', 'gold', 'platinum', 'diamond'];
   const currentTier = getContributionTier(reports);
 
@@ -226,6 +234,7 @@ export function ContributionAchievements({ reports, className }: { reports: numb
               Current Level: <span className="font-semibold text-foreground">{contributionTiers[currentTier].name}</span>
             </p>
             <p className="text-xs text-muted-foreground mt-1">{reports} reports submitted</p>
+            {score && <p className="text-xs font-bold text-primary mt-1">Total Score: {score}</p>}
           </div>
         )}
       </CardContent>

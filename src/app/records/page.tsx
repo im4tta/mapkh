@@ -90,8 +90,14 @@ export default function RecordsPage() {
       return params.toString();
     }, [searchParams]);
 
-    // This is the main data fetching function.
-    const fetchData = useCallback(async () => {
+    // This is the main data fetching function with scroll position persistence.
+    const fetchData = useCallback(async (preserveScrollPosition = false) => {
+        // Save current scroll position if requested
+        let savedScrollPosition = 0;
+        if (preserveScrollPosition) {
+            savedScrollPosition = window.scrollY;
+        }
+        
         setIsLoading(true);
         const currentSorting = { id: sort, desc: order === 'desc' };
         
@@ -110,6 +116,17 @@ export default function RecordsPage() {
             setPageCount(0);
         }
         setIsLoading(false);
+        
+        // Restore scroll position if requested
+        if (preserveScrollPosition && savedScrollPosition > 0) {
+            // Use requestAnimationFrame to ensure DOM has updated
+            requestAnimationFrame(() => {
+                window.scrollTo({
+                    top: savedScrollPosition,
+                    behavior: 'instant'
+                });
+            });
+        }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [pageIndex, pageSize, sort, order, violationTerm, status, priority, subViolationType, province, searchQuery]);
     
@@ -272,7 +289,7 @@ export default function RecordsPage() {
                 onPaginationChange={handlePaginationChange}
                 sorting={sorting}
                 onSortingChange={handleSortingChange}
-                refetchData={fetchData}
+                refetchData={(preserveScrollPosition = true) => fetchData(preserveScrollPosition)}
             />
         </>
     );

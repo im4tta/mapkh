@@ -26,6 +26,7 @@ import {
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ContributionBadge, ContributionBadgeInline, ContributionAchievements } from '@/components/contribution-badges';
+import { cn } from '@/lib/utils';
 
 const StatusBadge = ({ status }: { status: Report['status'] }) => {
     const { t } = useTranslation();
@@ -107,6 +108,7 @@ function Leaderboard({ data, error, allReports }: { data: LeaderboardEntry[] | u
                             <TableHead className="w-16">{t('contributions.leaderboard.rank')}</TableHead>
                             <TableHead>{t('contributions.leaderboard.contributor')}</TableHead>
                             <TableHead className="text-right">{t('contributions.leaderboard.reports')}</TableHead>
+                            <TableHead className="text-right">Score</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -128,11 +130,26 @@ function Leaderboard({ data, error, allReports }: { data: LeaderboardEntry[] | u
                                                 </Avatar>
                                                 <div className="flex flex-col gap-1">
                                                     <span className="font-medium">{entry.name}</span>
-                                                    <ContributionBadgeInline reports={entry.reports} size="sm" />
+                                                    <ContributionBadgeInline reports={entry.reports} score={entry.score} size="sm" />
                                                 </div>
                                             </div>
                                         </TableCell>
                                         <TableCell className="text-right font-semibold">{entry.reports}</TableCell>
+                                        <TableCell className="text-right">
+                                            <div className="flex flex-col items-end">
+                                                <span className="font-bold text-lg text-primary">{entry.score}</span>
+                                                {entry.approvedReports && entry.approvedReports > 0 && (
+                                                    <span className="text-xs text-green-600">
+                                                        {entry.approvedReports} approved
+                                                    </span>
+                                                )}
+                                                {entry.verifications && entry.verifications > 0 && (
+                                                    <span className="text-xs text-blue-600">
+                                                        {entry.verifications} verifications
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </TableCell>
                                     </TableRow>
                                 </DialogTrigger>
                                 <ContributorReportsDialog contributor={entry} reports={allReports} />
@@ -170,7 +187,7 @@ function ApprovedReports({ data, error }: { data: Report[] | undefined, error?: 
         }, {} as Record<string, Report[]>);
 
         // Sort groups by contributor name if that's the sort order
-        let sortedGroups = Object.entries(groups);
+        let sortedGroups = Object.entries(groups || {});
         if (sortOrder === 'contributor') {
             sortedGroups.sort(([a], [b]) => a.localeCompare(b));
         } else {
@@ -363,19 +380,42 @@ export default function ContributionsPage() {
                                 </div>
                                 <ContributionAchievements 
                                     reports={leaderboardData[0]?.reports || 0} 
+                                    score={leaderboardData[0]?.score || 0}
                                     className="max-w-2xl mx-auto"
                                 />
-                                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                                    {leaderboardData.slice(0, 6).map((contributor, index) => (
-                                        <div key={contributor.id} className="flex items-center gap-3 p-4 border rounded-lg">
-                                            <div className="text-lg font-bold text-muted-foreground">#{index + 1}</div>
-                                            <div className="flex-1">
-                                                <div className="font-medium">{contributor.name}</div>
-                                                <div className="text-sm text-muted-foreground">{contributor.reports} reports</div>
+                                <div className="space-y-4">
+                                    <div className="text-center">
+                                        <h3 className="text-lg font-semibold mb-2">Top 10 Contributors</h3>
+                                        <p className="text-muted-foreground text-sm">
+                                            Highest scoring contributors based on reports, approvals, and verifications
+                                        </p>
+                                    </div>
+                                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                        {leaderboardData.slice(0, 10).map((contributor, index) => (
+                                            <div key={contributor.id} className="flex items-center gap-3 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                                                <div className={cn(
+                                                    "text-lg font-bold flex items-center justify-center w-8 h-8 rounded-full",
+                                                    index === 0 && "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+                                                    index === 1 && "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",
+                                                    index === 2 && "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200",
+                                                    index > 2 && "text-muted-foreground"
+                                                )}>
+                                                    {index < 3 ? (
+                                                        <Trophy className="w-4 h-4" />
+                                                    ) : (
+                                                        `#${index + 1}`
+                                                    )}
+                                                </div>
+                                                <div className="flex-1">
+                                                    <div className="font-medium">{contributor.name}</div>
+                                                    <div className="text-sm text-muted-foreground">
+                                                        {contributor.reports} reports • Score: {contributor.score}
+                                                    </div>
+                                                </div>
+                                                <ContributionBadge reports={contributor.reports} score={contributor.score} size="sm" />
                                             </div>
-                                            <ContributionBadge reports={contributor.reports} size="sm" />
-                                        </div>
-                                    ))}
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
                         )}

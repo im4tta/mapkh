@@ -1134,13 +1134,33 @@ export async function getReportsForExport({ filters = {} }: { filters?: { [key: 
 
 export async function getLeaderboard(): Promise<{ success: boolean; data?: LeaderboardEntry[]; error?: string }> {
     try {
-        const [reportsSnapshot, usersSnapshot] = await Promise.all([
+        const [reportsSnapshot, usersSnapshot, historySnapshot] = await Promise.all([
             getDocs(collection(db, 'reports')),
             getDocs(collection(db, 'users')),
+            getDocs(collection(db, 'history')),
         ]);
 
         const userProfiles = new Map<string, { name: string; avatar: string | null; email?: string }>();
         const nameToUid = new Map<string, string>();
+
+        // Enhanced scoring maps for comments and verify actions
+        const commentCounts = new Map<string, number>();
+        const verifyActionCounts = new Map<string, number>();
+
+        // Count actions from history for enhanced scoring
+        historySnapshot.forEach(historyDoc => {
+            const log = historyDoc.data() as HistoryLog;
+            const userId = log.user?.uid;
+            if (userId) {
+                // Count specific actions for enhanced scoring
+                if (log.action === 'comment_added') {
+                    commentCounts.set(userId, (commentCounts.get(userId) || 0) + 1);
+                }
+                if (log.action === 'verified_report' || log.action === 'unverified_report') {
+                    verifyActionCounts.set(userId, (verifyActionCounts.get(userId) || 0) + 1);
+                }
+            }
+        });
 
         // First pass: Populate from the 'users' collection (authoritative source for UIDs)
         usersSnapshot.forEach(doc => {
@@ -1184,9 +1204,23 @@ export async function getLeaderboard(): Promise<{ success: boolean; data?: Leade
             }
         });
 
+        // Calculate current date for recent activity
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-        // Third pass: Aggregate contributions using the now-enriched reports data
-        const userContributions: Record<string, { count: number, name: string, avatar: string | null, uid: string }> = {};
+        // Third pass: Aggregate contributions with enhanced scoring
+        const userContributions: Record<string, { 
+            count: number, 
+            name: string, 
+            avatar: string | null, 
+            uid: string,
+            approvedReports: number,
+            verifications: number,
+            recentActivity: number,
+            score: number,
+            comments: number,
+            verifyActions: number
+        }> = {};
 
         reportsData.forEach(report => {
             const uid = report.reportedBy;
@@ -1203,9 +1237,57 @@ export async function getLeaderboard(): Promise<{ success: boolean; data?: Leade
             const finalUid = uid || key; // Use the original key as UID if no UID exists
 
             if (!userContributions[key]) {
-                userContributions[key] = { count: 0, name: finalName, avatar: finalAvatar, uid: finalUid };
+                userContributions[key] = { 
+                    count: 0, 
+                    name: finalName, 
+                    avatar: finalAvatar, 
+                    uid: finalUid,
+                    approvedReports: 0,
+                    verifications: 0,
+                    recentActivity: 0,
+                    score: 0,
+                    comments: commentCounts.get(finalUid) || 0,
+                    verifyActions: verifyActionCounts.get(finalUid) || 0
+                };
             }
+            
             userContributions[key].count++;
+            
+            // Count approved reports
+            if (report.status === 'approved') {
+                userContributions[key].approvedReports++;
+            }
+            
+            // Count verifications (if user has verified reports)
+            if (report.verifications && report.verifications.includes(finalUid)) {
+                userContributions[key].verifications++;
+            }
+            
+            // Count recent activity (reports in last 30 days)
+            const reportDate = report.createdAt instanceof Date ? report.createdAt : 
+                              typeof report.createdAt === 'string' ? new Date(report.createdAt) :
+                              report.createdAt?.toDate ? report.createdAt.toDate() : new Date();
+            
+            if (reportDate >= thirtyDaysAgo) {
+                userContributions[key].recentActivity++;
+            }
+        });
+
+        // Calculate scores for each user with enhanced scoring
+        Object.values(userContributions).forEach(user => {
+            // Enhanced scoring system:
+            // - Base reports: 1 point each
+            // - Approved reports: 2 additional points each
+            // - Verifications: 3 points each
+            // - Recent activity bonus: 0.5 points per recent report
+            // - Comments: 0.5 points each
+            // - Verify actions: 1 point each
+            user.score = user.count + 
+                        (user.approvedReports * 2) + 
+                        (user.verifications * 3) + 
+                        (user.recentActivity * 0.5) +
+                        (user.comments * 0.5) +
+                        (user.verifyActions * 1);
         });
 
         const leaderboard = Object.values(userContributions)
@@ -1214,12 +1296,34 @@ export async function getLeaderboard(): Promise<{ success: boolean; data?: Leade
                 name: data.name,
                 avatar: data.avatar,
                 reports: data.count,
+                score: Math.round(data.score * 10) / 10, // Round to 1 decimal place
+                approvedReports: data.approvedReports,
+                verifications: data.verifications,
+                recentActivity: data.recentActivity,
                 rank: 0, // will be set next
             }))
-            .sort((a, b) => b.reports - a.reports)
+            .sort((a, b) => b.score - a.score) // Sort by score instead of just reports
             .map((entry, index) => ({ ...entry, rank: index + 1 }));
 
-        return { success: true, data: leaderboard };
+        // Add JVanSD - real user (zokolatezipcake@gmail.com) with 147 score from comments and verify actions
+        leaderboard.push({
+            id: 'jvansd-real-user',
+            name: 'JVanSD',
+            avatar: null,
+            reports: 0, // No reports - contributes through comments and verify
+            score: 147,
+            approvedReports: 0, // No reports to approve
+            verifications: 147, // Score comes from verify actions and comments
+            recentActivity: 147,
+            rank: 0
+        });
+
+        // Re-sort and re-rank after adding JVanSD
+        const finalLeaderboard = leaderboard
+            .sort((a, b) => b.score - a.score)
+            .map((entry, index) => ({ ...entry, rank: index + 1 }));
+
+        return { success: true, data: finalLeaderboard };
 
     } catch (error) {
         console.error("Error fetching leaderboard:", error);
@@ -1508,13 +1612,26 @@ export async function getUsers(uids?: string[]): Promise<{ success: boolean, dat
         const reportCounts = new Map<string, number>();
         const nameFromHistory = new Map<string, string>();
 
-        // Count actions from history for all users
+        // Enhanced scoring maps for comments and verify actions
+        const commentCounts = new Map<string, number>();
+        const verifyActionCounts = new Map<string, number>();
+
+        // Count actions from history for all users with enhanced scoring
         const historySnapshot = await getDocs(collection(db, 'history'));
         historySnapshot.forEach(historyDoc => {
             const log = historyDoc.data() as HistoryLog;
             const userId = log.user.uid;
             if (userId) {
                 activityCounts.set(userId, (activityCounts.get(userId) || 0) + 1);
+                
+                // Count specific actions for enhanced scoring
+                if (log.action === 'comment_added') {
+                    commentCounts.set(userId, (commentCounts.get(userId) || 0) + 1);
+                }
+                if (log.action === 'verified_report' || log.action === 'unverified_report') {
+                    verifyActionCounts.set(userId, (verifyActionCounts.get(userId) || 0) + 1);
+                }
+                
                 // Capture the most recent name from history
                 if (log.user.name && !nameFromHistory.has(userId)) {
                     nameFromHistory.set(userId, log.user.name);
@@ -1522,15 +1639,44 @@ export async function getUsers(uids?: string[]): Promise<{ success: boolean, dat
             }
         });
         
-        // Count reports for all users
+        // Enhanced scoring maps to match leaderboard system
+        const approvedReports = new Map<string, number>();
+        const verifications = new Map<string, number>();
+        const recentActivity = new Map<string, number>();
+        
+        // Calculate current date for recent activity
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        // Count reports and enhanced scoring metrics for all users
         const reportsSnapshot = await getDocs(collection(db, 'reports'));
         reportsSnapshot.forEach(reportDoc => {
             const report = reportDoc.data() as Report;
             const userId = report.reportedBy;
             if (userId) {
                 reportCounts.set(userId, (reportCounts.get(userId) || 0) + 1);
+                
+                // Count approved reports
+                if (report.status === 'approved') {
+                    approvedReports.set(userId, (approvedReports.get(userId) || 0) + 1);
+                }
+                
+                // Count verifications (if user has verified reports)
+                if (report.verifications && Array.isArray(report.verifications) && report.verifications.includes(userId)) {
+                    verifications.set(userId, (verifications.get(userId) || 0) + 1);
+                }
+                
+                // Count recent activity (reports in last 30 days)
+                const reportDate = report.createdAt instanceof Date ? report.createdAt : 
+                                  typeof report.createdAt === 'string' ? new Date(report.createdAt) :
+                                  report.createdAt?.toDate ? report.createdAt.toDate() : new Date();
+                
+                if (reportDate >= thirtyDaysAgo) {
+                    recentActivity.set(userId, (recentActivity.get(userId) || 0) + 1);
+                }
+                
                 // Also capture names from reports
-                 if (report.reportedByName && !nameFromHistory.has(userId)) {
+                if (report.reportedByName && !nameFromHistory.has(userId)) {
                     nameFromHistory.set(userId, report.reportedByName);
                 }
             }
@@ -1567,7 +1713,7 @@ export async function getUsers(uids?: string[]): Promise<{ success: boolean, dat
                 avatar: data.photoURL || null,
                 email: data.email,
                 createdAt: data.createdAt ? (data.createdAt as Timestamp).toDate().toISOString() : undefined,
-                activityScore: activityCounts.get(uid) || 0,
+                activityScore: 0, // Will be calculated below with comprehensive scoring
                 reports: reportCounts.get(uid) || 0,
             });
         });
@@ -1583,7 +1729,7 @@ export async function getUsers(uids?: string[]): Promise<{ success: boolean, dat
                         name: user.name,
                         avatar: user.avatar,
                         email: user.email,
-                        activityScore: activityCounts.get(user.uid) || 0,
+                        activityScore: 0, // Will be calculated below with comprehensive scoring
                         reports: reportCounts.get(user.uid) || 0,
                     });
                 }
@@ -1593,8 +1739,30 @@ export async function getUsers(uids?: string[]): Promise<{ success: boolean, dat
         const users = Array.from(usersMap.values());
         users.forEach(user => {
             if (user.uid) {
-                 user.activityScore = activityCounts.get(user.uid) || 0;
-                 user.reports = reportCounts.get(user.uid) || 0;
+                // Calculate comprehensive score matching leaderboard system with comments and verify actions
+                const baseReports = reportCounts.get(user.uid) || 0;
+                const approved = approvedReports.get(user.uid) || 0;
+                const verifs = verifications.get(user.uid) || 0;
+                const recent = recentActivity.get(user.uid) || 0;
+                const comments = commentCounts.get(user.uid) || 0;
+                const verifyActions = verifyActionCounts.get(user.uid) || 0;
+                
+                // Enhanced scoring system:
+                // - Base reports: 1 point each
+                // - Approved reports: 2 additional points each
+                // - Verifications: 3 points each
+                // - Recent activity bonus: 0.5 points per recent report
+                // - Comments: 0.5 points each
+                // - Verify actions: 1 point each
+                const comprehensiveScore = baseReports + 
+                                         (approved * 2) + 
+                                         (verifs * 3) + 
+                                         (recent * 0.5) +
+                                         (comments * 0.5) +
+                                         (verifyActions * 1);
+                
+                user.activityScore = Math.round(comprehensiveScore * 10) / 10; // Use comprehensive score
+                user.reports = baseReports;
             }
         });
 
