@@ -1231,7 +1231,7 @@ export async function getLeaderboard(): Promise<{ success: boolean; data?: Leade
 }
 
 
-export async function addPost(text: string, userId: string, userName: string | null | undefined, replyTo?: CommunityPost | null): Promise<{ success: boolean; data?: { id: string }; error?: string }> {
+export async function addPost(text: string, userId: string, userName: string | null | undefined, replyTo?: CommunityPost | null, mentions?: string[]): Promise<{ success: boolean; data?: { id: string }; error?: string }> {
   if (!userId) {
     return { success: false, error: 'You must be logged in to post.' };
   }
@@ -1250,6 +1250,7 @@ export async function addPost(text: string, userId: string, userName: string | n
         text: replyTo.text,
         user: replyTo.user,
       } : null,
+      mentions: mentions || [],
     };
     const postRef = await addDoc(collection(db, 'posts'), postData);
     

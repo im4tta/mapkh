@@ -13,9 +13,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/context/auth-provider';
 import { addPost, updatePost, deletePost } from '@/app/actions';
-import { CommunityPost } from '@/lib/types';
+import { CommunityPost, UserInfo } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Send, MoreHorizontal, Pencil, Trash2, Reply, X } from 'lucide-react';
+import { Loader2, Send, MoreHorizontal, Pencil, Trash2, Reply, X, AtSign } from 'lucide-react';
+import { UserMentionInput, extractMentions, renderTextWithMentions } from '@/components/user-mention-input';
+import { sendMentionNotifications, sendReplyNotification } from '@/lib/notification-utils';
 import { collection, onSnapshot, query, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { formatDistanceToNow } from 'date-fns';
@@ -71,7 +73,9 @@ const PostItem = memo(({ post, onEdit, onReply }: { post: CommunityPost, onEdit:
                     </div>
                 )}
                 
-                <p className="text-sm text-foreground bg-muted p-2 rounded-md mt-1 whitespace-pre-wrap">{post.text}</p>
+                <div className="text-sm text-foreground bg-muted p-2 rounded-md mt-1 whitespace-pre-wrap">
+                    {renderTextWithMentions(post.text)}
+                </div>
             </div>
             {user && (
                 <>
@@ -129,6 +133,7 @@ export function CommunityTalk() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [editingPost, setEditingPost] = useState<CommunityPost | null>(null);
   const [replyingTo, setReplyingTo] = useState<CommunityPost | null>(null);
+  const [mentionedUsers, setMentionedUsers] = useState<UserInfo[]>([]);
 
   const form = useForm<PostFormValues>({
     resolver: zodResolver(postSchema),
@@ -204,18 +209,50 @@ export function CommunityTalk() {
       return;
     }
     
+    // Extract mentions from the post text
+    const mentions = extractMentions(data.text);
+    
     let result;
     if (editingPost) {
         result = await updatePost(editingPost.id, data.text, user.uid);
     } else {
-        result = await addPost(data.text, user.uid, user.displayName, replyingTo);
+        result = await addPost(data.text, user.uid, user.displayName, replyingTo, mentions);
     }
 
     if (result.success) {
-      form.reset();
-      setEditingPost(null);
-      setReplyingTo(null);
-    } else {
+        // Send notifications to mentioned users (only for new posts, not edits)
+        if (!editingPost && mentions.length > 0) {
+          const addResult = result as { success: boolean; data?: { id: string }; error?: string };
+          if (addResult.data) {
+            await sendMentionNotifications(mentions, addResult.data.id, data.text, {
+              uid: user.uid,
+              name: user.displayName || user.email || 'Anonymous',
+              avatar: user.photoURL,
+              email: user.email
+            });
+          }
+        }
+        
+        // Send reply notification if this is a reply (only for new posts, not edits)
+        if (!editingPost && replyingTo) {
+          await sendReplyNotification(
+            replyingTo.user.uid,
+            data.text,
+            {
+              uid: user.uid,
+              name: user.displayName || user.email || 'Anonymous',
+              avatar: user.photoURL,
+              email: user.email
+            },
+            replyingTo.id
+          );
+        }
+        
+        form.reset();
+        setEditingPost(null);
+        setReplyingTo(null);
+        setMentionedUsers([]);
+      } else {
       toast({ variant: 'destructive', title: t('contributions.talk.send_error_title'), description: result.error });
     }
   }, [user, editingPost, replyingTo, form, toast, t]);
@@ -275,13 +312,15 @@ export function CommunityTalk() {
                     render={({ field }) => (
                       <FormItem>
                         <FormControl>
-                          <Textarea
+                          <UserMentionInput
+                            value={field.value}
+                            onChange={field.onChange}
+                            onMention={(user) => {
+                              setMentionedUsers(prev => [...prev, user]);
+                            }}
                             placeholder={t('contributions.talk.placeholder')}
-                            className="resize-none"
-                            rows={2}
+                            className="resize-none border rounded-md p-3 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
                             disabled={isSubmitting || authLoading}
-                            {...field}
-                            ref={textareaRef}
                           />
                         </FormControl>
                         <FormMessage />

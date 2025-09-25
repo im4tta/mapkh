@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Trophy, MessageCircle, Info, LucideIcon, CheckCircle2, Loader2, ArrowUpDown, ChevronDown } from 'lucide-react';
+import { Trophy, MessageCircle, Info, LucideIcon, CheckCircle2, Loader2, ArrowUpDown, ChevronDown, Award } from 'lucide-react';
 import { CommunityTalk } from '@/components/community-talk';
 import { TipsSection } from '@/components/tips-section';
 import { LeaderboardEntry, Report } from '@/lib/types';
@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { ContributionBadge, ContributionBadgeInline, ContributionAchievements } from '@/components/contribution-badges';
 
 const StatusBadge = ({ status }: { status: Report['status'] }) => {
     const { t } = useTranslation();
@@ -54,7 +55,10 @@ function ContributorReportsDialog({ contributor, reports }: { contributor: Leade
     return (
         <DialogContent className="sm:max-w-4xl h-[80vh] flex flex-col">
             <DialogHeader>
-                <DialogTitle>All Reports by {contributor.name}</DialogTitle>
+                <DialogTitle className="flex items-center gap-3">
+                    <span>All Reports by {contributor.name}</span>
+                    <ContributionBadge reports={contributor.reports} size="sm" />
+                </DialogTitle>
                 <DialogDescription>
                     A list of all reports submitted by this contributor.
                 </DialogDescription>
@@ -122,7 +126,10 @@ function Leaderboard({ data, error, allReports }: { data: LeaderboardEntry[] | u
                                                     <AvatarImage src={entry.avatar || ''} alt={entry.name} />
                                                     <AvatarFallback>{entry.name.charAt(0)}</AvatarFallback>
                                                 </Avatar>
-                                                <span className="font-medium">{entry.name}</span>
+                                                <div className="flex flex-col gap-1">
+                                                    <span className="font-medium">{entry.name}</span>
+                                                    <ContributionBadgeInline reports={entry.reports} size="sm" />
+                                                </div>
                                             </div>
                                         </TableCell>
                                         <TableCell className="text-right font-semibold">{entry.reports}</TableCell>
@@ -328,10 +335,14 @@ export default function ContributionsPage() {
                 </div>
 
                 <Tabs defaultValue="leaderboard" className="w-full flex-1 flex flex-col">
-                    <TabsList className="grid w-full grid-cols-2">
+                    <TabsList className="grid w-full grid-cols-3">
                         <TabsTrigger value="leaderboard">
                             <Trophy className="mr-2 h-4 w-4" />
                             {t('contributions.tabs.leaderboard')}
+                        </TabsTrigger>
+                        <TabsTrigger value="achievements">
+                            <Award className="mr-2 h-4 w-4" />
+                            Achievements
                         </TabsTrigger>
                          <TabsTrigger value="approved">
                             <CheckCircle2 className="mr-2 h-4 w-4" />
@@ -340,6 +351,34 @@ export default function ContributionsPage() {
                     </TabsList>
                     <TabsContent value="leaderboard" className="py-4">
                         <Leaderboard data={leaderboardData} error={leaderboardError} allReports={allReportsData || []} />
+                    </TabsContent>
+                    <TabsContent value="achievements" className="py-4">
+                        {leaderboardData && leaderboardData.length > 0 && (
+                            <div className="space-y-6">
+                                <div className="text-center">
+                                    <h3 className="text-lg font-semibold mb-2">Your Contribution Level</h3>
+                                    <p className="text-muted-foreground text-sm">
+                                        Earn badges by submitting reports and helping improve the map
+                                    </p>
+                                </div>
+                                <ContributionAchievements 
+                                    reports={leaderboardData[0]?.reports || 0} 
+                                    className="max-w-2xl mx-auto"
+                                />
+                                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                    {leaderboardData.slice(0, 6).map((contributor, index) => (
+                                        <div key={contributor.id} className="flex items-center gap-3 p-4 border rounded-lg">
+                                            <div className="text-lg font-bold text-muted-foreground">#{index + 1}</div>
+                                            <div className="flex-1">
+                                                <div className="font-medium">{contributor.name}</div>
+                                                <div className="text-sm text-muted-foreground">{contributor.reports} reports</div>
+                                            </div>
+                                            <ContributionBadge reports={contributor.reports} size="sm" />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </TabsContent>
                     <TabsContent value="approved" className="py-4">
                         <ApprovedReports data={allReportsData} error={allReportsError} />

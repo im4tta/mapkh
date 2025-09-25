@@ -21,6 +21,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 
 const StatusInfo = ({ status, found, isVerifying }: { status: Report['status'], found?: boolean, isVerifying: boolean }) => {
     const { t } = useTranslation();
@@ -610,29 +611,32 @@ export default function VerificationReportPage() {
                             <div>
                                 <h3 className="font-semibold text-lg mb-3 border-b pb-2">Translation Fields</h3>
                                 <div className="space-y-4">
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="space-y-4">
                                         <div>
                                             <Label htmlFor="english-translation" className="text-sm font-medium">English Translation</Label>
-                                            <Input
+                                            <Textarea
                                                 id="english-translation"
                                                 placeholder="Enter English translation..."
                                                 defaultValue={report.englishLanguage || ''}
-                                                className="mt-1"
+                                                className="mt-1 min-h-[100px] resize-y"
+                                                rows={4}
                                             />
                                         </div>
                                         <div>
                                             <Label htmlFor="khmer-translation" className="text-sm font-medium">Khmer Translation</Label>
-                                            <Input
+                                            <Textarea
                                                 id="khmer-translation"
                                                 placeholder="បញ្ចូលការបកប្រែជាភាសាខ្មែរ..."
                                                 defaultValue={report.nativeKhmerLanguage || ''}
-                                                className="mt-1 font-khmer"
+                                                className="mt-1 font-khmer min-h-[100px] resize-y"
+                                                rows={4}
                                             />
                                         </div>
                                     </div>
-                                    <div className="flex gap-2 text-xs text-muted-foreground">
+                                    <div className="flex flex-col gap-1 text-xs text-muted-foreground">
                                         <p>• Translation fields are auto-filled from the original report</p>
                                         <p>• You can edit these fields as needed for verification</p>
+                                        <p>• Text areas will expand to accommodate longer text</p>
                                     </div>
                                 </div>
                             </div>

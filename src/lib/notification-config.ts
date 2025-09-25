@@ -158,6 +158,19 @@ export const notificationCategories: NotificationCategory[] = [
     defaultEnabled: true
   },
   {
+    id: 'mentions',
+    name: 'Mentions & Replies',
+    description: 'When someone mentions you or replies to your posts',
+    icon: '/icons/mention.png',
+    priority: 'normal',
+    vibration: [100, 50],
+    actions: [
+      { action: 'view', title: 'View Post', icon: '/icons/view.png' },
+      { action: 'reply', title: 'Reply', icon: '/icons/reply.png' }
+    ],
+    defaultEnabled: true
+  },
+  {
     id: 'community',
     name: 'Community',
     description: 'Community discussions and announcements',

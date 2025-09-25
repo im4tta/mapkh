@@ -1,4 +1,4 @@
-import { type LucideIcon, HelpCircle, MapPinOff, TextCursorInput, AlertCircle, Waypoints, Gauge, Bus, Building2, Map, PenSquare, Milestone, User, MessageSquare, CheckCircle2, FilePlus2, Star, CheckSquare, Target, BookOpen, Info, Folder, Edit, ShieldCheck, Award, ThumbsUp, File as FileIcon, Archive, Trophy } from 'lucide-react';
+import { type LucideIcon, HelpCircle, MapPinOff, TextCursorInput, AlertCircle, Waypoints, Gauge, Bus, Building2, Map, PenSquare, Milestone, User, MessageSquare, CheckCircle2, FilePlus2, Star, CheckSquare, Target, BookOpen, Info, Folder, Edit, ShieldCheck, Award, ThumbsUp, File as FileIcon, Archive, Trophy, AtSign, Reply } from 'lucide-react';
 import { Timestamp } from 'firebase/firestore';
 import { z } from 'zod';
 
@@ -133,6 +133,8 @@ export const NOTIFICATION_TYPES = {
   new_badge: { icon: Award, color: 'text-yellow-500' },
   verification: { icon: ThumbsUp, color: 'text-green-500' },
   archived: { icon: Archive, color: 'text-gray-500'},
+  mention: { icon: AtSign, color: 'text-blue-600' },
+  reply: { icon: Reply, color: 'text-indigo-500' },
 } as const;
 
 export type Notification = {
@@ -167,6 +169,7 @@ export type CommunityPost = {
     text: string;
     user: UserInfo;
   } | null;
+  mentions?: string[]; // Array of mentioned user names
 };
 
 export const tipIcons = {

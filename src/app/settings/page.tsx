@@ -15,6 +15,7 @@ import { useAuth } from "@/context/auth-provider";
 import { importReports, exportAllData, importAllData, findReportByPlaceId, uploadReportFile, bulkCreateDriveFolders, deleteEmptyReportFolders } from "../actions";
 import { SupporterService, type Supporter } from "@/lib/supporters";
 import { AdminNotificationManager } from "@/components/admin-notification-manager";
+import { NotificationSettings } from "@/components/notification-settings";
 import { PlaceIdCSVUploader } from "@/components/placeid-csv-uploader";
 import {
   AlertDialog,
@@ -841,6 +842,7 @@ export default function SettingsPage() {
   
   return (
     <div className="space-y-6">
+      <NotificationSettings />
       <AdminNotificationManager />
       <PlaceIdCSVUploader />
       <DataImporter />
