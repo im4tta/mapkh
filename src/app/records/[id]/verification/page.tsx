@@ -171,7 +171,7 @@ export default function VerificationReportPage() {
     const [currentTime, setCurrentTime] = useState(new Date());
 
     // Verification state
-    const [isVerifying, setIsVerifying] = useState(true);
+    const [isVerifying, setIsVerifying] = useState(false);
     const [isPlaceFound, setIsPlaceFound] = useState<boolean | undefined>(undefined);
 
     // Map control state
@@ -240,7 +240,7 @@ export default function VerificationReportPage() {
         setIsUploading(false);
     }
 
-    const handleReVerification = async () => {
+    const handleVerification = async () => {
         if (!report?.placeId) {
             toast({ variant: 'destructive', title: 'No Place ID', description: 'This report does not have a Place ID to verify.' });
             return;
@@ -291,16 +291,19 @@ export default function VerificationReportPage() {
             setIsVerifying(false);
         }
     }
+
+    const handleReVerification = async () => {
+        await handleVerification();
+    }
     
     useEffect(() => {
-        const fetchAndVerifyReport = async () => {
+        const fetchReport = async () => {
             if (!id) {
                 setError("Report ID is missing.");
                 setLoading(false);
                 return;
             }
             setLoading(true);
-            setIsVerifying(true);
             const reportNumber = parseInt(id, 10);
 
             if (isNaN(reportNumber)) {
@@ -320,29 +323,14 @@ export default function VerificationReportPage() {
 
             if (reportResult.success && reportResult.data) {
                 setReport(reportResult.data);
-                // Now that we have the report, verify the placeId
-                if (reportResult.data.placeId) {
-                    // Use default API key for initial verification, custom key only for re-verification
-                    const verificationResult = await verifyPlaceId(reportResult.data.placeId);
-                    if (verificationResult.success) {
-                        setIsPlaceFound(verificationResult.found);
-                    } else {
-                        // Handle case where verification API call itself fails
-                        setError(verificationResult.error || "Verification request failed.");
-                        setIsPlaceFound(false); // Assume not found if verification fails
-                    }
-                } else {
-                    // No placeId to verify
-                    setIsPlaceFound(false);
-                }
+                // Don't auto-verify on page load - user must click verification button
             } else {
                 setError(reportResult.error || "Failed to load report details.");
             }
             setLoading(false);
-            setIsVerifying(false);
         };
 
-        fetchAndVerifyReport();
+        fetchReport();
     }, [id]);
 
     const getSubViolationTypeLabels = () => {
@@ -455,7 +443,7 @@ export default function VerificationReportPage() {
 
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-muted/40 p-4 font-sans">
-        <APIProvider apiKey={apiKey}>
+        <APIProvider apiKey={apiKey || ''}>
             <div className="w-full max-w-4xl space-y-4">
                  <Card>
                     <CardHeader>
@@ -536,6 +524,24 @@ export default function VerificationReportPage() {
                                  )}
                             </div>
                         </div>
+                        
+                        {/* Initial Verification Button - Show when no verification has been done */}
+                        {isPlaceFound === undefined && !isVerifying && (
+                            <div className="mt-6 text-center">
+                                <Button 
+                                    onClick={handleVerification} 
+                                    size="lg"
+                                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                                >
+                                    <ShieldCheck className="mr-2 h-5 w-5" />
+                                    Start Verification
+                                </Button>
+                                <p className="text-sm text-muted-foreground mt-2">
+                                    Click to verify this location using Google Maps API
+                                </p>
+                            </div>
+                        )}
+                        
                         <div className="space-y-4">
                             <div className="grid gap-2">
                                 <Label htmlFor="zoom-slider">Zoom Level: {mapZoom}</Label>
