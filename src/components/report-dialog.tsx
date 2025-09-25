@@ -535,6 +535,12 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
     }
   };
 
+  // Add new state for Google Translate popup
+  const [googleTranslateOpen, setGoogleTranslateOpen] = useState(false);
+  const [googleTranslateText, setGoogleTranslateText] = useState('');
+  const [translateSourceLang, setTranslateSourceLang] = useState('auto');
+  const [translateTargetLang, setTranslateTargetLang] = useState('en');
+
   const handleGoogleTranslate = (text: string, sourceLang: string = 'auto', targetLang: string = 'en') => {
     if (!text.trim()) {
       toast({
@@ -545,8 +551,10 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
       return;
     }
     
-    const googleTranslateUrl = `https://translate.google.com/?sl=${sourceLang}&tl=${targetLang}&text=${encodeURIComponent(text)}&op=translate`;
-    window.open(googleTranslateUrl, '_blank', 'noopener,noreferrer');
+    setGoogleTranslateText(text);
+    setTranslateSourceLang(sourceLang);
+    setTranslateTargetLang(targetLang);
+    setGoogleTranslateOpen(true);
   };
 
   const proceedWithSubmission = async (values: ReportFormValues) => {
@@ -785,22 +793,16 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
                             <FormItem>
                                 <FormLabel>{t('report_dialog.english_name_label')}</FormLabel>
                                 <div className="flex items-center gap-2">
-                                <FormControl>
-                                    <Input placeholder={t('report_dialog.english_name_placeholder')} {...field} value={field.value ?? ''}/>
-                                </FormControl>
-                                <Button type="button" size="icon" variant="outline" onClick={handleSuggestEnglishName} disabled={isTranslating} title="Suggest English name from Thai">
-                                    {isTranslating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Languages className="h-4 w-4" />}
-                                </Button>
-                                <Button type="button" size="icon" variant="outline" onClick={handleSuggestEnglishFromKhmer} disabled={isTranslating} title="Suggest English name from Khmer">
-                                    {isTranslating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Languages className="h-4 w-4" />}
-                                </Button>
-                                <Button type="button" size="icon" variant="outline" onClick={() => handleGoogleTranslate(field.value || '', 'auto', 'en')} title="Translate with Google Translate">
-                                    <Globe className="h-4 w-4" />
-                                </Button>
-                                <Button type="button" size="icon" variant="outline" onClick={handleFindPlaceId} disabled={isFindingPlaceId}>
-                                    {isFindingPlaceId ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                                </Button>
-                                </div>
+                                 <FormControl>
+                                     <Input placeholder={t('report_dialog.english_name_placeholder')} {...field} value={field.value ?? ''}/>
+                                 </FormControl>
+                                 <Button type="button" size="icon" variant="outline" onClick={() => handleGoogleTranslate(field.value || '', 'auto', 'en')} title="Translate with Google Translate">
+                                     <Globe className="h-4 w-4" />
+                                 </Button>
+                                 <Button type="button" size="icon" variant="outline" onClick={handleFindPlaceId} disabled={isFindingPlaceId}>
+                                     {isFindingPlaceId ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                                 </Button>
+                                 </div>
                                 <FormMessage />
                             </FormItem>
                         )}
@@ -815,12 +817,6 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
                                 <FormControl>
                                     <Input placeholder="ឈ្មោះជាភាសាខ្មែរ" {...field} className="font-khmer" value={field.value ?? ''} />
                                 </FormControl>
-                                <Button type="button" size="icon" variant="outline" onClick={handleSuggestKhmerName} disabled={isTranslating} title="Suggest Khmer name from Thai">
-                                    {isTranslating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Languages className="h-4 w-4" />}
-                                </Button>
-                                <Button type="button" size="icon" variant="outline" onClick={handleSuggestKhmerFromEnglish} disabled={isTranslating} title="Suggest Khmer name from English">
-                                    {isTranslating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Languages className="h-4 w-4" />}
-                                </Button>
                                 <Button type="button" size="icon" variant="outline" onClick={() => handleGoogleTranslate(field.value || '', 'auto', 'km')} title="Translate with Google Translate">
                                     <Globe className="h-4 w-4" />
                                 </Button>
@@ -840,12 +836,6 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
                                 <FormControl>
                                     <Input placeholder={t('report_dialog.thai_name_placeholder')} {...field} value={field.value ?? ''} />
                                 </FormControl>
-                                <Button type="button" size="icon" variant="outline" onClick={handleSuggestThaiFromEnglish} disabled={isTranslating} title="Suggest Thai name from English">
-                                    {isTranslating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Languages className="h-4 w-4" />}
-                                </Button>
-                                <Button type="button" size="icon" variant="outline" onClick={handleSuggestThaiFromKhmer} disabled={isTranslating} title="Suggest Thai name from Khmer">
-                                    {isTranslating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Languages className="h-4 w-4" />}
-                                </Button>
                                 <Button type="button" size="icon" variant="outline" onClick={() => handleGoogleTranslate(field.value || '', 'auto', 'th')} title="Translate with Google Translate">
                                     <Globe className="h-4 w-4" />
                                 </Button>
@@ -1119,6 +1109,25 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
             </AlertDialogFooter>
         </AlertDialogContent>
     </AlertDialog>
-    </>
-  );
-}
+
+      {/* Google Translate Popup Dialog */}
+      <Dialog open={googleTranslateOpen} onOpenChange={setGoogleTranslateOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Google Translate</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 min-h-[500px]">
+             <iframe
+               src={`https://translate.google.com/?sl=${translateSourceLang}&tl=${translateTargetLang}&text=${encodeURIComponent(googleTranslateText)}&op=translate`}
+               className="w-full h-full border-0"
+               title="Google Translate"
+             />
+           </div>
+        </DialogContent>
+      </Dialog>
+     </>
+   );
+ }
+
+// Google Translate Popup Dialog
+// ... existing code ...

@@ -556,35 +556,28 @@ const MapControls = ({
                 <Camera className="h-5 w-5" />
             </Button>
             <Separator orientation="vertical" className="h-6" />
-            <div className="flex items-center gap-1">
-                <Button
-                    size="sm"
-                    variant={pinFilter === 'all' ? 'default' : 'outline'}
-                    onClick={() => setPinFilter('all')}
-                    className="h-8 px-2 text-xs"
-                >
-                    <Eye className="h-3 w-3 mr-1" />
-                    All
-                </Button>
-                <Button
-                    size="sm"
-                    variant={pinFilter === 'approved' ? 'default' : 'outline'}
-                    onClick={() => setPinFilter('approved')}
-                    className="h-8 px-2 text-xs"
-                >
-                    <Eye className="h-3 w-3 mr-1" />
-                    Approved
-                </Button>
-                <Button
-                    size="sm"
-                    variant={pinFilter === 'not-approved' ? 'default' : 'outline'}
-                    onClick={() => setPinFilter('not-approved')}
-                    className="h-8 px-2 text-xs"
-                >
-                    <EyeOff className="h-3 w-3 mr-1" />
-                    Pending
-                </Button>
-            </div>
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button size="sm" variant="outline" className="h-8 px-2 text-xs">
+                        <Filter className="h-3 w-3 mr-1" />
+                        {pinFilter === 'all' ? 'All Pins' : pinFilter === 'approved' ? 'Approved' : 'Pending'}
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-32">
+                    <DropdownMenuItem onClick={() => setPinFilter('all')} className="text-xs">
+                        <Eye className="h-3 w-3 mr-2" />
+                        All Pins
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setPinFilter('approved')} className="text-xs">
+                        <Eye className="h-3 w-3 mr-2" />
+                        Approved
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setPinFilter('not-approved')} className="text-xs">
+                        <EyeOff className="h-3 w-3 mr-2" />
+                        Pending
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
             <Separator orientation="vertical" className="h-6" />
             <Switch
                 id="satellite-switch"

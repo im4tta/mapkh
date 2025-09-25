@@ -124,6 +124,19 @@ export default function VerificationReportPage() {
     const [customApiKey, setCustomApiKey] = useState('');
     const [useCustomApiKey, setUseCustomApiKey] = useState(false);
     const [apiKeyError, setApiKeyError] = useState<string | null>(null);
+    const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
+    
+    // Load saved API key from localStorage on component mount
+    useEffect(() => {
+        const savedApiKey = localStorage.getItem('verification_api_key');
+        const savedUseCustom = localStorage.getItem('use_custom_api_key') === 'true';
+        
+        if (savedApiKey && savedUseCustom) {
+            setCustomApiKey(savedApiKey);
+            setUseCustomApiKey(true);
+        }
+    }, []);
+    
     const apiKey = useCustomApiKey && customApiKey ? customApiKey : defaultApiKey;
 
     // Validate API key format
@@ -140,6 +153,19 @@ export default function VerificationReportPage() {
         if (value.trim() && !validateApiKey(value)) {
             setApiKeyError('Invalid API key format. Google Maps API keys should start with "AIza" and be 35-45 characters long.');
         }
+    };
+
+    const saveApiKey = () => {
+        if (useCustomApiKey && customApiKey && validateApiKey(customApiKey)) {
+            localStorage.setItem('verification_api_key', customApiKey);
+            localStorage.setItem('use_custom_api_key', 'true');
+            toast({ title: 'API Key Saved', description: 'Your API key has been saved for future verification sessions.' });
+        } else if (!useCustomApiKey) {
+            localStorage.removeItem('verification_api_key');
+            localStorage.removeItem('use_custom_api_key');
+            toast({ title: 'API Key Cleared', description: 'Using default API key for verification.' });
+        }
+        setShowApiKeyDialog(false);
     };
     const printRef = useRef<HTMLDivElement>(null);
     const [currentTime, setCurrentTime] = useState(new Date());
@@ -289,8 +315,8 @@ export default function VerificationReportPage() {
                 setReport(reportResult.data);
                 // Now that we have the report, verify the placeId
                 if (reportResult.data.placeId) {
-                    const verificationApiKey = useCustomApiKey && customApiKey ? customApiKey : undefined;
-                    const verificationResult = await verifyPlaceId(reportResult.data.placeId, verificationApiKey);
+                    // Use default API key for initial verification, custom key only for re-verification
+                    const verificationResult = await verifyPlaceId(reportResult.data.placeId);
                     if (verificationResult.success) {
                         setIsPlaceFound(verificationResult.found);
                     } else {
@@ -321,7 +347,7 @@ export default function VerificationReportPage() {
         })
     }
     
-    if (loading || !apiKey) {
+    if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-muted/40">
                 <Card className="w-full max-w-lg p-8">
@@ -330,6 +356,62 @@ export default function VerificationReportPage() {
                     <Skeleton className="h-6 w-full mb-2" />
                     <Skeleton className="h-6 w-full mb-6" />
                     <Skeleton className="h-48 w-full rounded-md" />
+                </Card>
+            </div>
+        );
+    }
+
+    // Show API key dialog if no valid API key is available OR if we want to force the dialog
+    if (!apiKey || !defaultApiKey) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-muted/40 p-4">
+                <Card className="w-full max-w-md">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <Key className="h-5 w-5" />
+                            API Key Required
+                        </CardTitle>
+                        <CardDescription>
+                            A Google Maps API key is required to verify location data. Please provide your API key to continue.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="api-key-input">Google Maps API Key</Label>
+                            <Input
+                                id="api-key-input"
+                                type="password"
+                                placeholder="Enter your Google Maps API key..."
+                                value={customApiKey}
+                                onChange={(e) => handleApiKeyChange(e.target.value)}
+                                className={`font-mono ${apiKeyError ? 'border-red-500 focus:border-red-500' : ''}`}
+                            />
+                            {apiKeyError && (
+                                <p className="text-sm text-red-600 dark:text-red-400">
+                                    {apiKeyError}
+                                </p>
+                            )}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                            <p>• Your API key will be saved locally for future sessions</p>
+                            <p>• API key should start with "AIza" and be 35-45 characters long</p>
+                            <p>• Get your API key from <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Google Cloud Console</a></p>
+                        </div>
+                    </CardContent>
+                    <CardFooter>
+                        <Button 
+                            onClick={() => {
+                                if (customApiKey && validateApiKey(customApiKey)) {
+                                    setUseCustomApiKey(true);
+                                    saveApiKey();
+                                }
+                            }}
+                            disabled={!customApiKey || !!apiKeyError}
+                            className="w-full"
+                        >
+                            Save API Key & Continue
+                        </Button>
+                    </CardFooter>
                 </Card>
             </div>
         );
@@ -409,21 +491,31 @@ export default function VerificationReportPage() {
                                              <p className="text-sm text-muted-foreground">
                                                  This API key will be used specifically for location verification. It's separate from the Maps page configuration.
                                              </p>
-                                             <Button 
-                                                  onClick={handleReVerification} 
-                                                  disabled={isVerifying || !customApiKey.trim() || !!apiKeyError}
-                                                  size="sm"
-                                                  variant="outline"
-                                              >
-                                                 {isVerifying ? (
-                                                     <>
-                                                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                         Verifying...
-                                                     </>
-                                                 ) : (
-                                                     'Re-verify'
-                                                 )}
-                                             </Button>
+                                             <div className="flex gap-2">
+                                                 <Button 
+                                                      onClick={saveApiKey}
+                                                      disabled={useCustomApiKey && (!customApiKey.trim() || !!apiKeyError)}
+                                                      size="sm"
+                                                      variant="outline"
+                                                  >
+                                                     Save Settings
+                                                 </Button>
+                                                 <Button 
+                                                      onClick={handleReVerification} 
+                                                      disabled={isVerifying || (useCustomApiKey && (!customApiKey.trim() || !!apiKeyError))}
+                                                      size="sm"
+                                                      variant="outline"
+                                                  >
+                                                     {isVerifying ? (
+                                                         <>
+                                                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                             Verifying...
+                                                         </>
+                                                     ) : (
+                                                         'Re-verify Location'
+                                                     )}
+                                                 </Button>
+                                             </div>
                                          </div>
                                      </div>
                                  )}
@@ -474,6 +566,36 @@ export default function VerificationReportPage() {
                                     <div className="flex items-start gap-3"><MapPin className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" /><p><strong className="font-medium">Province:</strong> {report.province}</p></div>
                                     <div className="flex items-start gap-3"><Clock className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" /><p><strong className="font-medium">Found Timestamp:</strong> {date ? format(date, 'PPP p') : 'N/A'}</p></div>
                                     <div className="flex items-start gap-3"><User className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" /><p><strong className="font-medium">Reported By:</strong> {report.reportedByName}</p></div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <h3 className="font-semibold text-lg mb-3 border-b pb-2">Translation Fields</h3>
+                                <div className="space-y-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div>
+                                            <Label htmlFor="english-translation" className="text-sm font-medium">English Translation</Label>
+                                            <Input
+                                                id="english-translation"
+                                                placeholder="Enter English translation..."
+                                                defaultValue={report.englishLanguage || ''}
+                                                className="mt-1"
+                                            />
+                                        </div>
+                                        <div>
+                                            <Label htmlFor="khmer-translation" className="text-sm font-medium">Khmer Translation</Label>
+                                            <Input
+                                                id="khmer-translation"
+                                                placeholder="បញ្ចូលការបកប្រែជាភាសាខ្មែរ..."
+                                                defaultValue={report.nativeKhmerLanguage || ''}
+                                                className="mt-1 font-khmer"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2 text-xs text-muted-foreground">
+                                        <p>• Translation fields are auto-filled from the original report</p>
+                                        <p>• You can edit these fields as needed for verification</p>
+                                    </div>
                                 </div>
                             </div>
 
