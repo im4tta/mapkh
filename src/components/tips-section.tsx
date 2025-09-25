@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, memo, useMemo } from 'react';
 import { useAuth } from '@/context/auth-provider';
 import { useToast } from '@/hooks/use-toast';
 import { getTips, deleteTip } from '@/app/actions';
@@ -47,7 +47,7 @@ const pwaInstallSteps = {
   ],
 };
 
-const StepIcon = ({ iconName }: { iconName: string }) => {
+const StepIcon = memo(({ iconName }: { iconName: string }) => {
     switch (iconName) {
         case 'chrome':
         case 'safari':
@@ -68,7 +68,105 @@ const StepIcon = ({ iconName }: { iconName: string }) => {
         default:
             return <div className="h-5 w-5" />;
     }
-};
+});
+
+StepIcon.displayName = 'StepIcon';
+
+const TipItem = memo(({ tip, user, onEdit, onDelete, t }: { 
+    tip: Tip, 
+    user: any, 
+    onEdit: (tip: Tip) => void, 
+    onDelete: (tip: Tip) => void,
+    t: any 
+}) => {
+    const getIcon = useCallback((iconName: string): LucideIcon => {
+        return tipIcons[iconName as keyof typeof tipIcons] || Info;
+    }, []);
+
+    const TipIcon = getIcon(tip.icon);
+    const canEdit = user?.uid === tip.createdBy.uid;
+
+    return (
+        <AccordionItem value={`tip-${tip.id}`}>
+            <AccordionTrigger>
+                <div className="flex items-center gap-3">
+                    <TipIcon className="h-5 w-5 text-primary" />
+                    <span className="font-semibold text-left">{t(tip.title as any, { ns: 'translation', defaultValue: tip.title })}</span>
+                </div>
+            </AccordionTrigger>
+            <AccordionContent>
+                <p>{t(tip.content as any, { ns: 'translation', defaultValue: tip.content })}</p>
+                {canEdit && (
+                    <div className="flex items-center gap-2 mt-4">
+                        <AddTipDialog tip={tip} onTipSaved={() => onEdit(tip)}>
+                            <Button variant="outline" size="sm"><Pencil className="mr-2 h-3 w-3" /> Edit</Button>
+                        </AddTipDialog>
+                        <Button variant="outline" size="sm" onClick={() => onDelete(tip)}><Trash2 className="mr-2 h-3 w-3" /> Delete</Button>
+                    </div>
+                )}
+            </AccordionContent>
+        </AccordionItem>
+    );
+});
+
+TipItem.displayName = 'TipItem';
+
+const PWAInstallGuide = memo(() => {
+    // Memoize the install steps to prevent re-rendering
+    const androidSteps = useMemo(() => pwaInstallSteps.android.map((step, i) => (
+        <li key={i} className="flex items-center gap-2">
+            <StepIcon iconName={step.icon} />
+            {step.text}
+        </li>
+    )), []);
+
+    const iosSteps = useMemo(() => pwaInstallSteps.ios.map((step, i) => (
+        <li key={i} className="flex items-center gap-2">
+            <StepIcon iconName={step.icon} />
+            {step.text}
+        </li>
+    )), []);
+
+    const desktopSteps = useMemo(() => pwaInstallSteps.desktop.map((step, i) => (
+        <li key={i} className="flex items-center gap-2">
+            <StepIcon iconName={step.icon} />
+            {step.text}
+        </li>
+    )), []);
+
+    return (
+        <AccordionItem value="pwa-install-guide">
+            <AccordionTrigger>
+                <div className="flex items-center gap-3">
+                    <AppWindow className="h-5 w-5 text-primary" />
+                    <span className="font-semibold text-left">How to Install This App</span>
+                </div>
+            </AccordionTrigger>
+            <AccordionContent className="space-y-4">
+                <div>
+                    <h4 className="font-semibold flex items-center gap-2 mb-2"><Smartphone className="h-4 w-4" />Android</h4>
+                    <ul className="space-y-2 text-sm text-muted-foreground list-inside">
+                        {androidSteps}
+                    </ul>
+                </div>
+                <div>
+                    <h4 className="font-semibold flex items-center gap-2 mb-2"><Smartphone className="h-4 w-4" />iOS (iPhone/iPad)</h4>
+                    <ul className="space-y-2 text-sm text-muted-foreground list-inside">
+                        {iosSteps}
+                    </ul>
+                </div>
+                <div>
+                    <h4 className="font-semibold flex items-center gap-2 mb-2"><Laptop className="h-4 w-4" />Desktop</h4>
+                    <ul className="space-y-2 text-sm text-muted-foreground list-inside">
+                        {desktopSteps}
+                    </ul>
+                </div>
+            </AccordionContent>
+        </AccordionItem>
+    );
+});
+
+PWAInstallGuide.displayName = 'PWAInstallGuide';
 
 export function TipsSection() {
     const { t } = useTranslation();
@@ -93,7 +191,7 @@ export function TipsSection() {
         fetchTips();
     }, [fetchTips]);
 
-    const handleDelete = async () => {
+    const handleDelete = useCallback(async () => {
         if (!deletingTip || !user) return;
         const result = await deleteTip(deletingTip.id, user.uid);
         if (result.success) {
@@ -103,11 +201,25 @@ export function TipsSection() {
             toast({ variant: 'destructive', title: t('contributions.tips.delete_fail'), description: result.error });
         }
         setDeletingTip(null);
-    }
-    
-    const getIcon = (iconName: string): LucideIcon => {
-        return tipIcons[iconName as keyof typeof tipIcons] || Info;
-    }
+    }, [deletingTip, user, t, toast, fetchTips]);
+
+    const handleEditTip = useCallback(() => {
+        fetchTips();
+    }, [fetchTips]);
+
+    // Memoize rendered tips to prevent unnecessary re-renders
+    const renderedTips = useMemo(() => {
+        return tips.map((tip) => (
+            <TipItem 
+                key={tip.id} 
+                tip={tip} 
+                user={user} 
+                onEdit={handleEditTip} 
+                onDelete={setDeletingTip}
+                t={t}
+            />
+        ));
+    }, [tips, user, handleEditTip, t]);
 
     if (isLoading) {
         return <div className="flex justify-center items-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>
@@ -134,70 +246,10 @@ export function TipsSection() {
                 </CardHeader>
                 <CardContent className="flex-1 min-h-0">
                     <ScrollArea className="h-full pr-4 -mr-4">
-                     
                         <Accordion type="single" collapsible className="w-full">
-                            {/* PWA Install Guide */}
-                            <AccordionItem value="pwa-install-guide">
-                                <AccordionTrigger>
-                                    <div className="flex items-center gap-3">
-                                        <AppWindow className="h-5 w-5 text-primary" />
-                                        <span className="font-semibold text-left">How to Install This App</span>
-                                    </div>
-                                </AccordionTrigger>
-                                <AccordionContent className="space-y-4">
-                                     <div>
-                                        <h4 className="font-semibold flex items-center gap-2 mb-2"><Smartphone className="h-4 w-4" />Android</h4>
-                                        <ul className="space-y-2 text-sm text-muted-foreground list-inside">
-                                            {pwaInstallSteps.android.map((step, i) => (
-                                                <li key={i} className="flex items-center gap-2"><StepIcon iconName={step.icon} />{step.text}</li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                    <div>
-                                        <h4 className="font-semibold flex items-center gap-2 mb-2"><Smartphone className="h-4 w-4" />iOS (iPhone/iPad)</h4>
-                                        <ul className="space-y-2 text-sm text-muted-foreground list-inside">
-                                            {pwaInstallSteps.ios.map((step, i) => (
-                                                <li key={i} className="flex items-center gap-2"><StepIcon iconName={step.icon} />{step.text}</li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                    <div>
-                                        <h4 className="font-semibold flex items-center gap-2 mb-2"><Laptop className="h-4 w-4" />Desktop</h4>
-                                        <ul className="space-y-2 text-sm text-muted-foreground list-inside">
-                                            {pwaInstallSteps.desktop.map((step, i) => (
-                                                <li key={i} className="flex items-center gap-2"><StepIcon iconName={step.icon} />{step.text}</li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                </AccordionContent>
-                            </AccordionItem>
-                             {tips.length > 0 ? (
-                                <>
-                                    {tips.map((tip, index) => {
-                                        const TipIcon = getIcon(tip.icon);
-                                        const canEdit = user?.uid === tip.createdBy.uid;
-                                        return (
-                                        <AccordionItem value={`item-${index}`} key={tip.id}>
-                                            <AccordionTrigger>
-                                                <div className="flex items-center gap-3">
-                                                    <TipIcon className="h-5 w-5 text-primary" />
-                                                    <span className="font-semibold text-left">{t(tip.title as any, { ns: 'translation', defaultValue: tip.title })}</span>
-                                                </div>
-                                            </AccordionTrigger>
-                                            <AccordionContent>
-                                                <p>{t(tip.content as any, { ns: 'translation', defaultValue: tip.content })}</p>
-                                                {canEdit && (
-                                                    <div className="flex items-center gap-2 mt-4">
-                                                        <AddTipDialog tip={tip} onTipSaved={fetchTips}>
-                                                            <Button variant="outline" size="sm"><Pencil className="mr-2 h-3 w-3" /> Edit</Button>
-                                                        </AddTipDialog>
-                                                        <Button variant="outline" size="sm" onClick={() => setDeletingTip(tip)}><Trash2 className="mr-2 h-3 w-3" /> Delete</Button>
-                                                    </div>
-                                                )}
-                                            </AccordionContent>
-                                        </AccordionItem>
-                                    )})}
-                                </>
+                            <PWAInstallGuide />
+                            {tips.length > 0 ? (
+                                renderedTips
                             ) : (
                                 <div className="text-center py-8 text-muted-foreground">
                                     {t('contributions.tips.no_tips')}

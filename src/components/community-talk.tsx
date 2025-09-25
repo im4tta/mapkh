@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo, useCallback, memo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -30,12 +30,12 @@ const postSchema = z.object({
 
 type PostFormValues = z.infer<typeof postSchema>;
 
-const PostItem = ({ post, onEdit, onReply }: { post: CommunityPost, onEdit: (post: CommunityPost) => void, onReply: (post: CommunityPost) => void }) => {
+const PostItem = memo(({ post, onEdit, onReply }: { post: CommunityPost, onEdit: (post: CommunityPost) => void, onReply: (post: CommunityPost) => void }) => {
     const { user } = useAuth();
     const [isDeleting, setIsDeleting] = useState(false);
     const { toast } = useToast();
 
-    const handleDelete = async () => {
+    const handleDelete = useCallback(async () => {
         setIsDeleting(true);
         if (!user) return;
         const result = await deletePost(post.id, user.uid);
@@ -43,7 +43,11 @@ const PostItem = ({ post, onEdit, onReply }: { post: CommunityPost, onEdit: (pos
             toast({ variant: 'destructive', title: "Failed to delete post", description: result.error });
         }
         setIsDeleting(false); // Close dialog via onOpenChange
-    };
+    }, [post.id, user, toast]);
+
+    const formattedDate = useMemo(() => {
+        return post.createdAt ? formatDistanceToNow(new Date(post.createdAt as any), { addSuffix: true }) : '';
+    }, [post.createdAt]);
 
     return (
         <div className="group flex items-start gap-3">
@@ -55,7 +59,7 @@ const PostItem = ({ post, onEdit, onReply }: { post: CommunityPost, onEdit: (pos
                 <div className="flex items-center gap-2">
                     <span className="font-semibold text-sm">{post.user.name}</span>
                     <span className="text-xs text-muted-foreground">
-                        {post.createdAt ? formatDistanceToNow(new Date(post.createdAt as any), { addSuffix: true }) : ''}
+                        {formattedDate}
                         {post.updatedAt && " (edited)"}
                     </span>
                 </div>
@@ -111,7 +115,9 @@ const PostItem = ({ post, onEdit, onReply }: { post: CommunityPost, onEdit: (pos
             )}
         </div>
     );
-};
+});
+
+PostItem.displayName = 'PostItem';
 
 export function CommunityTalk() {
   const { user, loading: authLoading } = useAuth();
@@ -138,19 +144,33 @@ export function CommunityTalk() {
     }
   }, [editingPost, form]);
   
-  const handleReply = (post: CommunityPost) => {
+  const handleReply = useCallback((post: CommunityPost) => {
     setEditingPost(null); // Cancel any ongoing edit
     setReplyingTo(post);
     textareaRef.current?.focus();
-  }
+  }, []);
   
-  const cancelReply = () => {
+  const cancelReply = useCallback(() => {
       setReplyingTo(null);
-  }
+  }, []);
+
+  // Debounced scroll to bottom to reduce excessive scrolling on Android
+  const scrollToBottom = useCallback(() => {
+    if (scrollAreaRef.current) {
+        const scrollableView = scrollAreaRef.current.querySelector('div');
+        if (scrollableView) {
+            // Use requestAnimationFrame for smoother scrolling on mobile
+            requestAnimationFrame(() => {
+                scrollableView.scrollTop = scrollableView.scrollHeight;
+            });
+        }
+    }
+  }, []);
 
   useEffect(() => {
     setIsLoading(true);
-    const q = query(collection(db, "posts"), orderBy("createdAt", "asc"), limit(50));
+    // Reduce limit for better mobile performance
+    const q = query(collection(db, "posts"), orderBy("createdAt", "asc"), limit(30));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const postsData = snapshot.docs.map(doc => {
         const data = doc.data();
@@ -172,16 +192,13 @@ export function CommunityTalk() {
     return () => unsubscribe();
   }, [toast, t]);
   
+  // Debounce scroll to bottom to improve performance
   useEffect(() => {
-    if (scrollAreaRef.current) {
-        const scrollableView = scrollAreaRef.current.querySelector('div');
-        if (scrollableView) {
-            scrollableView.scrollTop = scrollableView.scrollHeight;
-        }
-    }
-  }, [posts]);
+    const timeoutId = setTimeout(scrollToBottom, 100);
+    return () => clearTimeout(timeoutId);
+  }, [posts, scrollToBottom]);
 
-  const onSubmit = async (data: PostFormValues) => {
+  const onSubmit = useCallback(async (data: PostFormValues) => {
     if (!user) {
       toast({ variant: 'destructive', title: t('contributions.talk.auth_error') });
       return;
@@ -201,7 +218,14 @@ export function CommunityTalk() {
     } else {
       toast({ variant: 'destructive', title: t('contributions.talk.send_error_title'), description: result.error });
     }
-  };
+  }, [user, editingPost, replyingTo, form, toast, t]);
+
+  // Memoize rendered posts to prevent unnecessary re-renders
+  const renderedPosts = useMemo(() => {
+    return posts.map((post) => (
+      <PostItem key={post.id} post={post} onEdit={setEditingPost} onReply={handleReply} />
+    ));
+  }, [posts, handleReply]);
 
   return (
     <Card className="h-full flex flex-col flex-1">
@@ -219,9 +243,7 @@ export function CommunityTalk() {
                     <Skeleton className="h-16 w-full" />
                 </>
             ) : posts.length > 0 ? (
-              posts.map((post) => (
-                <PostItem key={post.id} post={post} onEdit={setEditingPost} onReply={handleReply} />
-              ))
+              renderedPosts
             ) : (
                 <div className="text-center text-muted-foreground p-8">{t('contributions.talk.no_messages')}</div>
             )}

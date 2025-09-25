@@ -246,13 +246,20 @@ export default function VerificationReportPage() {
             return;
         }
         
+        // Check if we need an API key for verification
         if (useCustomApiKey && !customApiKey.trim()) {
-            toast({ variant: 'destructive', title: 'API Key Required', description: 'Please enter a valid Google Maps API key.' });
+            setShowApiKeyDialog(true);
             return;
         }
 
         if (useCustomApiKey && !validateApiKey(customApiKey)) {
-            toast({ variant: 'destructive', title: 'Invalid API Key', description: 'Please enter a valid Google Maps API key format.' });
+            setShowApiKeyDialog(true);
+            return;
+        }
+
+        // If no default API key and no custom API key, show dialog
+        if (!defaultApiKey && !customApiKey.trim()) {
+            setShowApiKeyDialog(true);
             return;
         }
 
@@ -361,8 +368,8 @@ export default function VerificationReportPage() {
         );
     }
 
-    // Show API key dialog if no valid API key is available OR if we want to force the dialog
-    if (!apiKey || !defaultApiKey) {
+    // Show API key dialog only when explicitly requested via showApiKeyDialog state
+    if (showApiKeyDialog) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-muted/40 p-4">
                 <Card className="w-full max-w-md">
@@ -398,18 +405,26 @@ export default function VerificationReportPage() {
                             <p>• Get your API key from <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Google Cloud Console</a></p>
                         </div>
                     </CardContent>
-                    <CardFooter>
+                    <CardFooter className="flex gap-2">
+                        <Button 
+                            onClick={() => setShowApiKeyDialog(false)}
+                            variant="outline"
+                            className="flex-1"
+                        >
+                            Cancel
+                        </Button>
                         <Button 
                             onClick={() => {
                                 if (customApiKey && validateApiKey(customApiKey)) {
                                     setUseCustomApiKey(true);
                                     saveApiKey();
+                                    setShowApiKeyDialog(false);
                                 }
                             }}
                             disabled={!customApiKey || !!apiKeyError}
-                            className="w-full"
+                            className="flex-1"
                         >
-                            Save API Key & Continue
+                            Save & Continue
                         </Button>
                     </CardFooter>
                 </Card>
