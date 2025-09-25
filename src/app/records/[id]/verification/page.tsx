@@ -139,6 +139,16 @@ export default function VerificationReportPage() {
     
     const apiKey = useCustomApiKey && customApiKey ? customApiKey : defaultApiKey;
 
+    // Debug logging for API key
+    useEffect(() => {
+        console.log('API Key Debug:', {
+            useCustomApiKey,
+            customApiKey: customApiKey ? `${customApiKey.substring(0, 10)}...` : 'none',
+            defaultApiKey: defaultApiKey ? `${defaultApiKey.substring(0, 10)}...` : 'none',
+            finalApiKey: apiKey ? `${apiKey.substring(0, 10)}...` : 'none'
+        });
+    }, [useCustomApiKey, customApiKey, defaultApiKey, apiKey]);
+
     // Validate API key format
     const validateApiKey = (key: string): boolean => {
         if (!key.trim()) return false;
@@ -628,18 +638,30 @@ export default function VerificationReportPage() {
                             </div>
 
                             <div style={{ width: `${mapWidth}px`, height: `${mapHeight}px`}} className="mx-auto rounded-md overflow-hidden border">
-                                <Map
-                                    center={report.position}
-                                    zoom={mapZoom}
-                                    mapId="verification_map"
-                                    gestureHandling={'none'}
-                                    disableDefaultUI={true}
-                                    mapTypeId={mapType}
-                                >
-                                    <AdvancedMarker position={report.position}>
-                                        <Pin />
-                                    </AdvancedMarker>
-                                </Map>
+                                {apiKey ? (
+                                    <Map
+                                        center={report.position}
+                                        zoom={mapZoom}
+                                        mapId="verification_map"
+                                        gestureHandling={'none'}
+                                        disableDefaultUI={true}
+                                        mapTypeId={mapType}
+                                    >
+                                        <AdvancedMarker position={report.position}>
+                                            <Pin />
+                                        </AdvancedMarker>
+                                    </Map>
+                                ) : (
+                                    <div className="flex items-center justify-center h-full bg-gray-100 dark:bg-gray-800">
+                                        <div className="text-center p-4">
+                                            <Key className="h-12 w-12 mx-auto mb-2 text-gray-400" />
+                                            <p className="text-gray-600 dark:text-gray-400">No API key available</p>
+                                            <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
+                                                Please configure a Google Maps API key to display the map
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                              
                             <div className="text-center pt-4">
