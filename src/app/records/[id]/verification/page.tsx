@@ -298,36 +298,43 @@ export default function VerificationReportPage() {
     
     useEffect(() => {
         const fetchReport = async () => {
-            if (!id) {
-                setError("Report ID is missing.");
+            try {
+                if (!id) {
+                    setError("Report ID is missing.");
+                    setLoading(false);
+                    return;
+                }
+                setLoading(true);
+                const reportNumber = parseInt(id, 10);
+
+                if (isNaN(reportNumber)) {
+                    setError("Invalid Report ID format.");
+                    setLoading(false);
+                    return;
+                };
+                
+                const [reportResult, termsResult, subTypesResult] = await Promise.all([
+                    getReportByNumericId(reportNumber),
+                    getViolationTerms(),
+                    getSubViolationTypes(),
+                ]);
+
+                if (termsResult.success && termsResult.data) setViolationTerms(termsResult.data);
+                if (subTypesResult.success && subTypesResult.data) setSubViolationTypes(subTypesResult.data);
+
+                if (reportResult.success && reportResult.data) {
+                    setReport(reportResult.data);
+                    // Don't auto-verify on page load - user must click verification button
+                } else {
+                    setError(reportResult.error || "Failed to load report details.");
+                }
+            } catch (err) {
+                const errorMessage = err instanceof Error ? err.message : 'Failed to load report data.';
+                setError(errorMessage);
+                console.error('Error fetching report:', err);
+            } finally {
                 setLoading(false);
-                return;
             }
-            setLoading(true);
-            const reportNumber = parseInt(id, 10);
-
-            if (isNaN(reportNumber)) {
-                setError("Invalid Report ID format.");
-                setLoading(false);
-                return;
-            };
-            
-            const [reportResult, termsResult, subTypesResult] = await Promise.all([
-                getReportByNumericId(reportNumber),
-                getViolationTerms(),
-                getSubViolationTypes(),
-            ]);
-
-            if (termsResult.success && termsResult.data) setViolationTerms(termsResult.data);
-            if (subTypesResult.success && subTypesResult.data) setSubViolationTypes(subTypesResult.data);
-
-            if (reportResult.success && reportResult.data) {
-                setReport(reportResult.data);
-                // Don't auto-verify on page load - user must click verification button
-            } else {
-                setError(reportResult.error || "Failed to load report details.");
-            }
-            setLoading(false);
         };
 
         fetchReport();
