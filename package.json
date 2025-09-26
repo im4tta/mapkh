@@ -47,6 +47,7 @@
     "@types/react-window": "^1.8.8",
     "@vercel/analytics": "^1.5.0",
     "@vis.gl/react-google-maps": "^1.1.0",
+    "canvas": "^3.2.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
@@ -104,6 +105,7 @@
     "genkit-cli": "^1.15.5",
     "postcss": "^8",
     "rimraf": "^5.0.7",
+    "sharp": "^0.34.4",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.9.2"
   }

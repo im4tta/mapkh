@@ -374,3 +374,83 @@ export const initializeBadgeSync = async (): Promise<void> => {
     console.error('Failed to initialize badge sync:', error);
   }
 };
+
+export const initializeRealTimePushNotifications = async (): Promise<boolean> => {
+  try {
+    // Register service worker first
+    const swRegistered = await registerServiceWorker();
+    if (!swRegistered) {
+      console.error('Service worker registration failed');
+      return false;
+    }
+
+    // Request notification permission
+    const hasPermission = await requestNotificationPermission();
+    if (!hasPermission) {
+      console.log('Notification permission denied');
+      return false;
+    }
+
+    // Get FCM token
+    const token = await fetchToken();
+    if (!token) {
+      console.error('Failed to get FCM token');
+      return false;
+    }
+
+    // Save token for server communication
+    await saveFCMToken(token);
+
+    // Initialize badge sync
+    await initializeBadgeSync();
+
+    // Setup message listener for foreground notifications
+    setupServiceWorkerMessageListener();
+
+    console.log('Real-time push notifications initialized successfully');
+    return true;
+  } catch (error) {
+    console.error('Failed to initialize real-time push notifications:', error);
+    return false;
+  }
+};
+
+export const sendTestNotification = async (): Promise<void> => {
+  try {
+    const token = getStoredFCMToken();
+    if (!token) {
+      throw new Error('No FCM token available');
+    }
+
+    // Send a test notification via your backend API
+    const response = await fetch('/api/notifications/test', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        token,
+        title: 'MapKH Test Notification',
+        body: 'This is a test notification to verify push notifications are working.',
+        data: {
+          type: 'test',
+          timestamp: Date.now()
+        }
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to send test notification');
+    }
+
+    console.log('Test notification sent successfully');
+  } catch (error) {
+    console.error('Failed to send test notification:', error);
+    // Fallback to local notification
+    showLocalNotification(
+      'MapKH Test Notification',
+      'This is a local test notification. Push notifications may not be fully configured.',
+      { type: 'test', timestamp: Date.now() }
+    );
+  }
+};

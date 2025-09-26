@@ -87,6 +87,15 @@ const saveBadgeCount = async (count) => {
     badgeCount = count;
     await saveToIndexedDB(BADGE_STORAGE_KEY, count);
     await updateBadge();
+    
+    // Notify main app of badge count change
+    const clients = await self.clients.matchAll({ type: 'window' });
+    clients.forEach(client => {
+      client.postMessage({
+        type: 'BADGE_COUNT_UPDATED',
+        data: { count }
+      });
+    });
   } catch (error) {
     console.error('Failed to save badge count:', error);
   }
@@ -852,6 +861,14 @@ self.addEventListener('message', async (event) => {
         const unreadCount = await getUnreadNotificationCount();
         await saveBadgeCount(unreadCount);
       }
+      break;
+      
+    case 'GET_BADGE_COUNT':
+      // Send current badge count back to main app
+      event.ports[0]?.postMessage({
+        type: 'BADGE_COUNT_RESPONSE',
+        count: badgeCount
+      });
       break;
       
     case 'REQUEST_NOTIFICATION_PERMISSION':

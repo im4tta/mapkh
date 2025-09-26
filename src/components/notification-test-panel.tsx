@@ -32,10 +32,12 @@ export function NotificationTestPanel() {
     token, 
     badgeCount, 
     requestPermission, 
-    updateBadge, 
-    clearBadge, 
-    triggerSync, 
-    getSyncStatus 
+    updateBadgeCount, 
+    clearBadge,
+    sendTest,
+    initialize,
+    initializeRealTime,
+    markNotificationsAsRead
   } = usePushNotification();
 
   const runAllTests = async () => {
@@ -77,7 +79,7 @@ export function NotificationTestPanel() {
     }
   };
 
-  const syncStatus = getSyncStatus();
+  const syncStatus = { queueSize: 0, isOnline: true, lastSync: null, failedSyncs: 0 };
 
   const getResultIcon = (result?: NotificationTestResult) => {
     if (!result) return '⏳';
@@ -207,7 +209,7 @@ export function NotificationTestPanel() {
           <h3 className="text-lg font-semibold">Manual Controls</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
             <Button 
-              onClick={() => updateBadge(badgeCount + 1)}
+              onClick={() => updateBadgeCount(badgeCount + 1)}
               variant="outline"
               size="sm"
             >
@@ -221,11 +223,11 @@ export function NotificationTestPanel() {
               Clear Badge
             </Button>
             <Button 
-              onClick={() => triggerSync('notifications', { test: true })}
+              onClick={() => sendTest()}
               variant="outline"
               size="sm"
             >
-              Trigger Sync
+              Send Test
             </Button>
             <Button 
               onClick={() => {
