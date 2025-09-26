@@ -3,7 +3,7 @@
   "name": "MapKHCorrect",
   "short_name": "MapCorrect",
   "description": "Fix the Map, Help the Nation. A user-friendly map error reporting app for community contributions.",
-  "start_url": "/?source=pwa",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#D6001C",
