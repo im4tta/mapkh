@@ -47,11 +47,7 @@ export function NotificationSettings() {
   const {
     permission,
     requestPermission,
-    isSupported,
-    isMobile,
-    isPWA,
-    capabilities,
-    supportMessage
+    isSupported
   } = usePushNotification();
 
   useEffect(() => {
@@ -125,12 +121,12 @@ export function NotificationSettings() {
           <CardTitle className="flex items-center gap-2">
             <Bell className="h-5 w-5" />
             Notification Permission
-            {isMobile && (
+            {mobileDetection?.isMobile && (
               <Smartphone className="h-4 w-4 text-muted-foreground" />
             )}
           </CardTitle>
           <CardDescription>
-            {isMobile && capabilities?.requiresInstallation 
+            {mobileDetection?.isMobile && mobileDetection?.capabilities?.requiresInstallation 
               ? 'Install the app to enable notifications and badges on this device.'
               : 'Browser permission is required to receive push notifications'
             }
@@ -141,9 +137,9 @@ export function NotificationSettings() {
             <Alert>
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                {capabilities?.requiresInstallation ? (
+                {mobileDetection?.capabilities?.requiresInstallation ? (
                   <div className="space-y-2">
-                    <p>{supportMessage}</p>
+                    <p>{mobileDetection?.supportMessage}</p>
                     {mobileDetection?.isIOS && (
                       <p className="text-sm">
                         On iOS: Tap the Share button <ExternalLink className="h-3 w-3 inline" /> and select "Add to Home Screen".
@@ -168,7 +164,7 @@ export function NotificationSettings() {
               <Badge variant={permission === 'granted' ? 'default' : 'destructive'}>
                 {permission === 'granted' ? 'Granted' : permission === 'denied' ? 'Denied' : 'Not Requested'}
               </Badge>
-              {isMobile && isPWA && (
+              {mobileDetection?.isMobile && mobileDetection?.isPWA && (
                 <p className="text-xs text-green-600">
                   ✓ Running as installed app - full notification support available
                 </p>
@@ -177,7 +173,7 @@ export function NotificationSettings() {
             {permission !== 'granted' && isSupported && (
               <Button 
                 onClick={requestPermission}
-                disabled={!capabilities?.canRequestPermission}
+                disabled={!mobileDetection?.capabilities?.canRequestPermission}
               >
                 {permission === 'denied' ? 'Permission Denied' : 'Enable Notifications'}
               </Button>
@@ -185,7 +181,7 @@ export function NotificationSettings() {
           </div>
           
           {/* Mobile-specific information */}
-          {isMobile && (
+          {mobileDetection?.isMobile && (
             <>
               <Separator className="my-4" />
               <div className="space-y-4">
@@ -206,31 +202,31 @@ export function NotificationSettings() {
                   <div>
                     <span className="font-medium">App Mode:</span>
                     <p className="text-muted-foreground">
-                      {isPWA ? 'Installed App' : 'Browser'}
+                      {mobileDetection?.isPWA ? 'Installed App' : 'Browser'}
                     </p>
                   </div>
                   <div>
                     <span className="font-medium">Notifications:</span>
                     <p className="text-muted-foreground">
-                      {capabilities?.canShowNotifications ? 'Supported' : 'Limited'}
+                      {mobileDetection?.capabilities?.canShowNotifications ? 'Supported' : 'Limited'}
                     </p>
                   </div>
                   <div>
                     <span className="font-medium">Badges:</span>
                     <p className="text-muted-foreground">
-                      {capabilities?.canUseBadging ? 'Supported' : 'Not Available'}
+                      {mobileDetection?.capabilities?.canUseBadging ? 'Supported' : 'Not Available'}
                     </p>
                   </div>
                 </div>
                 
-                {capabilities?.limitations && capabilities.limitations.length > 0 && (
+                {mobileDetection?.capabilities?.limitations && mobileDetection.capabilities.limitations.length > 0 && (
                   <Alert>
                     <AlertTriangle className="h-4 w-4" />
                     <AlertDescription>
                       <div className="space-y-1">
                         <p className="font-medium">Current Limitations:</p>
                         <ul className="list-disc list-inside space-y-1">
-                          {capabilities.limitations.map((limitation: string, index: number) => (
+                          {mobileDetection.capabilities.limitations.map((limitation: string, index: number) => (
                             <li key={index} className="text-sm">{limitation}</li>
                           ))}
                         </ul>
