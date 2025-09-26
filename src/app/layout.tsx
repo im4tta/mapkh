@@ -24,11 +24,11 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Noto+Sans+Khmer:wght@400;500;700&display=swap" rel="stylesheet" />
         <link rel="manifest" href="/manifest.json" />
-        <link rel="icon" href="/icons/icon-192x192.svg" />
-        <link rel="apple-touch-icon" href="/icons/icon-192x192.svg" />
-        <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192x192.svg" />
-        <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512x512.svg" />
-        <link rel="shortcut icon" href="/icons/icon-192x192.svg" />
+        <link rel="icon" href="/icons/favicon.png" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="apple-touch-icon" sizes="192x192" href="/icons/favicon.png" />
+        <link rel="apple-touch-icon" sizes="512x512" href="/icons/favicon.png" />
+        <link rel="shortcut icon" href="/icons/favicon.png" />
         <meta name="theme-color" content="#D6001C" media="(prefers-color-scheme: light)" />
         <meta name="theme-color" content="#00209F" media="(prefers-color-scheme: dark)" />
       </head>
