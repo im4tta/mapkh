@@ -1,7 +1,10 @@
 <svg width="72" height="72" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="72" height="72" rx="16" fill="#D6001C"/>
-  <path d="M36 12C50.3594 12 62 23.6406 62 38C62 52.3594 50.3594 64 36 64C21.6406 64 10 52.3594 10 38C10 23.6406 21.6406 12 36 12Z" fill="white"/>
-  <path d="M36 18C46.9688 18 56 27.0312 56 38C56 48.9688 46.9688 58 36 58C25.0312 58 16 48.9688 16 38C16 27.0312 25.0312 18 36 18Z" fill="#D6001C"/>
-  <path d="M36 24L42 30H39V42H33V30H30L36 24Z" fill="white"/>
-  <circle cx="36" cy="48" r="3" fill="white"/>
+  <rect width="72" height="72" rx="12" fill="#2563eb"/>
+  <g transform="translate(12, 12)">
+    <!-- Map pin icon -->
+    <path d="M24 3C18.2 3 13.5 7.7 13.5 13.5c0 7.875 10.5 19.5 10.5 19.5s10.5-11.625 10.5-19.5C34.5 7.7 29.8 3 24 3z" fill="white"/>
+    <circle cx="24" cy="13.5" r="3.75" fill="#2563eb"/>
+    <!-- KH text -->
+    <text x="24" y="42" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="12" font-weight="bold">KH</text>
+  </g>
 </svg>
