@@ -51,6 +51,7 @@ import { DataTableToolbar } from './data-table-toolbar';
 import { DataTablePagination } from './data-table-pagination';
 import { Input } from './ui/input';
 import { KeywordsDialog } from './keywords-dialog';
+import { evidenceCache } from '@/lib/evidence-cache';
 
 
 const DescriptionCell = ({ text }: { text: string }) => {
@@ -429,6 +430,7 @@ export function RecordsTable({
   const [subViolationTypes, setSubViolationTypes] = useState<SubViolationType[]>([]);
   const [editingPlaceId, setEditingPlaceId] = useState<{ id: string, value: string } | null>(null);
   const [evidenceCounts, setEvidenceCounts] = useState<Record<string, number>>({});
+  const [loadingEvidenceCounts, setLoadingEvidenceCounts] = useState<Set<string>>(new Set());
 
   const { toast } = useToast();
 
@@ -442,21 +444,92 @@ export function RecordsTable({
   useEffect(() => {
     const fetchEvidenceCounts = async () => {
       const reportsWithDriveLink = data.filter(report => report.driveLink);
-      const counts: Record<string, number> = {};
+      if (reportsWithDriveLink.length === 0) return;
+
+      console.log(`Found ${reportsWithDriveLink.length} reports with drive links`);
       
-      await Promise.all(
-        reportsWithDriveLink.map(async (report) => {
-          try {
-            const result = await getDriveFolderInfo(report.driveLink!);
-            counts[report.id] = result.fileCount;
-          } catch (error) {
-            console.error(`Failed to get evidence count for report ${report.id}:`, error);
-            counts[report.id] = 0;
+      // Check cache first
+      const driveLinks = reportsWithDriveLink.map(report => report.driveLink!);
+      const cachedCounts = evidenceCache.getMultiple(driveLinks);
+      
+      // Set cached counts immediately
+      const initialCounts: Record<string, number> = {};
+      const reportsNeedingFetch: typeof reportsWithDriveLink = [];
+      
+      reportsWithDriveLink.forEach(report => {
+        const cachedCount = cachedCounts[report.driveLink!];
+        if (cachedCount !== undefined) {
+          initialCounts[report.id] = cachedCount;
+        } else {
+          reportsNeedingFetch.push(report);
+        }
+      });
+      
+      // Update state with cached values
+      if (Object.keys(initialCounts).length > 0) {
+        setEvidenceCounts(prev => ({ ...prev, ...initialCounts }));
+      }
+      
+      // Fetch remaining counts in batches
+      if (reportsNeedingFetch.length > 0) {
+        console.log(`Fetching evidence counts for ${reportsNeedingFetch.length} reports not in cache`);
+        
+        // Set loading state for reports being fetched
+        setLoadingEvidenceCounts(new Set(reportsNeedingFetch.map(r => r.id)));
+        
+        const BATCH_SIZE = 5; // Process in smaller batches to avoid overwhelming the API
+        const batches = [];
+        
+        for (let i = 0; i < reportsNeedingFetch.length; i += BATCH_SIZE) {
+          batches.push(reportsNeedingFetch.slice(i, i + BATCH_SIZE));
+        }
+        
+        // Process batches sequentially with delay
+        for (const batch of batches) {
+          const batchPromises = batch.map(async (report) => {
+            try {
+              console.log(`Fetching evidence count for report ${report.id} with drive link: ${report.driveLink}`);
+              const result = await getDriveFolderInfo(report.driveLink!);
+              console.log(`Evidence count result for report ${report.id}:`, result);
+              
+              // Cache the result
+              evidenceCache.set(report.driveLink!, result.fileCount);
+              
+              return { reportId: report.id, driveLink: report.driveLink!, count: result.fileCount };
+            } catch (error) {
+              console.error(`Failed to get evidence count for report ${report.id}:`, error);
+              // Cache 0 for failed requests to avoid repeated failures
+              evidenceCache.set(report.driveLink!, 0);
+              return { reportId: report.id, driveLink: report.driveLink!, count: 0 };
+            }
+          });
+          
+          const batchResults = await Promise.all(batchPromises);
+          
+          // Update state with batch results
+          const batchCounts: Record<string, number> = {};
+          const batchCacheData: Record<string, number> = {};
+          
+          batchResults.forEach(({ reportId, driveLink, count }) => {
+            batchCounts[reportId] = count;
+            batchCacheData[driveLink] = count;
+          });
+          
+          setEvidenceCounts(prev => ({ ...prev, ...batchCounts }));
+          
+          // Remove from loading state
+          setLoadingEvidenceCounts(prev => {
+            const newSet = new Set(prev);
+            batchResults.forEach(({ reportId }) => newSet.delete(reportId));
+            return newSet;
+          });
+          
+          // Add small delay between batches to be respectful to the API
+          if (batches.indexOf(batch) < batches.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 100));
           }
-        })
-      );
-      
-      setEvidenceCounts(counts);
+        }
+      }
     };
 
     if (data.length > 0) {
@@ -1163,11 +1236,20 @@ export function RecordsTable({
                                             <TooltipTrigger asChild>
                                                 <Badge variant="outline" className="h-7 px-2 flex items-center gap-1">
                                                     <Folder className="h-3 w-3" />
-                                                    {evidenceCounts[report.id] || 0}
+                                                    {loadingEvidenceCounts.has(report.id) ? (
+                                                        <div className="animate-pulse bg-muted rounded w-4 h-3" />
+                                                    ) : (
+                                                        evidenceCounts[report.id] || 0
+                                                    )}
                                                 </Badge>
                                             </TooltipTrigger>
                                             <TooltipContent>
-                                                <p>{evidenceCounts[report.id] || 0} Evidence Files</p>
+                                                <p>
+                                                    {loadingEvidenceCounts.has(report.id) 
+                                                        ? "Loading evidence count..." 
+                                                        : `${evidenceCounts[report.id] || 0} Evidence Files`
+                                                    }
+                                                </p>
                                             </TooltipContent>
                                         </Tooltip>
                                     </TooltipProvider>
