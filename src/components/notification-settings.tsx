@@ -48,7 +48,6 @@ export function NotificationSettings() {
     permission,
     requestPermission,
     isSupported,
-    hasPermission,
     isMobile,
     isPWA,
     capabilities,
@@ -166,8 +165,8 @@ export function NotificationSettings() {
           <div className="flex items-center justify-between">
             <div className="space-y-1">
               <div className="font-medium">Current Status</div>
-              <Badge variant={hasPermission ? 'default' : 'destructive'}>
-                {hasPermission ? 'Granted' : permission === 'denied' ? 'Denied' : 'Not Requested'}
+              <Badge variant={permission === 'granted' ? 'default' : 'destructive'}>
+                {permission === 'granted' ? 'Granted' : permission === 'denied' ? 'Denied' : 'Not Requested'}
               </Badge>
               {isMobile && isPWA && (
                 <p className="text-xs text-green-600">
@@ -175,7 +174,7 @@ export function NotificationSettings() {
                 </p>
               )}
             </div>
-            {!hasPermission && isSupported && (
+            {permission !== 'granted' && isSupported && (
               <Button 
                 onClick={requestPermission}
                 disabled={!capabilities?.canRequestPermission}
