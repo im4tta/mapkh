@@ -125,7 +125,7 @@ export function AdminNotificationManager() {
   const [previewMode, setPreviewMode] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
   
-  const { isSupported, hasPermission } = usePushNotification();
+  const { isSupported } = usePushNotification();
   const { user } = useAuth();
 
   // Filter deliveries based on status
