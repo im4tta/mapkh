@@ -1,0 +1,10 @@
+<svg width="192" height="192" viewBox="0 0 192 192" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="192" height="192" rx="32" fill="#2563eb"/>
+  <g transform="translate(32, 32)">
+    <!-- Map pin icon -->
+    <path d="M64 8C48.54 8 36 20.54 36 36c0 21 28 52 28 52s28-31 28-52c0-15.46-12.54-28-28-28z" fill="white"/>
+    <circle cx="64" cy="36" r="10" fill="#2563eb"/>
+    <!-- KH text -->
+    <text x="64" y="112" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="32" font-weight="bold">KH</text>
+  </g>
+</svg>

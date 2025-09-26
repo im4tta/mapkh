@@ -1,0 +1,10 @@
+<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="180" height="180" rx="30" fill="#2563eb"/>
+  <g transform="translate(30, 30)">
+    <!-- Map pin icon -->
+    <path d="M60 7.5C45.51 7.5 33.75 19.26 33.75 33.75c0 19.69 26.25 48.75 26.25 48.75s26.25-29.06 26.25-48.75c0-14.49-11.76-26.25-26.25-26.25z" fill="white"/>
+    <circle cx="60" cy="33.75" r="9.38" fill="#2563eb"/>
+    <!-- KH text -->
+    <text x="60" y="105" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="30" font-weight="bold">KH</text>
+  </g>
+</svg>
