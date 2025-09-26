@@ -93,10 +93,9 @@ export function Dashboard() {
 
         reports.forEach(report => {
             let status = report.status;
-            // Handle legacy status
-            // @ts-ignore
-            if (status === 'under-review') {
-                status = 'in-review';
+            // Handle legacy status conversion
+            if ((status as string) === 'under-review') {
+                status = 'in-review' as Report['status'];
             }
             // Group by the consistent English key
             if (statusMap[status]) {

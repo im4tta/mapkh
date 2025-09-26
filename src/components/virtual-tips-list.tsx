@@ -1,17 +1,18 @@
 import React, { memo, useMemo, useCallback } from 'react';
+// @ts-ignore - react-window typing issues
 import { List } from 'react-window';
-import { Tip, tipIcons } from '../lib/types';
+import { Tip, tipIcons, UserInfo } from '../lib/types';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '../components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { AddTipDialog } from '@/components/add-tip-dialog';
 import { Pencil, Trash2, Info, LucideIcon } from 'lucide-react';
 
 interface VirtualTipsListProps {
-  tips: Tip[];
-  user: any;
+  tips?: Tip[]; // Make tips optional with default
+  user: UserInfo | null;
   onEdit: (tip: Tip) => void;
   onDelete: (tip: Tip) => void;
-  t: any;
+  t: (key: string, options?: { ns?: string; defaultValue?: string }) => string;
   height: number;
 }
 
@@ -20,10 +21,10 @@ interface TipItemProps {
   style: React.CSSProperties;
   data: {
     tips: Tip[];
-    user: any;
+    user: UserInfo | null;
     onEdit: (tip: Tip) => void;
     onDelete: (tip: Tip) => void;
-    t: any;
+    t: (key: string, options?: { ns?: string; defaultValue?: string }) => string;
   };
 }
 
@@ -118,23 +119,46 @@ const VirtualTipItem = memo(({ index, style, data }: TipItemProps) => {
 
 VirtualTipItem.displayName = 'VirtualTipItem';
 
-const RowComponent = memo(({ index, style, ...props }: any) => {
-  return <VirtualTipItem index={index} style={style} data={props} />;
+const RowComponent = memo(({ index, style, data }: {
+  index: number;
+  style: React.CSSProperties;
+  data: {
+    tips: Tip[];
+    user: UserInfo | null;
+    onEdit: (tip: Tip) => void;
+    onDelete: (tip: Tip) => void;
+    t: (key: string, options?: { ns?: string; defaultValue?: string }) => string;
+  };
+}) => {
+  // Guard against null/undefined data
+  if (!data) {
+    return (
+      <div style={style} className="px-4 py-3 text-muted-foreground">
+        Loading...
+      </div>
+    );
+  }
+  
+  const { tips, user, onEdit, onDelete, t } = data;
+  return <VirtualTipItem index={index} style={style} data={{ tips, user, onEdit, onDelete, t }} />;
 });
 
 RowComponent.displayName = 'RowComponent';
 
-export const VirtualTipsList = memo(({ tips, user, onEdit, onDelete, t, height }: VirtualTipsListProps) => {
+export const VirtualTipsList = memo(({ tips = [], user, onEdit, onDelete, t, height }: VirtualTipsListProps) => {
+  // Use safe data with default empty array
+  const safeData = tips ?? [];
+  
   const itemData = useMemo(() => ({
-    tips,
+    tips: safeData,
     user,
     onEdit,
     onDelete,
     t,
-  }), [tips, user, onEdit, onDelete, t]);
+  }), [safeData, user, onEdit, onDelete, t]);
 
   // Add null checks for props
-  if (!tips || !Array.isArray(tips) || tips.length === 0) {
+  if (!Array.isArray(safeData) || safeData.length === 0) {
     return (
       <div className="flex items-center justify-center h-32 text-muted-foreground">
         {t ? t('contributions.tips.no_tips', { defaultValue: 'No tips available' }) : 'No tips available'}
@@ -144,15 +168,18 @@ export const VirtualTipsList = memo(({ tips, user, onEdit, onDelete, t, height }
 
   return (
     <List
+      // @ts-ignore - react-window typing issues
       height={height}
-      itemCount={tips.length}
+      // @ts-ignore - react-window typing issues
+      itemCount={safeData.length}
+      // @ts-ignore - react-window typing issues
       itemSize={100} // Reduced from 120 to fix line spacing
+      // @ts-ignore - react-window typing issues
       itemData={itemData}
+      // @ts-ignore - react-window typing issues
       overscanCount={2} // Render 2 extra items for smoother scrolling
     >
-      {({ index, style }) => (
-        <VirtualTipItem index={index} style={style} data={itemData} />
-      )}
+      {RowComponent as any}
     </List>
   );
 });

@@ -287,8 +287,8 @@ export async function testWebPushNotification(): Promise<boolean> {
         notification: {
           title: 'MapKH Test Notification',
           body: 'Web Push API is working correctly!',
-          icon: '/icons/icon-192x192.png',
-          badge: '/icons/icon-192x192.png',
+          icon: '/icons/icon-192x192.svg',
+      badge: '/icons/icon-192x192.svg',
           data: {
             url: '/',
             test: true

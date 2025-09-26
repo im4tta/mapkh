@@ -58,7 +58,7 @@ function ContributorReportsDialog({ contributor, reports }: { contributor: Leade
             <DialogHeader>
                 <DialogTitle className="flex items-center gap-3">
                     <span>All Reports by {contributor.name}</span>
-                    <ContributionBadge reports={contributor.reports} size="sm" />
+                    <ContributionBadge reports={contributor.reports} score={contributor.score} size="sm" />
                 </DialogTitle>
                 <DialogDescription>
                     A list of all reports submitted by this contributor.
@@ -102,61 +102,65 @@ function Leaderboard({ data, error, allReports }: { data: LeaderboardEntry[] | u
     return (
         <Card>
             <ScrollArea className="h-[60vh]">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead className="w-16">{t('contributions.leaderboard.rank')}</TableHead>
-                            <TableHead>{t('contributions.leaderboard.contributor')}</TableHead>
-                            <TableHead className="text-right">{t('contributions.leaderboard.reports')}</TableHead>
-                            <TableHead className="text-right">Score</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {data.map((entry, index) => (
-                             <Dialog key={entry.id}>
-                                <DialogTrigger asChild>
-                                    <TableRow className="cursor-pointer">
-                                        <TableCell className="font-bold text-lg text-center">
-                                            {index === 0 && <Trophy className="w-6 h-6 text-yellow-500 inline-block" />}
-                                            {index === 1 && <Trophy className="w-6 h-6 text-gray-400 inline-block" />}
-                                            {index === 2 && <Trophy className="w-6 h-6 text-yellow-700 inline-block" />}
-                                            {index > 2 && entry.rank}
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center gap-3">
-                                                <Avatar>
-                                                    <AvatarImage src={entry.avatar || ''} alt={entry.name} />
-                                                    <AvatarFallback>{entry.name.charAt(0)}</AvatarFallback>
-                                                </Avatar>
-                                                <div className="flex flex-col gap-1">
-                                                    <span className="font-medium">{entry.name}</span>
-                                                    <ContributionBadgeInline reports={entry.reports} score={entry.score} size="sm" />
+                <div className="min-w-full overflow-x-auto">
+                    <Table className="min-w-[600px]">
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="w-12 sm:w-16">{t('contributions.leaderboard.rank')}</TableHead>
+                                <TableHead className="min-w-[200px]">{t('contributions.leaderboard.contributor')}</TableHead>
+                                <TableHead className="text-right w-16 sm:w-20">{t('contributions.leaderboard.reports')}</TableHead>
+                                <TableHead className="text-right w-20 sm:w-24">Score</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {data.map((entry, index) => (
+                                 <Dialog key={entry.id}>
+                                    <DialogTrigger asChild>
+                                        <TableRow className="cursor-pointer">
+                                            <TableCell className="font-bold text-sm sm:text-lg text-center">
+                                                {index === 0 && <Trophy className="w-4 h-4 sm:w-6 sm:h-6 text-yellow-500 inline-block" />}
+                                                {index === 1 && <Trophy className="w-4 h-4 sm:w-6 sm:h-6 text-gray-400 inline-block" />}
+                                                {index === 2 && <Trophy className="w-4 h-4 sm:w-6 sm:h-6 text-yellow-700 inline-block" />}
+                                                {index > 2 && entry.rank}
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-2 sm:gap-3">
+                                                    <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
+                                                        <AvatarImage src={entry.avatar || ''} alt={entry.name} />
+                                                        <AvatarFallback className="text-xs sm:text-sm">{entry.name.charAt(0)}</AvatarFallback>
+                                                    </Avatar>
+                                                    <div className="flex flex-col gap-1 min-w-0">
+                                                        <span className="font-medium text-sm sm:text-base truncate">{entry.name}</span>
+                                                        <div className="hidden sm:block">
+                                                            <ContributionBadgeInline reports={entry.reports} score={entry.score} size="sm" />
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="text-right font-semibold">{entry.reports}</TableCell>
-                                        <TableCell className="text-right">
-                                            <div className="flex flex-col items-end">
-                                                <span className="font-bold text-lg text-primary">{entry.score}</span>
-                                                {entry.approvedReports && entry.approvedReports > 0 && (
-                                                    <span className="text-xs text-green-600">
-                                                        {entry.approvedReports} approved
-                                                    </span>
-                                                )}
-                                                {entry.verifications && entry.verifications > 0 && (
-                                                    <span className="text-xs text-blue-600">
-                                                        {entry.verifications} verifications
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                </DialogTrigger>
-                                <ContributorReportsDialog contributor={entry} reports={allReports} />
-                            </Dialog>
-                        ))}
-                    </TableBody>
-                </Table>
+                                            </TableCell>
+                                            <TableCell className="text-right font-semibold text-sm sm:text-base">{entry.reports}</TableCell>
+                                            <TableCell className="text-right">
+                                                <div className="flex flex-col items-end">
+                                                    <span className="font-bold text-sm sm:text-lg text-primary">{entry.score}</span>
+                                                    {entry.approvedReports && entry.approvedReports > 0 && (
+                                                        <span className="text-xs text-green-600 hidden sm:inline">
+                                                            {entry.approvedReports} approved
+                                                        </span>
+                                                    )}
+                                                    {entry.verifications && entry.verifications > 0 && (
+                                                        <span className="text-xs text-blue-600 hidden sm:inline">
+                                                            {entry.verifications} verifications
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    </DialogTrigger>
+                                    <ContributorReportsDialog contributor={entry} reports={allReports} />
+                                </Dialog>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
             </ScrollArea>
         </Card>
     );
@@ -352,7 +356,7 @@ export default function ContributionsPage() {
                 </div>
 
                 <Tabs defaultValue="leaderboard" className="w-full flex-1 flex flex-col">
-                    <TabsList className="grid w-full grid-cols-3">
+                    <TabsList className="grid w-full grid-cols-4">
                         <TabsTrigger value="leaderboard">
                             <Trophy className="mr-2 h-4 w-4" />
                             {t('contributions.tabs.leaderboard')}
@@ -360,6 +364,10 @@ export default function ContributionsPage() {
                         <TabsTrigger value="achievements">
                             <Award className="mr-2 h-4 w-4" />
                             Achievements
+                        </TabsTrigger>
+                        <TabsTrigger value="tips">
+                            <Info className="mr-2 h-4 w-4" />
+                            {t('contributions.tabs.tips')}
                         </TabsTrigger>
                          <TabsTrigger value="approved">
                             <CheckCircle2 className="mr-2 h-4 w-4" />
@@ -391,7 +399,7 @@ export default function ContributionsPage() {
                                         </p>
                                     </div>
                                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                                        {leaderboardData.slice(0, 10).map((contributor, index) => (
+                                        {leaderboardData?.slice(0, 10).map((contributor, index) => (
                                             <div key={contributor.id} className="flex items-center gap-3 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
                                                 <div className={cn(
                                                     "text-lg font-bold flex items-center justify-center w-8 h-8 rounded-full",
@@ -419,6 +427,9 @@ export default function ContributionsPage() {
                                 </div>
                             </div>
                         )}
+                    </TabsContent>
+                    <TabsContent value="tips" className="py-4 flex-1 flex flex-col">
+                        <TipsSection />
                     </TabsContent>
                     <TabsContent value="approved" className="py-4">
                         <ApprovedReports data={allReportsData} error={allReportsError} />

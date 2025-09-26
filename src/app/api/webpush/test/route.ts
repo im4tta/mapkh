@@ -50,8 +50,8 @@ export async function POST(request: NextRequest) {
     const notification = body.notification || {
       title: 'MapKH Test Notification',
       body: 'Web Push API is working correctly! This is a test notification.',
-      icon: '/icons/icon-192x192.png',
-      badge: '/icons/icon-192x192.png',
+      icon: '/icons/icon-192x192.svg',
+      badge: '/icons/icon-192x192.svg',
       data: {
         url: '/',
         test: true,
@@ -63,8 +63,8 @@ export async function POST(request: NextRequest) {
     const notificationPayload = {
       title: notification.title,
       body: notification.body,
-      icon: notification.icon || '/icons/icon-192x192.png',
-      badge: notification.badge || '/icons/icon-192x192.png',
+      icon: notification.icon || '/icons/icon-192x192.svg',
+        badge: notification.badge || '/icons/icon-192x192.svg',
       data: {
         ...notification.data,
         timestamp: Date.now(),
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
         {
           action: 'open',
           title: 'Open App',
-          icon: '/icons/icon-192x192.png'
+          icon: '/icons/icon-192x192.svg'
         },
         {
           action: 'dismiss',

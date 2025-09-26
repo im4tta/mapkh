@@ -1,6 +1,6 @@
 // API endpoint for sending Web Push notifications
 import { NextRequest, NextResponse } from 'next/server';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 const webpush = require('web-push');
 
@@ -90,8 +90,8 @@ export async function POST(request: NextRequest) {
     const notificationPayload = {
       title: body.notification.title,
       body: body.notification.body,
-      icon: body.notification.icon || '/icons/icon-192x192.png',
-      badge: body.notification.badge || '/icons/icon-192x192.png',
+      icon: body.notification.icon || '/icons/icon-192x192.svg',
+      badge: body.notification.badge || '/icons/icon-192x192.svg',
       data: {
         ...body.notification.data,
         timestamp: Date.now(),

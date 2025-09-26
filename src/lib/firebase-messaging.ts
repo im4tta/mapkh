@@ -190,8 +190,8 @@ export const showLocalNotification = (title: string, body: string, data?: any) =
 
   const notification = new Notification(title, {
     body,
-    icon: '/icon-192x192.png',
-    badge: '/badge-72x72.png',
+    icon: '/icons/icon-192x192.svg',
+    badge: '/badge-72x72.svg',
     tag: 'mapkh-local',
     data,
     requireInteraction: true

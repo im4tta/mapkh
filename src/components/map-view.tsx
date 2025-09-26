@@ -818,6 +818,7 @@ function MapContent({ initialReports }: { initialReports: Report[] }) {
         setTemporaryPin(null);
         placesService.current?.getDetails({ placeId: iconMouseEvent.placeId, fields: ['name'] }, async (place, status) => {
              if (status === google.maps.places.PlacesServiceStatus.OK && place?.name) {
+                const { translateText } = await import('@/ai/flows/translate-text');
                 const [enResult, kmResult, thResult] = await Promise.all([
                     reverseGeocode({ lat: pos.lat, lng: pos.lng, language: 'en' }),
                     translateText({ text: place.name, targetLanguage: 'km'}),

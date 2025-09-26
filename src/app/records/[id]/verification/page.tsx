@@ -140,16 +140,6 @@ export default function VerificationReportPage() {
     
     const apiKey = useCustomApiKey && customApiKey ? customApiKey : defaultApiKey;
 
-    // Debug logging for API key
-    useEffect(() => {
-        console.log('API Key Debug:', {
-            useCustomApiKey,
-            customApiKey: customApiKey ? `${customApiKey.substring(0, 10)}...` : 'none',
-            defaultApiKey: defaultApiKey ? `${defaultApiKey.substring(0, 10)}...` : 'none',
-            finalApiKey: apiKey ? `${apiKey.substring(0, 10)}...` : 'none'
-        });
-    }, [useCustomApiKey, customApiKey, defaultApiKey, apiKey]);
-
     // Validate API key format
     const validateApiKey = (key: string): boolean => {
         if (!key.trim()) return false;

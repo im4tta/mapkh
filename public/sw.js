@@ -25,8 +25,8 @@ const CURRENT_CACHES = {
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
-  '/icons/icon-192x192.png',
-  '/icons/icon-512x512.png',
+  '/icons/icon-192x192.svg',
+  '/icons/icon-512x512.svg',
   '/offline.html'
 ];
 
@@ -196,8 +196,8 @@ messaging.onBackgroundMessage(async (payload) => {
     const notificationTitle = payload.notification?.title || payload.data?.title || 'MapKH Notification';
     const notificationOptions = {
       body: payload.notification?.body || payload.data?.body || 'You have a new notification',
-      icon: payload.data?.icon || '/icon-192x192.png',
-      badge: '/badge-72x72.png',
+      icon: payload.data?.icon || '/icons/icon-192x192.svg',
+      badge: '/badge-72x72.svg',
       tag: payload.data?.reportId || payload.data?.notificationId || 'mapkh-notification',
       data: {
         ...payload.data,
@@ -209,12 +209,12 @@ messaging.onBackgroundMessage(async (payload) => {
         {
           action: 'view',
           title: payload.data?.actionText || 'View',
-          icon: '/icon-192x192.png'
+          icon: '/icons/icon-192x192.svg'
         },
         {
           action: 'dismiss',
           title: 'Dismiss',
-          icon: '/icon-192x192.png'
+          icon: '/icons/icon-192x192.svg'
         }
       ],
       requireInteraction: payload.data?.requireInteraction !== 'false',
@@ -232,8 +232,8 @@ messaging.onBackgroundMessage(async (payload) => {
     // Fallback notification
     return self.registration.showNotification('MapKH Notification', {
       body: 'You have a new notification',
-      icon: '/icon-192x192.png',
-      badge: '/badge-72x72.png'
+      icon: '/icons/icon-192x192.svg',
+      badge: '/badge-72x72.svg'
     });
   }
 });
@@ -480,8 +480,8 @@ self.addEventListener('push', (event) => {
       const notificationTitle = data.notification?.title || data.data?.title || 'MapKH Notification';
       const notificationOptions = {
         body: data.notification?.body || data.data?.body || 'You have a new notification',
-        icon: data.data?.icon || '/icon-192x192.png',
-        badge: '/badge-72x72.png',
+        icon: data.data?.icon || '/icons/icon-192x192.svg',
+        badge: '/badge-72x72.svg',
         tag: data.data?.reportId || data.data?.notificationId || 'mapkh-push',
         data: {
           ...data.data,
@@ -633,8 +633,8 @@ self.addEventListener('install', (event) => {
   // Show update notification to user
   self.registration.showNotification('MapKH Update Available', {
     body: 'A new version of MapKH is available. Restart the app to update.',
-    icon: '/icons/icon-192x192.png',
-    badge: '/icons/icon-192x192.png',
+    icon: '/icons/icon-192x192.svg',
+    badge: '/icons/icon-192x192.svg',
     tag: 'app-update',
     requireInteraction: true,
     actions: [

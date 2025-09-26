@@ -87,7 +87,15 @@ const contributionTiers = {
   }
 };
 
-export function getContributionTier(reports: number): ContributionTier | null {
+export function getContributionTier(reports: number, score?: number): ContributionTier | null {
+  // For users with high scores but low reports (like JVanSD with 147 scores from comments/verifications)
+  if (score && score >= 100) return 'diamond';
+  if (score && score >= 50) return 'platinum';
+  if (score && score >= 25) return 'gold';
+  if (score && score >= 10) return 'silver';
+  if (score && score >= 1) return 'bronze';
+  
+  // Traditional report-based tiers
   if (reports >= 100) return 'diamond';
   if (reports >= 50) return 'platinum';
   if (reports >= 25) return 'gold';
@@ -98,7 +106,7 @@ export function getContributionTier(reports: number): ContributionTier | null {
 
 // Modern Achievement Badge (like Profile section)
 export function ContributionBadge({ reports, score, className, size = 'md' }: ContributionBadgeProps) {
-  const tier = getContributionTier(reports);
+  const tier = getContributionTier(reports, score);
   
   if (!tier) return null;
   
@@ -150,9 +158,9 @@ export function ContributionBadge({ reports, score, className, size = 'md' }: Co
   );
 }
 
-// Compact inline badge for tables
+// Inline Badge (like Dashboard)
 export function ContributionBadgeInline({ reports, score, className, size = 'md' }: { reports: number; score?: number; className?: string; size?: 'sm' | 'md' | 'lg' }) {
-  const tier = getContributionTier(reports);
+  const tier = getContributionTier(reports, score);
   
   if (!tier) return null;
   
@@ -183,7 +191,7 @@ export function ContributionBadgeInline({ reports, score, className, size = 'md'
 // Modern Achievement Grid Section (like Profile badges)
 export function ContributionAchievements({ reports, score, className }: { reports: number; score?: number; className?: string }) {
   const allTiers: ContributionTier[] = ['bronze', 'silver', 'gold', 'platinum', 'diamond'];
-  const currentTier = getContributionTier(reports);
+  const currentTier = getContributionTier(reports, score);
 
   return (
     <Card className={className}>

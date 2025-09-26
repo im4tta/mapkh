@@ -108,7 +108,7 @@ export default function LoginPage() {
                                   <div className="flex items-center justify-between">
                                     <FormLabel>{t('login.password_label')}</FormLabel>
                                     <Link href="/forgot-password" passHref>
-                                      <Button variant="link" className="px-0 text-sm h-auto">Forgot password?</Button>
+                                      <Button type="button" variant="link" className="px-0 text-sm h-auto">Forgot password?</Button>
                                     </Link>
                                   </div>
                                     <FormControl>

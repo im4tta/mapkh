@@ -39,7 +39,7 @@ import { Progress } from './ui/progress';
 import { Checkbox } from './ui/checkbox';
 import Link from 'next/link';
 import { useActivityDialog } from '@/context/activity-dialog-provider';
-import { cn } from '@/lib/utils';
+import { cn, loadColumnVisibility, saveColumnVisibility } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle as NormalDialogTitle, DialogDescription } from './ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
@@ -415,7 +415,13 @@ export function RecordsTable({
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [isComparisonDialogOpen, setIsComparisonDialogOpen] = useState(false);
   const [reportsToCompare, setReportsToCompare] = useState<Report[]>([]);
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>(() => {
+    // Load saved column visibility preferences on initialization
+    if (typeof window !== 'undefined') {
+      return loadColumnVisibility();
+    }
+    return {};
+  });
   
   const [editingReport, setEditingReport] = useState<Report | null>(null);
   const [keywordReport, setKeywordReport] = useState<Report | null>(null);
@@ -1029,7 +1035,12 @@ export function RecordsTable({
     onRowSelectionChange: setRowSelection,
     onSortingChange,
     onPaginationChange,
-    onColumnVisibilityChange: setColumnVisibility,
+    onColumnVisibilityChange: (updater) => {
+      const newVisibility = typeof updater === 'function' ? updater(columnVisibility) : updater;
+      setColumnVisibility(newVisibility);
+      // Auto-save column visibility preferences
+      saveColumnVisibility(newVisibility);
+    },
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -1299,9 +1310,9 @@ const StatusBadge = ({ report, refetch }: { report: Report, refetch: () => void 
   };
   
   let displayStatus = report.status;
-  // @ts-ignore
-  if (report.status === 'under-review') {
-    displayStatus = 'in-review';
+  // Handle legacy status conversion
+  if (report.status === 'in-review') {
+    displayStatus = 'in-review' as Report['status'];
   }
 
   return (

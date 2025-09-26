@@ -63,17 +63,25 @@ export function PWAInstallPrompt() {
       return;
     }
 
-    // Show prompt more prominently for mobile users who need installation for notifications
-    if (caps.requiresInstallation) {
-      setShowInstallPrompt(true);
-    }
+    // Enhanced Chrome address bar installation support
+    let installPromptShown = false;
 
     // Listen for beforeinstallprompt event
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       const promptEvent = e as BeforeInstallPromptEvent;
       setDeferredPrompt(promptEvent);
-      setShowInstallPrompt(true);
+      
+      // For Chrome desktop, show prompt immediately to encourage address bar installation
+      if (!detection.isMobile && !installPromptShown) {
+        setShowInstallPrompt(true);
+        installPromptShown = true;
+      }
+      
+      // For mobile, only show if notifications require installation
+      if (detection.isMobile && caps.requiresInstallation) {
+        setShowInstallPrompt(true);
+      }
     };
 
     // Listen for app installed event
@@ -87,29 +95,48 @@ export function PWAInstallPrompt() {
       });
     };
 
+    // Enhanced visibility change handling for Chrome address bar
+    const handleVisibilityChange = () => {
+      if (!document.hidden && deferredPrompt && !detection.isMobile && !installPromptShown) {
+        // Show prompt when user returns to tab, encouraging Chrome address bar installation
+        setTimeout(() => {
+          if (!isInstalled && deferredPrompt) {
+            setShowInstallPrompt(true);
+            installPromptShown = true;
+          }
+        }, 2000);
+      }
+    };
+
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [toast]);
+  }, [toast, isInstalled, deferredPrompt]);
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) {
-      // Provide platform-specific instructions
-      let instructions = 'To install this app, use your browser\'s install option in the menu or address bar.';
+      // Provide platform-specific instructions with emphasis on Chrome address bar
+      let instructions = 'To install this app, look for the install icon in your browser\'s address bar or use the browser menu.';
       
       if (mobileDetection?.isIOS) {
         instructions = 'To install on iOS: Tap the Share button and select "Add to Home Screen".';
       } else if (mobileDetection?.isAndroid) {
         instructions = 'To install on Android: Tap the menu (⋮) and select "Add to Home Screen" or "Install App".';
+      } else {
+        // Desktop Chrome specific instructions
+        instructions = 'To install: Look for the install icon (⊕) in the Chrome address bar, or use the browser menu → "Install MapKH".';
       }
       
       toast({
         title: 'Install App',
         description: instructions,
+        duration: 6000,
       });
       return;
     }
@@ -165,9 +192,10 @@ export function PWAInstallPrompt() {
   // Show install prompt banner
   if (showInstallPrompt) {
     const showNotificationBenefit = capabilities?.requiresInstallation;
+    const isDesktop = !mobileDetection?.isMobile;
     
     return (
-      <Card className="fixed bottom-4 left-4 right-4 z-50 shadow-lg md:left-auto md:w-80">
+      <Card className="fixed bottom-4 left-4 right-4 z-50 shadow-lg md:left-auto md:w-96">
         <CardContent className="p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1">
@@ -176,17 +204,26 @@ export function PWAInstallPrompt() {
                 {showNotificationBenefit && (
                   <Bell className="h-4 w-4 text-orange-500" />
                 )}
-                <h3 className="font-semibold text-sm">Install MapKH</h3>
+                <h3 className="font-semibold text-sm">
+                  {isDesktop ? 'Install MapKH from Chrome' : 'Install MapKH'}
+                </h3>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                {showNotificationBenefit 
-                  ? 'Enable notifications and get the full experience'
-                  : 'Install this app for a better experience with offline access and notifications.'
+                {isDesktop 
+                  ? 'Click the install icon (⊕) in your Chrome address bar for the best experience'
+                  : showNotificationBenefit 
+                    ? 'Enable notifications and get the full experience'
+                    : 'Install this app for a better experience with offline access and notifications.'
                 }
               </p>
-              {showNotificationBenefit && (
+              {showNotificationBenefit && !isDesktop && (
                 <p className="text-xs text-orange-600 mt-1">
                   Required for notifications on this device
+                </p>
+              )}
+              {isDesktop && (
+                <p className="text-xs text-blue-600 mt-1">
+                  Look for the install button in your browser's address bar
                 </p>
               )}
             </div>
@@ -204,10 +241,10 @@ export function PWAInstallPrompt() {
               onClick={handleInstallClick}
               size="sm"
               className="flex-1"
-              variant={showNotificationBenefit ? "default" : "outline"}
+              variant={showNotificationBenefit || isDesktop ? "default" : "outline"}
             >
               <Download className="h-4 w-4 mr-2" />
-              Install
+              {isDesktop ? 'Install from Chrome' : 'Install'}
             </Button>
             <Button
               onClick={handleDismiss}

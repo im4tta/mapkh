@@ -117,7 +117,7 @@ async function sendNotificationNow(
       notification: {
         title: composition.title,
         body: composition.body,
-        icon: composition.icon || '/icon-192x192.png'
+        icon: composition.icon || '/icons/icon-192x192.svg'
       },
       data: {
         category: composition.category,

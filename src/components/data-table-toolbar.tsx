@@ -3,10 +3,11 @@
 'use client';
 
 import { Table } from '@tanstack/react-table';
-import { Trash2, Download, LocateFixed, View, Copy, Check, MapPin, CopyPlus } from 'lucide-react';
+import { Trash2, Download, LocateFixed, View, Copy, Check, MapPin, CopyPlus, Save, RotateCcw } from 'lucide-react';
 import { Button } from './ui/button';
 import { useAuth } from '@/context/auth-provider';
 import { deleteReports, getReportsForExport, getSubViolationTypes, bulkFetchPlaceIds, bulkUpdateReportsStatus, bulkUpdateReportsProvince, bulkUpdateReportsPriority, bulkUpdateReportsIssueType, bulkCopyDescriptionToKeywords } from '@/app/actions';
+import { saveColumnVisibility, clearColumnVisibility } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
@@ -334,6 +335,46 @@ export function DataTableToolbar<TData>({
                   </DropdownMenuCheckboxItem>
                 )
               })}
+            <DropdownMenuSeparator />
+            <div className="flex gap-1 p-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 flex-1"
+                onClick={() => {
+                  const currentVisibility = table.getState().columnVisibility;
+                  saveColumnVisibility(currentVisibility);
+                  toast({
+                    title: "View Saved",
+                    description: "Column visibility preferences have been saved.",
+                  });
+                }}
+              >
+                <Save className="mr-1 h-3 w-3" />
+                Save
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 flex-1"
+                onClick={() => {
+                  clearColumnVisibility();
+                  // Reset all columns to visible
+                  table.getAllColumns().forEach(column => {
+                    if (column.getCanHide()) {
+                      column.toggleVisibility(true);
+                    }
+                  });
+                  toast({
+                    title: "View Reset",
+                    description: "Column visibility has been reset to default.",
+                  });
+                }}
+              >
+                <RotateCcw className="mr-1 h-3 w-3" />
+                Reset
+              </Button>
+            </div>
           </DropdownMenuContent>
         </DropdownMenu>
 

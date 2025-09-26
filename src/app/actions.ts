@@ -156,8 +156,8 @@ export async function createNotification(userId: string | null, type: Notificati
             data: {
               title: title,
               body: message,
-              icon: '/apple-icon.png',
-              badge: '/icon.png',
+              icon: '/icons/icon-192x192.svg',
+        badge: '/icons/icon-192x192.svg',
             },
             reportDetails: reportDetails ? JSON.stringify(reportDetails) : "{}",
             read: false,
@@ -944,8 +944,7 @@ export async function getReports({
         }
         if (status && status !== 'all') {
             filteredReports = filteredReports.filter(report => {
-                 let reportStatus = report.status;
-                 // @ts-ignore
+                 let reportStatus = report.status as string;
                  if (reportStatus === 'under-review') {
                      reportStatus = 'in-review';
                  }
@@ -1836,7 +1835,7 @@ export async function importReports(records: any[], currentUserId?: string): Pro
                 
                 let status = record.status ? record.status.trim().toLowerCase().replace(/\s+/g, '-') : 'not-submitted';
                 if (status === 'under-review') {
-                    status = 'in-review';
+                    status = 'in-review' as Report['status'];
                 }
 
                 const reportData: any = {

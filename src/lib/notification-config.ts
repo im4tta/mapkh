@@ -36,8 +36,8 @@ export const defaultNotificationConfig: NotificationConfig = {
   vapidKey: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_VAPID_KEY || '',
   
   // Default notification appearance
-  defaultIcon: '/icon-192x192.png',
-  defaultBadge: '/badge-72x72.png',
+  defaultIcon: '/icons/icon-192x192.svg',
+  defaultBadge: '/badge-72x72.svg',
   
   // Default behavior
   requireInteraction: false,

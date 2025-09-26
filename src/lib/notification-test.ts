@@ -171,8 +171,8 @@ export async function testLocalNotification(): Promise<NotificationTestResult> {
 
     const notification = new Notification('Test Notification', {
       body: 'This is a test notification from MapKH',
-      icon: '/icon-192x192.png',
-      badge: '/badge-72x72.png',
+      icon: '/icons/icon-192x192.svg',
+      badge: '/badge-72x72.svg',
       tag: 'test-notification',
       requireInteraction: false,
       data: {
@@ -295,8 +295,8 @@ export async function testBackgroundNotifications(): Promise<NotificationTestRes
     const testNotification = {
       title: 'Background Test Notification',
       body: 'This is a test of background notifications when app is closed',
-      icon: '/icon-192x192.png',
-      badge: '/badge-72x72.png',
+      icon: '/icons/icon-192x192.svg',
+      badge: '/badge-72x72.svg',
       tag: 'background-test',
       data: {
         url: '/',

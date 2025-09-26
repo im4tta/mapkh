@@ -232,7 +232,7 @@ export function NotificationTestPanel() {
                 if (permission === 'granted') {
                   new Notification('Test Notification', {
                     body: 'Manual test notification',
-                    icon: '/icon-192x192.png'
+                    icon: '/icons/icon-192x192.svg'
                   });
                 }
               }}

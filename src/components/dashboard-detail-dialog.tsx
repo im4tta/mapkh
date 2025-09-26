@@ -163,10 +163,9 @@ export function DashboardDetailDialog({
     };
     
     let displayStatus = status;
-    // @ts-ignore
-    if (status === 'under-review') {
+    if ((status as string) === 'under-review') {
         console.warn("Found legacy status 'under-review', converting to 'in-review' for display.");
-        displayStatus = 'in-review';
+        displayStatus = 'in-review' as Report['status'];
     }
 
     return (

@@ -337,7 +337,7 @@ export default function AnalyticsPage() {
         const createDistributionData = (key: keyof Report, defaultLabel: string, translationPrefix?: string) => {
              const dataMap = filteredReports.reduce((acc, report) => {
                 let value: any = report[key];
-                if (key === 'status' && value === 'under-review') value = 'in-review';
+                if (key === 'status' && value === 'under-review') value = 'in-review' as Report['status'];
 
                 if (Array.isArray(value)) {
                     value.forEach(v => {

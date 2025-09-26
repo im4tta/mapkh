@@ -30,7 +30,6 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Report, provinces, ViolationTerm, SubViolationType, iconMap, PlaceType } from '@/lib/types';
 import { submitReport, updateReport, getViolationTerms, getSubViolationTypes, getPlaceTypes, addPlaceType, uploadReportFile } from '@/app/actions';
 import { findDuplicateReports, FindDuplicateReportsOutput } from '@/ai/flows/find-duplicate-reports';
-import { translateText } from '@/ai/flows/translate-text';
 import { geocodeAddress } from '@/ai/flows/geocode-address';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Calendar as CalendarIcon, AlertTriangle, Check, ChevronsUpDown, X, ChevronDown, ListChecks, MapPin, UploadCloud, File, Image as ImageIcon, Languages, Search, Pencil, Globe } from 'lucide-react';
@@ -291,6 +290,7 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
     }
     setIsTranslating(true);
     try {
+        const { translateText } = await import('@/ai/flows/translate-text');
         const result = await translateText({
             text: thaiNameValue,
             targetLanguage: 'km',
@@ -329,6 +329,7 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
     }
     setIsTranslating(true);
     try {
+        const { translateText } = await import('@/ai/flows/translate-text');
         const result = await translateText({
             text: thaiNameValue,
             targetLanguage: 'en',
@@ -367,6 +368,7 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
     }
     setIsTranslating(true);
     try {
+        const { translateText } = await import('@/ai/flows/translate-text');
         const result = await translateText({
             text: khmerNameValue,
             targetLanguage: 'en',
@@ -405,6 +407,7 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
     }
     setIsTranslating(true);
     try {
+        const { translateText } = await import('@/ai/flows/translate-text');
         const result = await translateText({
             text: englishNameValue,
             targetLanguage: 'km',
@@ -443,6 +446,7 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
     }
     setIsTranslating(true);
     try {
+        const { translateText } = await import('@/ai/flows/translate-text');
         const result = await translateText({
             text: englishNameValue,
             targetLanguage: 'th',
@@ -481,6 +485,7 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
     }
     setIsTranslating(true);
     try {
+        const { translateText } = await import('@/ai/flows/translate-text');
         const result = await translateText({
             text: khmerNameValue,
             targetLanguage: 'th',
@@ -535,13 +540,9 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
     }
   };
 
-  // Add new state for Google Translate popup
-  const [googleTranslateOpen, setGoogleTranslateOpen] = useState(false);
-  const [googleTranslateText, setGoogleTranslateText] = useState('');
-  const [translateSourceLang, setTranslateSourceLang] = useState('auto');
-  const [translateTargetLang, setTranslateTargetLang] = useState('en');
+  // Add new state for AI translation - using existing isTranslating state
 
-  const handleGoogleTranslate = (text: string, sourceLang: string = 'auto', targetLang: string = 'en') => {
+  const handleAITranslate = async (text: string, targetLang: string = 'en', fieldName: string) => {
     if (!text.trim()) {
       toast({
         variant: 'destructive',
@@ -551,10 +552,35 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
       return;
     }
     
-    setGoogleTranslateText(text);
-    setTranslateSourceLang(sourceLang);
-    setTranslateTargetLang(targetLang);
-    setGoogleTranslateOpen(true);
+    setIsTranslating(true);
+    
+    try {
+      const { translateText } = await import('@/ai/flows/translate-text');
+      const result = await translateText({
+        text: text,
+        targetLanguage: targetLang
+      });
+      
+      if (result.translatedText) {
+        // Update the form field with the translated text
+        form.setValue(fieldName as any, result.translatedText);
+        toast({
+          title: "Translation successful",
+          description: `Text translated to ${targetLang === 'en' ? 'English' : targetLang === 'km' ? 'Khmer' : 'Thai'}`,
+        });
+      } else {
+        throw new Error('Translation failed');
+      }
+    } catch (error) {
+      console.error('Translation error:', error);
+      toast({
+        variant: 'destructive',
+        title: "Translation failed",
+        description: "Unable to translate text. Please try again.",
+      });
+    } finally {
+      setIsTranslating(false);
+    }
   };
 
   const proceedWithSubmission = async (values: ReportFormValues) => {
@@ -796,9 +822,9 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
                                  <FormControl>
                                      <Input placeholder={t('report_dialog.english_name_placeholder')} {...field} value={field.value ?? ''}/>
                                  </FormControl>
-                                 <Button type="button" size="icon" variant="outline" onClick={() => handleGoogleTranslate(field.value || '', 'auto', 'en')} title="Translate with Google Translate">
-                                     <Globe className="h-4 w-4" />
-                                 </Button>
+                                 <Button type="button" size="icon" variant="outline" onClick={() => handleAITranslate(field.value || '', 'en', 'englishName')} title="Translate to English" disabled={isTranslating}>
+                        <Languages className="h-4 w-4" />
+                      </Button>
                                  <Button type="button" size="icon" variant="outline" onClick={handleFindPlaceId} disabled={isFindingPlaceId}>
                                      {isFindingPlaceId ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                                  </Button>
@@ -817,9 +843,9 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
                                 <FormControl>
                                     <Input placeholder="ឈ្មោះជាភាសាខ្មែរ" {...field} className="font-khmer" value={field.value ?? ''} />
                                 </FormControl>
-                                <Button type="button" size="icon" variant="outline" onClick={() => handleGoogleTranslate(field.value || '', 'auto', 'km')} title="Translate with Google Translate">
-                                    <Globe className="h-4 w-4" />
-                                </Button>
+                                <Button type="button" size="icon" variant="outline" onClick={() => handleAITranslate(field.value || '', 'km', 'khmerName')} title="Translate to Khmer" disabled={isTranslating}>
+                        <Languages className="h-4 w-4" />
+                      </Button>
                             </div>
                             <FormMessage />
                             </FormItem>
@@ -836,9 +862,9 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
                                 <FormControl>
                                     <Input placeholder={t('report_dialog.thai_name_placeholder')} {...field} value={field.value ?? ''} />
                                 </FormControl>
-                                <Button type="button" size="icon" variant="outline" onClick={() => handleGoogleTranslate(field.value || '', 'auto', 'th')} title="Translate with Google Translate">
-                                    <Globe className="h-4 w-4" />
-                                </Button>
+                                <Button type="button" size="icon" variant="outline" onClick={() => handleAITranslate(field.value || '', 'th', 'thaiName')} title="Translate to Thai" disabled={isTranslating}>
+                        <Languages className="h-4 w-4" />
+                      </Button>
                                 </div>
                                 <FormMessage />
                             </FormItem>
@@ -1109,25 +1135,6 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
             </AlertDialogFooter>
         </AlertDialogContent>
     </AlertDialog>
-
-      {/* Google Translate Popup Dialog */}
-      <Dialog open={googleTranslateOpen} onOpenChange={setGoogleTranslateOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
-          <DialogHeader>
-            <DialogTitle>Google Translate</DialogTitle>
-          </DialogHeader>
-          <div className="flex-1 min-h-[500px]">
-             <iframe
-               src={`https://translate.google.com/?sl=${translateSourceLang}&tl=${translateTargetLang}&text=${encodeURIComponent(googleTranslateText)}&op=translate`}
-               className="w-full h-full border-0"
-               title="Google Translate"
-             />
-           </div>
-        </DialogContent>
-      </Dialog>
      </>
    );
  }
-
-// Google Translate Popup Dialog
-// ... existing code ...

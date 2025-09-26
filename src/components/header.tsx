@@ -39,7 +39,6 @@ export function Header() {
   const isAdmin = user?.uid === 'ADMIN_UID_REDACTED';
   const [isMounted, setIsMounted] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [chatDefaultTab, setChatDefaultTab] = useState<'talk' | 'tips'>('talk');
   const [unreadPosts, setUnreadPosts] = useState(0);
 
   useEffect(() => {
@@ -122,8 +121,7 @@ export function Header() {
     fetchUserLanguage();
   }, [user, loading, i18n]);
   
-  const handleChatOpen = async (tab: 'talk' | 'tips') => {
-    setChatDefaultTab(tab);
+  const handleChatOpen = async () => {
     setIsChatOpen(true);
     if (user) {
         const userDocRef = doc(db, "users", user.uid);
@@ -192,13 +190,9 @@ export function Header() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => handleChatOpen('talk')}>
+                    <DropdownMenuItem onClick={handleChatOpen}>
                       <MessageSquare className="mr-2 h-4 w-4" />
                       <span>{t('contributions.tabs.talk')}</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleChatOpen('tips')}>
-                      <Info className="mr-2 h-4 w-4" />
-                      <span>{t('contributions.tabs.tips')}</span>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -259,7 +253,7 @@ export function Header() {
         </div>
       </div>
     </header>
-    <ChatDialog isOpen={isChatOpen} onOpenChange={handleChatDialogChange} defaultTab={chatDefaultTab} />
+    <ChatDialog isOpen={isChatOpen} onOpenChange={handleChatDialogChange} />
     </>
   );
 }
