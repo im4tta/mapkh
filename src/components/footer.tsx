@@ -15,6 +15,8 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { SupporterService, type Supporter } from '@/lib/supporters';
 
+import { safeGetItem } from '@/lib/storage-utils';
+
 export function Footer() {
   const { t } = useTranslation();
   const [supporters, setSupporters] = useState<Supporter[]>([]);
@@ -33,8 +35,8 @@ export function Footer() {
         console.error('Error loading supporters in footer:', error);
         setError('Failed to load supporters');
         setIsLoading(false);
-        // Fallback: try to load from localStorage if Firestore fails
-        const savedSupporters = localStorage.getItem('mapkh_supporters');
+        // Fallback: try to load from safe storage if Firestore fails
+        const savedSupporters = safeGetItem<string>('mapkh_supporters');
         if (savedSupporters) {
           try {
             const localSupporters = JSON.parse(savedSupporters);

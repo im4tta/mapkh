@@ -51,6 +51,7 @@ import { DataTableToolbar } from './data-table-toolbar';
 import { DataTablePagination } from './data-table-pagination';
 import { Input } from './ui/input';
 import { KeywordsDialog } from './keywords-dialog';
+import { EvidenceDialog } from './evidence-dialog';
 import { evidenceCache } from '@/lib/evidence-cache';
 
 
@@ -427,6 +428,7 @@ export function RecordsTable({
   const [editingReport, setEditingReport] = useState<Report | null>(null);
   const [keywordReport, setKeywordReport] = useState<Report | null>(null);
   const [uploadingReport, setUploadingReport] = useState<Report | null>(null);
+  const [evidenceReport, setEvidenceReport] = useState<Report | null>(null);
   const [subViolationTypes, setSubViolationTypes] = useState<SubViolationType[]>([]);
   const [editingPlaceId, setEditingPlaceId] = useState<{ id: string, value: string } | null>(null);
   const [evidenceCounts, setEvidenceCounts] = useState<Record<string, number>>({});
@@ -647,6 +649,10 @@ export function RecordsTable({
     } else {
       toast({ variant: 'destructive', title: 'Update Failed', description: result.error });
     }
+  };
+
+  const handleShowEvidence = (report: Report) => {
+    setEvidenceReport(report);
   };
 
   const columns = useMemo<ColumnDef<Report>[]>(() => [
@@ -1129,19 +1135,14 @@ export function RecordsTable({
   return (
     <>
       <div className="space-y-4">
-        <div className="flex justify-between items-center">
-            <DataTableToolbar table={table} refetchData={refetchData!} onCompare={handleCompare} />
-            <div className="flex items-center gap-2">
-                <Button variant={view === 'table' ? 'secondary' : 'ghost'} size="icon" onClick={() => handleViewChange('table')}>
-                    <List className="h-4 w-4" />
-                    <span className="sr-only">{t('records.table_view')}</span>
-                </Button>
-                <Button variant={view === 'grid' ? 'secondary' : 'ghost'} size="icon" onClick={() => handleViewChange('grid')}>
-                    <LayoutGrid className="h-4 w-4" />
-                    <span className="sr-only">{t('records.grid_view')}</span>
-                </Button>
-            </div>
-        </div>
+        <DataTableToolbar 
+          table={table} 
+          refetchData={refetchData!} 
+          onCompare={handleCompare} 
+          setColumnVisibility={setColumnVisibility}
+          view={view}
+          onViewChange={handleViewChange}
+        />
       
       {view === 'table' ? (
         <>
@@ -1234,7 +1235,11 @@ export function RecordsTable({
                                     <TooltipProvider>
                                         <Tooltip>
                                             <TooltipTrigger asChild>
-                                                <Badge variant="outline" className="h-7 px-2 flex items-center gap-1">
+                                                <Badge 
+                                                    variant="outline" 
+                                                    className="h-7 px-2 flex items-center gap-1 cursor-pointer hover:bg-accent" 
+                                                    onClick={() => handleShowEvidence(report)}
+                                                >
                                                     <Folder className="h-3 w-3" />
                                                     {loadingEvidenceCounts.has(report.id) ? (
                                                         <div className="animate-pulse bg-muted rounded w-4 h-3" />
@@ -1247,7 +1252,7 @@ export function RecordsTable({
                                                 <p>
                                                     {loadingEvidenceCounts.has(report.id) 
                                                         ? "Loading evidence count..." 
-                                                        : `${evidenceCounts[report.id] || 0} Evidence Files`
+                                                        : `${evidenceCounts[report.id] || 0} Evidence Files - Click to view`
                                                     }
                                                 </p>
                                             </TooltipContent>
@@ -1335,6 +1340,14 @@ export function RecordsTable({
       <Dialog open={isVerifiersDialogOpen} onOpenChange={setIsVerifiersDialogOpen}>
           <VerifiersDialog uids={selectedVerifiers} onOpenChange={setIsVerifiersDialogOpen} />
       </Dialog>
+      {evidenceReport && evidenceReport.driveLink && (
+        <EvidenceDialog
+          driveLink={evidenceReport.driveLink}
+          reportNumber={evidenceReport.reportNumber}
+          isOpen={!!evidenceReport}
+          onClose={() => setEvidenceReport(null)}
+        />
+      )}
       {<FindPlaceIdDialog />}
     </>
   );
@@ -1434,3 +1447,36 @@ const PriorityBadge = ({ priority }: { priority?: 'low' | 'medium' | 'high' }) =
         </Badge>
     );
 };
+
+
+
+// View Profile Types and Configurations
+export type ViewProfile = 'profile1' | 'profile2' | 'profile3' | 'custom';
+
+export interface ViewProfileConfig {
+  id: ViewProfile;
+  name: string;
+  description: string;
+  columns: string[];
+}
+
+export const VIEW_PROFILES: ViewProfileConfig[] = [
+  {
+    id: 'profile1',
+    name: 'Profile 1',
+    description: 'Essential + Violations',
+    columns: ['select', 'reportNumber', 'description', 'englishLanguage', 'nativeKhmerLanguage', 'thaiLanguage', 'placeId', 'violationTerm', 'subViolationType']
+  },
+  {
+    id: 'profile2', 
+    name: 'Profile 2',
+    description: 'Profile 1 + Province',
+    columns: ['select', 'reportNumber', 'description', 'englishLanguage', 'nativeKhmerLanguage', 'thaiLanguage', 'placeId', 'violationTerm', 'subViolationType', 'province']
+  },
+  {
+    id: 'profile3',
+    name: 'Profile 3', 
+    description: 'Basic Info Only',
+    columns: ['select', 'reportNumber', 'description', 'englishLanguage', 'nativeKhmerLanguage', 'thaiLanguage', 'placeId']
+  }
+];

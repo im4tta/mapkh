@@ -635,19 +635,7 @@ const MapControls = ({
              <Label htmlFor="satellite-switch" className="flex items-center gap-2 cursor-pointer text-sm font-medium shrink-0">
                 <Satellite className="h-5 w-5" />
             </Label>
-            <Separator orientation="vertical" className="h-6" />
-            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                <span className="text-xs">Zoom:</span>
-                <span className={`text-xs font-mono px-2 py-1 rounded ${
-                    zoomLevel >= 15 ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' : 
-                    'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300'
-                }`}>
-                    {zoomLevel.toFixed(1)}
-                </span>
-                {zoomLevel < 15 && (
-                    <span className="text-xs text-muted-foreground">(zoom 15+ for names)</span>
-                )}
-            </div>
+
         </div>
       </div>
     </div>
@@ -743,6 +731,8 @@ function MapContent({ initialReports }: { initialReports: Report[] }) {
   const map = useMap();
   const placesService = useRef<google.maps.places.PlacesService | null>(null);
 
+
+
   useEffect(() => {
     if (map && !placesService.current) {
         placesService.current = new google.maps.places.PlacesService(map);
@@ -784,11 +774,9 @@ function MapContent({ initialReports }: { initialReports: Report[] }) {
 
   const handleCloseDialogs = () => {
     setIsReportDialogOpen(false);
-    setClickedPosition(null);
     setEditingReport(null);
-    setPoiPin(null);
-    setTemporaryPin(null);
-    setClickedInfo({ en: '', km: '', th: '', province: '', placeId: null });
+    // Don't clear clickedPosition, poiPin, temporaryPin, and clickedInfo 
+    // to preserve location button and location data after dialog closes
   };
   
   const handleOpenReportDialog = useCallback(async () => {
@@ -807,9 +795,11 @@ function MapContent({ initialReports }: { initialReports: Report[] }) {
   }, [user, toast, temporaryPin, poiPin]);
 
   const handleMapClick = useCallback(async (e: google.maps.MapMouseEvent) => {
-    if (!e.latLng) return;
-    const pos = e.latLng.toJSON();
+    const pos = e.latLng?.toJSON();
+    if (!pos) return;
+
     setSelectedReport(null);
+    setClickedPosition(pos);
     setClickedInfo({ en: '', km: '', th: '', province: '', placeId: null });
 
     const iconMouseEvent = e as google.maps.IconMouseEvent;
@@ -837,25 +827,43 @@ function MapContent({ initialReports }: { initialReports: Report[] }) {
         });
     } else {
         setPoiPin(null);
-        const [enResult, kmResult, thResult] = await Promise.all([
-          reverseGeocode({ lat: pos.lat, lng: pos.lng, language: 'en' }),
-          reverseGeocode({ lat: pos.lat, lng: pos.lng, language: 'km' }),
-          reverseGeocode({ lat: pos.lat, lng: pos.lng, language: 'th' }),
-        ]);
-
-        const info = {
-          en: enResult.displayName || '',
-          km: kmResult.displayName || '',
-          th: thResult.displayName || '',
-          province: enResult.province || kmResult.province || thResult.province || "Unknown",
-          placeId: enResult.placeId || null,
-        };
-        setClickedInfo(info);
-        setTemporaryPin({
+        
+        // Set temporaryPin immediately with basic info
+        const tempPin = {
             position: pos,
-            displayName: info.en,
-            province: info.province,
-        });
+            displayName: 'Loading location...',
+            province: 'Unknown',
+        };
+        setTemporaryPin(tempPin);
+        
+        // Then update with detailed location info
+        try {
+            const [enResult, kmResult, thResult] = await Promise.all([
+              reverseGeocode({ lat: pos.lat, lng: pos.lng, language: 'en' }),
+              reverseGeocode({ lat: pos.lat, lng: pos.lng, language: 'km' }),
+              reverseGeocode({ lat: pos.lat, lng: pos.lng, language: 'th' }),
+            ]);
+
+            const info = {
+              en: enResult.displayName || '',
+              km: kmResult.displayName || '',
+              th: thResult.displayName || '',
+              province: enResult.province || kmResult.province || thResult.province || "Unknown",
+              placeId: enResult.placeId || null,
+            };
+            setClickedInfo(info);
+            
+            // Update temporaryPin with detailed info
+            const updatedTempPin = {
+                position: pos,
+                displayName: info.en || 'Unknown location',
+                province: info.province,
+            };
+            setTemporaryPin(updatedTempPin);
+        } catch (error) {
+            console.error('Error getting location info:', error);
+            // Keep the basic temporaryPin even if geocoding fails
+        }
     }
   }, [i18n.language]);
   

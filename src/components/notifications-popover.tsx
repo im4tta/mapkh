@@ -7,7 +7,7 @@ import { db } from '@/lib/firebase';
 import { useAuth } from '@/context/auth-provider';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
-import { Bell, CheckCheck, Users, Trash2, X, Check, MessageSquare, ThumbsUp, FilePlus2, Edit, Award } from 'lucide-react';
+import { Bell, CheckCheck, Users, Trash2, X, Check, MessageSquare, ThumbsUp, FilePlus2, Edit, Award, List } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { type Notification, NOTIFICATION_TYPES, Report } from '@/lib/types';
@@ -71,20 +71,15 @@ const NotificationItem = ({ notification, onClose, onDismiss }: { notification: 
 
   const handleDeleteClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
-    setIsDismissed(true); // Optimistically update UI
     onDismiss(notification.id);
   }
 
   return (
     <div
       className={cn(
-        'group flex items-start gap-3 p-3 rounded-lg transition-all duration-300 cursor-pointer',
-        !isDismissed ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-muted/80 opacity-50',
-        isDismissed && 'h-0 py-0 opacity-0 my-[-1px]' // Animate out
+        'group flex items-start gap-3 p-3 mb-2 rounded-lg transition-all duration-200 cursor-pointer',
+        !isDismissed ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-muted/80 opacity-50'
       )}
-      style={{
-          transition: 'padding-top 0.3s ease, padding-bottom 0.3s ease, margin-top 0.3s ease, margin-bottom 0.3s ease, opacity 0.3s ease',
-      }}
       onClick={handleClick}
     >
       <div className="flex-shrink-0 pt-1">
@@ -227,30 +222,88 @@ export function NotificationsPopover() {
 
 
   const handleDismissCommunityNotification = async (id: string) => {
+    try {
       const result = await dismissNotification(id, user?.uid);
-       if (!result.success) {
+      if (result.success) {
+        // Update badge count after successful dismissal
+        const newUnreadCount = unreadCount - 1;
+        if ('setAppBadge' in navigator) {
+          try {
+            if (newUnreadCount > 0) {
+              await (navigator as any).setAppBadge(newUnreadCount);
+            } else {
+              await (navigator as any).clearAppBadge();
+            }
+          } catch (badgeError) {
+            console.warn('Failed to update app badge:', badgeError);
+          }
+        }
+      } else {
         toast({
-            variant: 'destructive',
-            title: "Error",
-            description: "Failed to dismiss notification. It may reappear on refresh."
+          variant: 'destructive',
+          title: "Error",
+          description: result.error || "Failed to dismiss notification. It may reappear on refresh."
         });
+      }
+    } catch (error) {
+      console.error('Error dismissing notification:', error);
+      toast({
+        variant: 'destructive',
+        title: "Error",
+        description: "An unexpected error occurred while dismissing the notification."
+      });
     }
   }
 
   const handleMarkAllRead = async () => {
     if (!user) return;
-    const result = await dismissAllCommunityNotifications(user.uid);
-    if (result.success) {
+    
+    try {
+      // Dismiss all community notifications
+      const communityResult = await dismissAllCommunityNotifications(user.uid);
+      
+      // Dismiss all personal notifications
+      const personalNotificationIds = personalNotifications
+        .filter(n => !n.dismissedBy?.includes(user.uid))
+        .map(n => n.id);
+      
+      let personalResults = [];
+      for (const id of personalNotificationIds) {
+        const result = await dismissNotification(id, user.uid);
+        personalResults.push(result);
+      }
+      
+      const allSuccessful = communityResult.success && personalResults.every(r => r.success);
+      
+      if (allSuccessful) {
+        // Clear the badge count after successfully marking all as read
+        if ('clearAppBadge' in navigator) {
+          try {
+            await (navigator as any).clearAppBadge();
+          } catch (badgeError) {
+            console.warn('Failed to clear app badge:', badgeError);
+          }
+        }
+        
         toast({
-            title: "Notifications marked as read",
-            description: "All community notifications have been dismissed.",
+          title: "All notifications cleared",
+          description: "All notifications have been marked as read.",
         });
-    } else {
-         toast({
-            variant: 'destructive',
-            title: "Error",
-            description: "Failed to mark all notifications as read."
+      } else {
+        const failedCount = personalResults.filter(r => !r.success).length + (communityResult.success ? 0 : 1);
+        toast({
+          variant: 'destructive',
+          title: "Partial success",
+          description: `${failedCount} notification(s) could not be cleared. Please try again.`
         });
+      }
+    } catch (error) {
+      console.error('Error in handleMarkAllRead:', error);
+      toast({
+        variant: 'destructive',
+        title: "Error",
+        description: "An unexpected error occurred while clearing notifications."
+      });
     }
   }
 
@@ -313,100 +366,100 @@ export function NotificationsPopover() {
           )}
         </div>
         <Tabs defaultValue="all" className="w-full">
-          <TabsList className="grid w-full grid-cols-6 h-8 p-0 bg-muted/50">
-            <TabsTrigger value="all" className="text-xs px-1 py-1 relative">
-              All
+          <TabsList className="grid w-full grid-cols-6 h-10 gap-1 p-1">
+            <TabsTrigger value="all" className="text-xs px-2 py-2 relative min-w-0 flex items-center justify-center">
+              <List className="h-3 w-3" />
               {tabCounts.all > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">
+                <span className="absolute -top-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-500 text-[9px] text-white font-medium z-10">
                   {tabCounts.all > 9 ? '9+' : tabCounts.all}
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="comments" className="text-xs px-1 py-1 relative">
+            <TabsTrigger value="comments" className="text-xs px-2 py-2 relative min-w-0 flex items-center justify-center">
               <MessageSquare className="h-3 w-3" />
               {tabCounts.comments > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">
+                <span className="absolute -top-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-500 text-[9px] text-white font-medium z-10">
                   {tabCounts.comments > 9 ? '9+' : tabCounts.comments}
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="verification" className="text-xs px-1 py-1 relative">
+            <TabsTrigger value="verification" className="text-xs px-2 py-2 relative min-w-0 flex items-center justify-center">
               <ThumbsUp className="h-3 w-3" />
               {tabCounts.verification > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">
+                <span className="absolute -top-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-500 text-[9px] text-white font-medium z-10">
                   {tabCounts.verification > 9 ? '9+' : tabCounts.verification}
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="creation" className="text-xs px-1 py-1 relative">
+            <TabsTrigger value="creation" className="text-xs px-2 py-2 relative min-w-0 flex items-center justify-center">
               <FilePlus2 className="h-3 w-3" />
               {tabCounts.creation > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">
+                <span className="absolute -top-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-500 text-[9px] text-white font-medium z-10">
                   {tabCounts.creation > 9 ? '9+' : tabCounts.creation}
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="updates" className="text-xs px-1 py-1 relative">
+            <TabsTrigger value="updates" className="text-xs px-2 py-2 relative min-w-0 flex items-center justify-center">
               <Edit className="h-3 w-3" />
               {tabCounts.updates > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">
+                <span className="absolute -top-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-500 text-[9px] text-white font-medium z-10">
                   {tabCounts.updates > 9 ? '9+' : tabCounts.updates}
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="achievements" className="text-xs px-1 py-1 relative">
+            <TabsTrigger value="achievements" className="text-xs px-2 py-2 relative min-w-0 flex items-center justify-center">
               <Award className="h-3 w-3" />
               {tabCounts.achievements > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">
+                <span className="absolute -top-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-500 text-[9px] text-white font-medium z-10">
                   {tabCounts.achievements > 9 ? '9+' : tabCounts.achievements}
                 </span>
               )}
             </TabsTrigger>
           </TabsList>
           
-          <TabsContent value="all" className="mt-0">
+          <TabsContent value="all" className="mt-2">
             <ScrollArea className="h-96">
-              <div className="p-1">
+              <div className="p-2 space-y-1">
                 <NotificationList notifications={groupedNotifications.all} />
               </div>
             </ScrollArea>
           </TabsContent>
           
-          <TabsContent value="comments" className="mt-0">
+          <TabsContent value="comments" className="mt-2">
             <ScrollArea className="h-96">
-              <div className="p-1">
+              <div className="p-2 space-y-1">
                 <NotificationList notifications={groupedNotifications.comments} />
               </div>
             </ScrollArea>
           </TabsContent>
           
-          <TabsContent value="verification" className="mt-0">
+          <TabsContent value="verification" className="mt-2">
             <ScrollArea className="h-96">
-              <div className="p-1">
+              <div className="p-2 space-y-1">
                 <NotificationList notifications={groupedNotifications.verification} />
               </div>
             </ScrollArea>
           </TabsContent>
           
-          <TabsContent value="creation" className="mt-0">
+          <TabsContent value="creation" className="mt-2">
             <ScrollArea className="h-96">
-              <div className="p-1">
+              <div className="p-2 space-y-1">
                 <NotificationList notifications={groupedNotifications.creation} />
               </div>
             </ScrollArea>
           </TabsContent>
           
-          <TabsContent value="updates" className="mt-0">
+          <TabsContent value="updates" className="mt-2">
             <ScrollArea className="h-96">
-              <div className="p-1">
+              <div className="p-2 space-y-1">
                 <NotificationList notifications={groupedNotifications.updates} />
               </div>
             </ScrollArea>
           </TabsContent>
           
-          <TabsContent value="achievements" className="mt-0">
+          <TabsContent value="achievements" className="mt-2">
             <ScrollArea className="h-96">
-              <div className="p-1">
+              <div className="p-2 space-y-1">
                 <NotificationList notifications={groupedNotifications.achievements} />
               </div>
             </ScrollArea>

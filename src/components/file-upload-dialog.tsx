@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import * as Papa from 'papaparse';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { useAuth } from '@/context/auth-provider';
+import { evidenceCache } from '@/lib/evidence-cache';
 
 interface FileUploadDialogProps {
   isOpen: boolean;
@@ -88,6 +89,12 @@ const UrlImportTab = ({ report, onComplete }: { report: Report; onComplete: () =
 
                     if (saveResult.success) {
                         toast({ title: 'Reviews imported successfully', description: 'A "Reviews.txt" file has been added to the Drive folder.'});
+                        
+                        // Invalidate evidence cache for this report's drive link to force refresh
+                        if (report.driveLink) {
+                            evidenceCache.invalidate(report.driveLink);
+                        }
+                        
                         onComplete();
                     } else {
                         toast({ variant: 'destructive', title: 'Import Failed', description: saveResult.error });
@@ -191,6 +198,12 @@ export function FileUploadDialog({ isOpen, onClose, report, onUploadComplete }: 
     }
 
     setIsUploading(false);
+    
+    // Invalidate evidence cache for this report's drive link to force refresh
+    if (report.driveLink) {
+      evidenceCache.invalidate(report.driveLink);
+    }
+    
     onUploadComplete(); // Refresh data in the parent component
     toast({ title: 'Upload process finished.', description: 'Check the status of each file below.'});
   };
@@ -212,6 +225,12 @@ export function FileUploadDialog({ isOpen, onClose, report, onUploadComplete }: 
 
     if (result.success) {
       toast({ title: 'URL saved successfully', description: 'The source URL was saved to the Drive folder.' });
+      
+      // Invalidate evidence cache for this report's drive link to force refresh
+      if (report.driveLink) {
+        evidenceCache.invalidate(report.driveLink);
+      }
+      
       onUploadComplete();
     } else {
       toast({ variant: 'destructive', title: 'Failed to save URL', description: result.error });

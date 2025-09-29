@@ -1,4 +1,5 @@
 import { NotificationTestPanel } from '@/components/notification-test-panel';
+import { IOSPWATest } from '@/components/ios-pwa-test';
 import { PushNotificationProvider } from '@/context/push-notification-provider';
 
 export default function TestNotificationsPage() {
@@ -12,7 +13,10 @@ export default function TestNotificationsPage() {
           </p>
         </div>
         
-        <NotificationTestPanel />
+        <div className="space-y-8">
+          <NotificationTestPanel />
+          <IOSPWATest />
+        </div>
         
         <div className="mt-8 p-4 bg-muted rounded-lg">
           <h2 className="text-lg font-semibold mb-2">Testing Instructions</h2>

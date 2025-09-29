@@ -317,8 +317,30 @@ const BulkEvidenceUploader = () => {
             setFilesToUpload(prev => prev.map(f => f.id === fileStatus.id ? { ...f, status: 'finding', message: 'Finding matching report...' } : f));
             
             const filenameWithoutExt = fileStatus.file.name.replace(/\.[^/.]+$/, "");
-            const parts = filenameWithoutExt.split('_');
-            const placeId = parts.find(p => p.startsWith('ChI'));
+            
+            // Improved placeID extraction that handles underscores within placeIDs
+            // Look for pattern: ChI followed by alphanumeric characters and underscores
+            // Stop at common suffixes like 'verification', 'evidence', 'photo', etc.
+            const placeIdMatch = filenameWithoutExt.match(/ChI[A-Za-z0-9_-]+/);
+            let placeId = placeIdMatch ? placeIdMatch[0] : null;
+            
+            // If we found a potential placeID, refine it by removing common suffixes
+            if (placeId) {
+                const suffixPatterns = [
+                    /_verification$/i,
+                    /_evidence$/i,
+                    /_photo$/i,
+                    /_image$/i,
+                    /_doc$/i,
+                    /_document$/i,
+                    /_file$/i,
+                    /_\d+$/  // Remove trailing numbers like _1, _2, etc.
+                ];
+                
+                for (const pattern of suffixPatterns) {
+                    placeId = placeId.replace(pattern, '');
+                }
+            }
 
             if (!placeId) {
                 setFilesToUpload(prev => prev.map(f => f.id === fileStatus.id ? { ...f, status: 'error', message: 'Could not find Place ID in filename.' } : f));
@@ -374,7 +396,7 @@ const BulkEvidenceUploader = () => {
         <Card>
             <CardHeader>
                 <CardTitle>Bulk Evidence Upload</CardTitle>
-                <CardDescription>Upload multiple files at once. The filename must contain the report's Google Place ID (e.g., `any_prefix_ChI..._any_suffix.jpg`).</CardDescription>
+                <CardDescription>Upload multiple files at once. The filename must contain the report's Google Place ID. The system will automatically extract Place IDs from filenames, even if they contain underscores (e.g., `ChIJN1t_tDeuEmsRUsoyG83frY4_verification.jpg`).</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
                  <Input type="file" accept="image/*,video/*,.pdf,.doc,.docx" onChange={handleFileChange} multiple disabled={isProcessing} ref={fileInputRef} />

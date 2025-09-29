@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
       notification: {
         title: title || 'MapKH Test Notification',
         body: body || 'This is a test notification from MapKH',
-        icon: '/icons/icon-192x192.png',
+        icon: '/icons/icon-192x192.svg',
       },
       data: {
         type: 'test',
@@ -67,8 +67,8 @@ export async function POST(request: NextRequest) {
         notification: {
           title: title || 'MapKH Test Notification',
           body: body || 'This is a test notification from MapKH',
-          icon: '/icons/icon-192x192.png',
-          badge: '/icons/icon-96x96.png',
+          icon: '/icons/icon-192x192.svg',
+        badge: '/icons/icon-96x96.svg',
           tag: 'mapkh-test',
           requireInteraction: true,
           actions: [

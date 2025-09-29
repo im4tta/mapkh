@@ -6,12 +6,17 @@ importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js'
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
 
 // Service Worker version for cache busting - increment this to force updates
-const SW_VERSION = '2.1.0';
+const SW_VERSION = '4.0.0';
+const APP_VERSION = '0.1.0'; // Should match package.json version
 const CACHE_PREFIX = 'mapkh';
 const CACHE_NAME = `${CACHE_PREFIX}-cache-v${SW_VERSION}`;
 const STATIC_CACHE = `${CACHE_PREFIX}-static-v${SW_VERSION}`;
 const DYNAMIC_CACHE = `${CACHE_PREFIX}-dynamic-v${SW_VERSION}`;
 const API_CACHE = `${CACHE_PREFIX}-api-v${SW_VERSION}`;
+
+// Version tracking for forced updates
+const VERSION_STORAGE_KEY = 'mapkh_app_version';
+const FORCE_UPDATE_KEY = 'mapkh_force_update';
 
 // Cache versioning for automatic cleanup
 const CURRENT_CACHES = {
@@ -21,12 +26,18 @@ const CURRENT_CACHES = {
   main: CACHE_NAME
 };
 
-// Assets to cache immediately
+// Assets to cache immediately - Updated with PNG Apple touch icons
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
-  '/icons/favicon.png',
-  '/icons/favicon.png',
+  '/favicon-32x32.svg',
+  '/icons/icon-192x192.svg',
+  '/icons/icon-512x512.svg',
+  '/apple-touch-icon.png',
+  '/apple-touch-icon-120x120.png',
+  '/apple-touch-icon-152x152.png',
+  '/apple-touch-icon-167x167.png',
+  '/apple-touch-icon-180x180.png',
   '/offline.html'
 ];
 
@@ -70,14 +81,33 @@ const UPDATE_NOTIFICATION_KEY = 'mapkh_update_available';
 let updateAvailable = false;
 let newServiceWorker = null;
 
-// Load badge count from IndexedDB
+// Load badge count from IndexedDB and localStorage for iOS compatibility
 const loadBadgeCount = async () => {
   try {
-    const stored = await getFromIndexedDB(BADGE_STORAGE_KEY);
+    // Try IndexedDB first
+    let stored = await getFromIndexedDB(BADGE_STORAGE_KEY);
+    
+    // If not found, try localStorage (iOS fallback)
+    if (!stored) {
+      try {
+        stored = parseInt(
+          self.localStorage?.getItem('mapkh_badge_count') ||
+          self.localStorage?.getItem('pwa_badge_count') ||
+          self.localStorage?.getItem('ios_badge_count') ||
+          '0'
+        );
+      } catch (e) {
+        // localStorage not available in service worker context
+        stored = 0;
+      }
+    }
+    
     badgeCount = stored || 0;
     await updateBadge();
+    console.log(`Badge count loaded: ${badgeCount}`);
   } catch (error) {
     console.error('Failed to load badge count:', error);
+    badgeCount = 0;
   }
 };
 
@@ -553,6 +583,132 @@ const cleanupOldCaches = async () => {
   }
 };
 
+// Force complete cache cleanup for major version updates
+const forceCompleteCacheCleanup = async () => {
+  try {
+    console.log('Performing complete cache cleanup for version update...');
+    
+    // Get all cache names
+    const cacheNames = await caches.keys();
+    
+    // Delete ALL caches with our prefix (complete reset)
+    const allOurCaches = cacheNames.filter(name => name.startsWith(CACHE_PREFIX));
+    
+    console.log(`Force deleting ${allOurCaches.length} caches:`, allOurCaches);
+    
+    await Promise.all(
+      allOurCaches.map(async (cacheName) => {
+        console.log(`Force deleting cache: ${cacheName}`);
+        return caches.delete(cacheName);
+      })
+    );
+    
+    // Clear IndexedDB storage for notifications and badges
+    try {
+      await clearIndexedDBData();
+    } catch (error) {
+      console.warn('Failed to clear IndexedDB:', error);
+    }
+    
+    console.log('Complete cache cleanup finished');
+    
+    // Notify clients about the forced update
+    await notifyClientsOfForceUpdate();
+    
+  } catch (error) {
+    console.error('Force cache cleanup failed:', error);
+  }
+};
+
+// Clear IndexedDB data for fresh start
+const clearIndexedDBData = async () => {
+  try {
+    const db = await openDB();
+    const transaction = db.transaction(['notifications', 'settings'], 'readwrite');
+    
+    // Clear notifications
+    const notificationStore = transaction.objectStore('notifications');
+    await notificationStore.clear();
+    
+    // Clear settings but preserve user preferences
+    const settingsStore = transaction.objectStore('settings');
+    const keysToDelete = [BADGE_STORAGE_KEY, UPDATE_NOTIFICATION_KEY, VERSION_STORAGE_KEY];
+    
+    for (const key of keysToDelete) {
+      try {
+        await settingsStore.delete(key);
+      } catch (error) {
+        console.warn(`Failed to delete ${key}:`, error);
+      }
+    }
+    
+    await transaction.complete;
+    console.log('IndexedDB cleanup completed');
+  } catch (error) {
+    console.error('IndexedDB cleanup failed:', error);
+  }
+};
+
+// Check if force update is needed
+const checkForceUpdate = async () => {
+  try {
+    const storedVersion = await getFromIndexedDB(VERSION_STORAGE_KEY);
+    const forceUpdate = await getFromIndexedDB(FORCE_UPDATE_KEY);
+    
+    console.log(`Stored version: ${storedVersion}, Current version: ${APP_VERSION}, Force update: ${forceUpdate}`);
+    
+    // If no stored version or version mismatch, or force update flag is set
+    if (!storedVersion || storedVersion !== APP_VERSION || forceUpdate) {
+      console.log('Version mismatch or force update detected, performing complete cache cleanup');
+      await forceCompleteCacheCleanup();
+      
+      // Update stored version
+      await saveToIndexedDB(VERSION_STORAGE_KEY, APP_VERSION);
+      
+      // Clear force update flag
+      await saveToIndexedDB(FORCE_UPDATE_KEY, false);
+      
+      return true;
+    }
+    
+    return false;
+  } catch (error) {
+    console.error('Force update check failed:', error);
+    return false;
+  }
+};
+
+// Force clear icon caches specifically
+const forceIconCacheRefresh = async () => {
+  try {
+    console.log('Force refreshing icon caches...');
+    const cache = await caches.open(STATIC_CACHE);
+    
+    // List of all icon files to force refresh
+    const iconFiles = [
+      '/favicon-32x32.svg',
+      '/icons/icon-192x192.svg', 
+      '/icons/icon-512x512.svg',
+      '/khmer-flag-pin-icon.svg',
+      '/khmer-flag-pin-maskable.svg',
+      '/apple-touch-icon-khmer.svg',
+      '/manifest.json' // Also refresh manifest since it references icons
+    ];
+    
+    // Delete existing cached versions
+    await Promise.all(
+      iconFiles.map(async (url) => {
+        await cache.delete(url);
+        console.log(`Cleared cache for: ${url}`);
+      })
+    );
+    
+    console.log('Icon cache refresh completed');
+  } catch (error) {
+    console.error('Icon cache refresh failed:', error);
+  }
+};
+
 // Force cache refresh for critical assets
 const refreshCriticalAssets = async () => {
   try {
@@ -560,7 +716,14 @@ const refreshCriticalAssets = async () => {
     const criticalAssets = [
       '/',
       '/manifest.json',
-      '/sw.js' // Self-update
+      '/sw.js', // Self-update
+      // Force refresh all icon files with cache-busting
+      `/favicon-32x32.svg?v=${SW_VERSION}&t=${Date.now()}`,
+      `/icons/icon-192x192.svg?v=${SW_VERSION}&t=${Date.now()}`,
+      `/icons/icon-512x512.svg?v=${SW_VERSION}&t=${Date.now()}`,
+      `/khmer-flag-pin-icon.svg?v=${SW_VERSION}&t=${Date.now()}`,
+      `/khmer-flag-pin-maskable.svg?v=${SW_VERSION}&t=${Date.now()}`,
+      `/apple-touch-icon-khmer.svg?v=${SW_VERSION}&t=${Date.now()}`
     ];
     
     await Promise.all(
@@ -569,11 +732,16 @@ const refreshCriticalAssets = async () => {
           const response = await fetch(url, { 
             cache: 'no-cache',
             headers: {
-              'Cache-Control': 'no-cache, no-store, must-revalidate'
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache',
+              'Expires': '0'
             }
           });
           if (response.ok) {
-            await cache.put(url, response);
+            // Store without query parameters for clean cache keys
+            const cleanUrl = url.split('?')[0];
+            await cache.put(cleanUrl, response);
+            console.log(`Refreshed and cached: ${cleanUrl}`);
           }
         } catch (error) {
           console.warn(`Failed to refresh ${url}:`, error);
@@ -642,7 +810,7 @@ self.addEventListener('install', (event) => {
   // Show update notification to user
   self.registration.showNotification('MapKH Update Available', {
     body: 'A new version of MapKH is available. Restart the app to update.',
-    icon: '/icons/favicon.png',
+    icon: '/icons/icon-192x192.svg',
     badge: '/badge-72x72.svg',
     tag: 'app-update',
     requireInteraction: true,
@@ -664,6 +832,7 @@ self.addEventListener('install', (event) => {
   
   event.waitUntil(
     Promise.all([
+      forceIconCacheRefresh(), // Clear icon caches first
       cacheAssets(),
       refreshCriticalAssets(),
       loadBadgeCount(),
@@ -677,12 +846,24 @@ self.addEventListener('activate', (event) => {
   console.log(`Service Worker v${SW_VERSION} activating`);
   
   event.waitUntil(
-    Promise.all([
-      self.clients.claim(),
-      loadBadgeCount(),
-      cleanupOldCaches(),
-      notifyClientsOfUpdate()
-    ])
+    (async () => {
+      try {
+        // Check if force update is needed first
+        const forceUpdatePerformed = await checkForceUpdate();
+        
+        // Perform standard activation tasks
+        await Promise.all([
+          self.clients.claim(),
+          loadBadgeCount(),
+          forceUpdatePerformed ? Promise.resolve() : cleanupOldCaches(), // Skip if force cleanup already done
+          notifyClientsOfUpdate()
+        ]);
+        
+        console.log(`Service Worker v${SW_VERSION} activated successfully`);
+      } catch (error) {
+        console.error('Service Worker activation failed:', error);
+      }
+    })()
   );
 });
 
@@ -696,6 +877,48 @@ const notifyClientsOfUpdate = async () => {
       message: 'Service Worker updated successfully'
     });
   });
+};
+
+// Notify clients about forced cache cleanup and app update
+const notifyClientsOfForceUpdate = async () => {
+  const clients = await self.clients.matchAll();
+  clients.forEach(client => {
+    client.postMessage({
+      type: 'FORCE_UPDATE_COMPLETED',
+      version: APP_VERSION,
+      swVersion: SW_VERSION,
+      message: 'App has been updated with cache cleanup. Please refresh for the latest version.',
+      action: 'REFRESH_REQUIRED'
+    });
+  });
+  
+  // Also show a notification to the user
+  try {
+    await self.registration.showNotification('MapKH Updated! 🎉', {
+      body: 'Your app has been updated with new features and improvements. Tap to refresh.',
+      icon: '/apple-touch-icon-152x152.png',
+      badge: '/apple-touch-icon-120x120.png',
+      tag: 'app-update',
+      requireInteraction: true,
+      actions: [
+        {
+          action: 'refresh',
+          title: 'Refresh Now'
+        },
+        {
+          action: 'dismiss',
+          title: 'Later'
+        }
+      ],
+      data: {
+        type: 'app-update',
+        url: '/',
+        action: 'refresh'
+      }
+    });
+  } catch (error) {
+    console.warn('Failed to show update notification:', error);
+  }
 };
 
 // Handle fetch events with cache strategies
@@ -745,21 +968,21 @@ setInterval(() => {
 
 // Handle sync events for offline functionality
 self.addEventListener('sync', (event) => {
-  console.log('Background sync event:', event.tag);
+  console.log('Background sync triggered:', event.tag);
   
   switch (event.tag) {
     case 'background-sync':
       event.waitUntil(performBackgroundSync());
       break;
-      
     case 'notification-sync':
       event.waitUntil(syncNotificationStatus());
       break;
-      
+    case 'report-sync':
+      event.waitUntil(syncPendingReports());
+      break;
     case 'badge-sync':
       event.waitUntil(syncBadgeCount());
       break;
-      
     default:
       console.log('Unknown sync tag:', event.tag);
   }
@@ -846,10 +1069,38 @@ self.addEventListener('message', async (event) => {
       
     case 'UPDATE_BADGE_COUNT':
       await saveBadgeCount(data.count || 0);
+      await updateBadge();
+      break;
+      
+    case 'UPDATE_BADGE':
+      await saveBadgeCount(data.count || 0);
+      await updateBadge();
       break;
       
     case 'CLEAR_BADGE':
       await saveBadgeCount(0);
+      await updateBadge();
+      break;
+      
+    case 'UPDATE_BADGE_NOTIFICATION':
+      // For mobile devices that need notification-based badge updates
+      await saveBadgeCount(data.count || 0);
+      await updateBadge();
+      // Create a silent notification for badge update on some mobile platforms
+      if (data.count > 0) {
+        try {
+          await self.registration.showNotification('MapKH', {
+            body: `You have ${data.count} unread notification${data.count > 1 ? 's' : ''}`,
+            badge: '/icon-192x192.png',
+            icon: '/icon-192x192.png',
+            tag: 'badge-update',
+            silent: true,
+            data: { type: 'badge-update', count: data.count }
+          });
+        } catch (error) {
+          console.warn('Failed to show badge notification:', error);
+        }
+      }
       break;
       
     case 'MARK_NOTIFICATIONS_READ':

@@ -6,12 +6,13 @@ import { ThemeProvider } from '@/components/theme-provider';
 import { PushNotificationProvider } from '@/context/push-notification-provider';
 import { AppShell } from '@/components/app-shell';
 import { ActivityDialogProvider } from '@/context/activity-dialog-provider';
-import { Suspense, useEffect } from 'react';
+import React, { Suspense, useEffect, Component, ErrorInfo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { I18nProvider } from '@/context/i18n-provider';
 import { useToast } from '@/hooks/use-toast';
 import { PWAInstallPrompt } from '@/components/pwa-install-prompt';
+import { IOSPWAInitializer } from '@/components/ios-pwa-initializer';
 
 
 function AppBootstrapper({ children }: { children: React.ReactNode }) {
@@ -91,6 +92,34 @@ function AppBootstrapper({ children }: { children: React.ReactNode }) {
 }
 
 
+// Error boundary for providers that might fail on mobile
+class ProviderErrorBoundary extends Component<
+  { children: React.ReactNode; fallback: React.ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: { children: React.ReactNode; fallback: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    console.warn('Provider initialization error:', error);
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.warn('Provider error details:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback;
+    }
+
+    return this.props.children;
+  }
+}
+
 export function ClientProviders({ children }: { children: React.ReactNode }) {
     return (
       <I18nProvider>
@@ -101,15 +130,19 @@ export function ClientProviders({ children }: { children: React.ReactNode }) {
           disableTransitionOnChange
         >
           <AuthProvider>
-              <PushNotificationProvider>
-                <Suspense fallback={null}>
-                  <ActivityDialogProvider>
-                    <AppBootstrapper>
-                        {children}
-                    </AppBootstrapper>
-                  </ActivityDialogProvider>
-                </Suspense>
-              </PushNotificationProvider>
+              <ProviderErrorBoundary fallback={children}>
+                <PushNotificationProvider>
+                  <IOSPWAInitializer>
+                    <Suspense fallback={null}>
+                      <ActivityDialogProvider>
+                        <AppBootstrapper>
+                            {children}
+                        </AppBootstrapper>
+                      </ActivityDialogProvider>
+                    </Suspense>
+                  </IOSPWAInitializer>
+                </PushNotificationProvider>
+              </ProviderErrorBoundary>
           </AuthProvider>
         </ThemeProvider>
       </I18nProvider>

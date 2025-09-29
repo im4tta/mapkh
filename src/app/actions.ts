@@ -17,20 +17,27 @@ import { google } from 'googleapis';
 
 export async function getDriveFolderInfo(driveLink: string): Promise<{ fileCount: number; fileTypes: string[]; error?: string }> {
     try {
+        console.log('getDriveFolderInfo called with driveLink:', driveLink);
+        
         // Extract folder ID from Google Drive link
         const match = driveLink.match(/\/folders\/([a-zA-Z0-9-_]+)/);
         if (!match) {
+            console.log('Invalid Google Drive folder link format');
             return { fileCount: 0, fileTypes: [], error: 'Invalid Google Drive folder link' };
         }
         
         const folderId = match[1];
+        console.log('Extracted folder ID:', folderId);
         
         const serviceAccountEmail = process.env.GCP_SERVICE_ACCOUNT_EMAIL;
         const serviceAccountKey = process.env.GCP_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(/\\n/g, '\n');
         
         if (!serviceAccountEmail || !serviceAccountKey) {
+            console.log('Google Drive integration not configured - missing credentials');
             return { fileCount: 0, fileTypes: [], error: 'Google Drive integration not configured' };
         }
+        
+        console.log('Creating Google Drive auth with service account:', serviceAccountEmail);
         
         const auth = new google.auth.JWT(
             serviceAccountEmail,
@@ -40,6 +47,8 @@ export async function getDriveFolderInfo(driveLink: string): Promise<{ fileCount
         );
         
         const drive = google.drive({ version: 'v3', auth });
+        
+        console.log('Listing files in folder:', folderId);
         
         // List files in the folder
         const res = await drive.files.list({
@@ -51,6 +60,8 @@ export async function getDriveFolderInfo(driveLink: string): Promise<{ fileCount
         
         const files = res.data.files || [];
         const fileCount = files.length;
+        
+        console.log(`Found ${fileCount} files in folder ${folderId}`);
         
         // Get unique file types
         const fileTypes = [...new Set(files.map(file => {
@@ -65,6 +76,8 @@ export async function getDriveFolderInfo(driveLink: string): Promise<{ fileCount
             if (mimeType === 'application/vnd.google-apps.folder') return 'Folder';
             return 'Other';
         }).filter(type => type !== 'Folder'))]; // Exclude folders from file types
+        
+        console.log('File types found:', fileTypes);
         
         return { fileCount, fileTypes };
     } catch (error: any) {

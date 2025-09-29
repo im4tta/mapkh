@@ -10,7 +10,7 @@ import {
   initializeRealTimePushNotifications,
   sendTestNotification
 } from '@/lib/firebase-messaging';
-import { badgeManager, addBadgeListener } from '@/lib/badge-manager';
+import { getBadgeManager, addBadgeListener } from '@/lib/badge-manager';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { BellRing, BellOff } from 'lucide-react';
@@ -53,7 +53,7 @@ const EnableNotificationsButton: React.FC = () => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
       setPermission(Notification.permission);
       // Load initial badge count
-      setBadgeCount(badgeManager.getBadgeCount());
+      setBadgeCount(getBadgeManager().getBadgeCount());
     }
   }, []);
 
@@ -156,7 +156,7 @@ const PushNotificationProvider: React.FC<PushNotificationProviderProps> = ({ chi
       setPermission(Notification.permission);
       
       // Initialize badge manager and listen for changes
-      setBadgeCount(badgeManager.getBadgeCount());
+      setBadgeCount(getBadgeManager().getBadgeCount());
       const unsubscribe = addBadgeListener((count) => {
         setBadgeCount(count);
       });
@@ -227,7 +227,7 @@ const PushNotificationProvider: React.FC<PushNotificationProviderProps> = ({ chi
     console.log('Received foreground message:', payload);
     
     // Increment badge count for foreground notifications
-    await badgeManager.incrementBadge();
+    await getBadgeManager().incrementBadge();
     
     // Show toast notification when app is in foreground
     toast({
@@ -238,7 +238,7 @@ const PushNotificationProvider: React.FC<PushNotificationProviderProps> = ({ chi
 
   const handleUpdateBadgeCount = async (count: number) => {
     try {
-      await badgeManager.updateBadgeCount(count);
+      await getBadgeManager().updateBadgeCount(count);
     } catch (error) {
       console.error('Failed to update badge:', error);
     }
@@ -246,7 +246,7 @@ const PushNotificationProvider: React.FC<PushNotificationProviderProps> = ({ chi
 
   const handleClearBadge = async () => {
     try {
-      await badgeManager.clearBadge();
+      await getBadgeManager().clearBadge();
     } catch (error) {
       console.error('Failed to clear badge:', error);
     }
@@ -254,7 +254,7 @@ const PushNotificationProvider: React.FC<PushNotificationProviderProps> = ({ chi
 
   const handleMarkNotificationsAsRead = async (notificationIds: string[]) => {
     try {
-      await badgeManager.markNotificationsAsRead(notificationIds);
+      await getBadgeManager().markNotificationsAsRead(notificationIds);
     } catch (error) {
       console.error('Failed to mark notifications as read:', error);
     }

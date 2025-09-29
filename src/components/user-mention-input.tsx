@@ -2,8 +2,6 @@
 
 import React, { useState, useRef, useEffect, forwardRef } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { UserInfo } from '@/lib/types';
 import { getUsers } from '@/app/actions';
 
@@ -30,7 +28,9 @@ export const UserMentionInput = forwardRef<HTMLTextAreaElement, UserMentionInput
     const [mentionQuery, setMentionQuery] = useState('');
     const [mentionPosition, setMentionPosition] = useState({ start: 0, end: 0 });
     const [filteredUsers, setFilteredUsers] = useState<MentionUser[]>([]);
+    const [selectedIndex, setSelectedIndex] = useState(0);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const dropdownRef = useRef<HTMLDivElement>(null);
 
     // Load users on component mount
     useEffect(() => {
@@ -72,6 +72,7 @@ export const UserMentionInput = forwardRef<HTMLTextAreaElement, UserMentionInput
           setMentionQuery(textAfterAt);
           setMentionPosition({ start: lastAtIndex, end: cursorPosition });
           setShowMentions(true);
+          setSelectedIndex(0);
           
           // Filter users based on query
           const filtered = users.filter(user =>
@@ -120,7 +121,16 @@ export const UserMentionInput = forwardRef<HTMLTextAreaElement, UserMentionInput
     // Handle key events for mention navigation
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (showMentions && filteredUsers.length > 0) {
-        if (e.key === 'Escape') {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          setSelectedIndex(prev => (prev + 1) % filteredUsers.length);
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          setSelectedIndex(prev => (prev - 1 + filteredUsers.length) % filteredUsers.length);
+        } else if (e.key === 'Enter' || e.key === 'Tab') {
+          e.preventDefault();
+          handleUserSelect(filteredUsers[selectedIndex]);
+        } else if (e.key === 'Escape') {
           setShowMentions(false);
           e.preventDefault();
         }
@@ -129,49 +139,47 @@ export const UserMentionInput = forwardRef<HTMLTextAreaElement, UserMentionInput
 
     return (
       <div className="relative">
-        <Popover open={showMentions} onOpenChange={setShowMentions}>
-          <PopoverTrigger asChild>
-            <textarea
-              ref={textareaRef}
-              value={value}
-              onChange={handleTextChange}
-              onKeyDown={handleKeyDown}
-              placeholder={placeholder}
-              className={className}
-              disabled={disabled}
-              rows={3}
-            />
-          </PopoverTrigger>
-          <PopoverContent className="w-80 p-0" align="start">
-            <Command>
-              <CommandList>
-                <CommandEmpty>No users found.</CommandEmpty>
-                <CommandGroup heading="Mention User">
-                  {filteredUsers.map((user) => (
-                    <CommandItem
-                      key={user.uid}
-                      onSelect={() => handleUserSelect(user)}
-                      className="flex items-center gap-2 cursor-pointer"
-                    >
-                      <Avatar className="h-6 w-6">
-                        <AvatarImage src={user.avatar || undefined} />
-                        <AvatarFallback className="text-xs">
-                          {user.name.charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex flex-col">
-                        <span className="text-sm font-medium">{user.name}</span>
-                        {user.email && (
-                          <span className="text-xs text-muted-foreground">{user.email}</span>
-                        )}
-                      </div>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        </Popover>
+        <textarea
+          ref={textareaRef}
+          value={value}
+          onChange={handleTextChange}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          className={className}
+          disabled={disabled}
+          rows={3}
+        />
+        
+        {showMentions && filteredUsers.length > 0 && (
+          <div
+            ref={dropdownRef}
+            className="absolute z-50 w-80 mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto"
+          >
+            <div className="p-2 text-sm text-gray-500 border-b">Mention User</div>
+            {filteredUsers.map((user, index) => (
+              <div
+                key={user.uid}
+                onClick={() => handleUserSelect(user)}
+                className={`flex items-center gap-2 p-2 cursor-pointer hover:bg-gray-100 ${
+                  index === selectedIndex ? 'bg-blue-50 border-l-2 border-blue-500' : ''
+                }`}
+              >
+                <Avatar className="h-6 w-6">
+                  <AvatarImage src={user.avatar || undefined} />
+                  <AvatarFallback className="text-xs">
+                    {user.name.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium">{user.name}</span>
+                  {user.email && (
+                    <span className="text-xs text-muted-foreground">{user.email}</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     );
   }

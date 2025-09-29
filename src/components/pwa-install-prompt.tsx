@@ -72,9 +72,11 @@ export function PWAInstallPrompt() {
       const promptEvent = e as BeforeInstallPromptEvent;
       setDeferredPrompt(promptEvent);
       
-      // For Chrome desktop, show prompt immediately to encourage address bar installation
+      // For desktop browsers, don't show prompt immediately - let users login first
+      // Only show the small install button in the corner
       if (!detection.isMobile && !installPromptShown) {
-        setShowInstallPrompt(true);
+        // Don't show the banner immediately on desktop
+        // setShowInstallPrompt(true);
         installPromptShown = true;
       }
       
@@ -98,13 +100,14 @@ export function PWAInstallPrompt() {
     // Enhanced visibility change handling for Chrome address bar
     const handleVisibilityChange = () => {
       if (!document.hidden && deferredPrompt && !detection.isMobile && !installPromptShown) {
-        // Show prompt when user returns to tab, encouraging Chrome address bar installation
-        setTimeout(() => {
-          if (!isInstalled && deferredPrompt) {
-            setShowInstallPrompt(true);
-            installPromptShown = true;
-          }
-        }, 2000);
+        // Don't automatically show prompt when user returns to tab
+        // Let them use the app normally and discover the install button naturally
+        // setTimeout(() => {
+        //   if (!isInstalled && deferredPrompt) {
+        //     setShowInstallPrompt(true);
+        //     installPromptShown = true;
+        //   }
+        // }, 2000);
       }
     };
 

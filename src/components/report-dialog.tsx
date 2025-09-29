@@ -225,6 +225,9 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
             return;
         }
 
+      // Get current form values to preserve user input
+      const currentValues = form.getValues();
+      
       const defaultValues = isEditMode && report ? {
         ...report,
         subViolationType: Array.isArray(report.subViolationType) ? report.subViolationType : (report.subViolationType ? [report.subViolationType] : []),
@@ -240,25 +243,26 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
         nativeKhmerLanguage: khmerName || report.nativeKhmerLanguage || '',
         thaiLanguage: thaiName || report.thaiLanguage || '',
       } : {
-        subViolationType: [],
-        otherSubViolationType: '',
-        description: '',
-        province: province || '',
-        placeId: placeId || '',
-        englishLanguage: englishName || '',
-        nativeKhmerLanguage: khmerName || '',
-        thaiLanguage: thaiName || '',
-        impactCategory: '',
-        priority: 'low' as 'low',
-        violationTerm: 'None',
+        // Preserve existing form data if it exists, otherwise use defaults
+        subViolationType: currentValues.subViolationType?.length > 0 ? currentValues.subViolationType : [],
+        otherSubViolationType: currentValues.otherSubViolationType || '',
+        description: currentValues.description || '',
+        province: province || currentValues.province || '',
+        placeId: placeId || currentValues.placeId || '',
+        englishLanguage: englishName || currentValues.englishLanguage || '',
+        nativeKhmerLanguage: khmerName || currentValues.nativeKhmerLanguage || '',
+        thaiLanguage: thaiName || currentValues.thaiLanguage || '',
+        impactCategory: currentValues.impactCategory || '',
+        priority: (currentValues.priority as 'low' | 'medium' | 'high') || 'low',
+        violationTerm: currentValues.violationTerm || 'None',
         locationWithin: `https://www.google.com/maps?q=${position.lat},${position.lng}`,
         reportedBy: user?.uid,
         reportedByName: user?.displayName || user?.email || 'Community User',
-        submittedBy: '',
-        targetDate: undefined,
-        progress: 0,
-        notes: '',
-        driveLink: '',
+        submittedBy: currentValues.submittedBy || '',
+        targetDate: currentValues.targetDate || undefined,
+        progress: currentValues.progress || 0,
+        notes: currentValues.notes || '',
+        driveLink: currentValues.driveLink || '',
         status: 'not-submitted' as 'not-submitted',
       };
       form.reset(defaultValues as ReportFormValues);
@@ -822,7 +826,7 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
                                  <FormControl>
                                      <Input placeholder={t('report_dialog.english_name_placeholder')} {...field} value={field.value ?? ''}/>
                                  </FormControl>
-                                 <Button type="button" size="icon" variant="outline" onClick={() => handleAITranslate(field.value || '', 'en', 'englishName')} title="Translate to English" disabled={isTranslating}>
+                                 <Button type="button" size="icon" variant="outline" onClick={() => handleAITranslate(field.value || '', 'en', 'englishLanguage')} title="Translate to English" disabled={isTranslating}>
                         <Languages className="h-4 w-4" />
                       </Button>
                                  <Button type="button" size="icon" variant="outline" onClick={handleFindPlaceId} disabled={isFindingPlaceId}>
@@ -843,7 +847,7 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
                                 <FormControl>
                                     <Input placeholder="ឈ្មោះជាភាសាខ្មែរ" {...field} className="font-khmer" value={field.value ?? ''} />
                                 </FormControl>
-                                <Button type="button" size="icon" variant="outline" onClick={() => handleAITranslate(field.value || '', 'km', 'khmerName')} title="Translate to Khmer" disabled={isTranslating}>
+                                <Button type="button" size="icon" variant="outline" onClick={() => handleAITranslate(field.value || '', 'km', 'nativeKhmerLanguage')} title="Translate to Khmer" disabled={isTranslating}>
                         <Languages className="h-4 w-4" />
                       </Button>
                             </div>
@@ -862,7 +866,7 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
                                 <FormControl>
                                     <Input placeholder={t('report_dialog.thai_name_placeholder')} {...field} value={field.value ?? ''} />
                                 </FormControl>
-                                <Button type="button" size="icon" variant="outline" onClick={() => handleAITranslate(field.value || '', 'th', 'thaiName')} title="Translate to Thai" disabled={isTranslating}>
+                                <Button type="button" size="icon" variant="outline" onClick={() => handleAITranslate(field.value || '', 'th', 'thaiLanguage')} title="Translate to Thai" disabled={isTranslating}>
                         <Languages className="h-4 w-4" />
                       </Button>
                                 </div>

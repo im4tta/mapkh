@@ -249,41 +249,186 @@ export async function requestNotificationPermissionMobile(): Promise<{
   }
 }
 
-// Badge management with mobile-specific fallbacks
-export async function updateBadgeMobile(count: number): Promise<boolean> {
-  const detection = detectMobileEnvironment();
-  
-  if (!detection.supportsBadging) {
-    // Badge API not supported, skip badge update silently
-    return false;
-  }
-  
+// Update app badge with mobile-specific handling
+export async function updateBadgeMobile(count: number): Promise<void> {
   try {
-    if (count > 0) {
-      await (navigator as any).setAppBadge(count);
-    } else {
-      await (navigator as any).clearAppBadge();
+    const env = detectMobileEnvironment();
+    
+    // Ensure count is valid
+    const badgeCount = Math.max(0, Math.floor(count));
+    
+    // Try native badge API first (most reliable)
+    if ('setAppBadge' in navigator) {
+      try {
+        await (navigator as any).setAppBadge(badgeCount);
+        console.log(`Badge updated to ${badgeCount} using native API`);
+        return;
+      } catch (error) {
+        console.warn('Native badge API failed, trying fallbacks:', error);
+      }
     }
-    return true;
+    
+    // Mobile-specific fallbacks
+    if (env.isMobile) {
+      // For iOS Safari/PWA - enhanced handling
+      if (env.isIOS) {
+        try {
+          // Try multiple approaches for iOS
+          if (env.isPWA || env.isStandalone) {
+            // PWA-specific badge handling
+            await (navigator as any).setAppBadge(badgeCount);
+            console.log(`iOS PWA badge updated to ${badgeCount}`);
+          } else {
+            // Safari fallback - use service worker and multiple storage
+            if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+              navigator.serviceWorker.controller.postMessage({
+                type: 'UPDATE_BADGE',
+                count: badgeCount
+              });
+            }
+            
+            // Store in multiple locations for iOS Safari
+            localStorage.setItem('pwa_badge_count', badgeCount.toString());
+            localStorage.setItem('ios_badge_count', badgeCount.toString());
+            sessionStorage.setItem('badge_count', badgeCount.toString());
+            
+            console.log(`iOS Safari badge stored: ${badgeCount}`);
+          }
+        } catch (error) {
+          console.warn('iOS badge update failed:', error);
+          // Enhanced fallback storage for iOS
+          try {
+            localStorage.setItem('pwa_badge_count', badgeCount.toString());
+            localStorage.setItem('ios_badge_count', badgeCount.toString());
+            localStorage.setItem('app_badge_count', badgeCount.toString());
+            sessionStorage.setItem('badge_count', badgeCount.toString());
+            
+            // Try to register for background sync if available
+            if ('serviceWorker' in navigator && 'sync' in window.ServiceWorkerRegistration.prototype) {
+              navigator.serviceWorker.ready.then(registration => {
+                if ('sync' in registration && registration.sync) {
+                  return (registration.sync as unknown as { register: (tag: string) => Promise<void> }).register('badge-sync');
+                }
+              }).catch(syncError => {
+                console.warn('Background sync registration failed:', syncError);
+              });
+            }
+          } catch (storageError) {
+            console.error('Failed to store badge count for iOS:', storageError);
+          }
+        }
+      }
+      
+      // For Android Chrome PWA - enhanced handling
+      if (env.isAndroid) {
+        try {
+          if (env.isPWA) {
+            await (navigator as any).setAppBadge(badgeCount);
+            console.log(`Android PWA badge updated to ${badgeCount}`);
+          } else {
+            // Chrome browser fallback
+            if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+              navigator.serviceWorker.controller.postMessage({
+                type: 'UPDATE_BADGE',
+                count: badgeCount
+              });
+            }
+          }
+        } catch (error) {
+          console.warn('Android badge update failed:', error);
+          // Fallback: create persistent notification with badge
+          if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({
+              type: 'UPDATE_BADGE_NOTIFICATION',
+              count: badgeCount
+            });
+          }
+        }
+      }
+    }
+    
+    // Universal fallback: store in localStorage for service worker
+    localStorage.setItem('app_badge_count', badgeCount.toString());
+    
+    // Dispatch custom event for other components to listen
+    window.dispatchEvent(new CustomEvent('badgeUpdated', { 
+      detail: { count: badgeCount } 
+    }));
+    
   } catch (error) {
-    console.error('Failed to update badge:', error);
-    return false;
+    console.error('Failed to update mobile badge:', error);
+    throw error;
   }
 }
 
 // Clear badge with mobile-specific handling
-export async function clearBadgeMobile(): Promise<boolean> {
-  const detection = detectMobileEnvironment();
-  
-  if (!detection.supportsBadging) {
-    return false;
-  }
-  
+export async function clearBadgeMobile(): Promise<void> {
   try {
-    await (navigator as any).clearAppBadge();
-    return true;
+    const env = detectMobileEnvironment();
+    
+    // Try native badge API first
+    if ('clearAppBadge' in navigator) {
+      try {
+        await (navigator as any).clearAppBadge();
+        console.log('Badge cleared using native API');
+        return;
+      } catch (error) {
+        console.warn('Native badge clear failed, trying fallbacks:', error);
+      }
+    }
+    
+    // Mobile-specific fallbacks
+    if (env.isMobile) {
+      // For iOS Safari/PWA
+      if (env.isIOS) {
+        try {
+          if (env.isPWA) {
+            await (navigator as any).clearAppBadge();
+          } else {
+            // Safari fallback - use service worker
+            if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+              navigator.serviceWorker.controller.postMessage({
+                type: 'CLEAR_BADGE'
+              });
+            }
+          }
+          console.log('iOS badge cleared');
+        } catch (error) {
+          console.warn('iOS badge clear failed:', error);
+        }
+      }
+      
+      // For Android Chrome PWA
+      if (env.isAndroid) {
+        try {
+          if (env.isPWA) {
+            await (navigator as any).clearAppBadge();
+            console.log('Android PWA badge cleared');
+          } else {
+            // Chrome browser fallback
+            if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+              navigator.serviceWorker.controller.postMessage({
+                type: 'CLEAR_BADGE'
+              });
+            }
+          }
+        } catch (error) {
+          console.warn('Android badge clear failed:', error);
+        }
+      }
+    }
+    
+    // Universal fallback: clear from localStorage
+    localStorage.removeItem('app_badge_count');
+    localStorage.removeItem('pwa_badge_count');
+    
+    // Dispatch custom event
+    window.dispatchEvent(new CustomEvent('badgeUpdated', { 
+      detail: { count: 0 } 
+    }));
+    
   } catch (error) {
-    console.error('Failed to clear badge:', error);
-    return false;
+    console.error('Failed to clear mobile badge:', error);
+    throw error;
   }
 }

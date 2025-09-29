@@ -35,13 +35,31 @@ export class BadgeManager {
     return BadgeManager.instance;
   }
 
+  // Check if we're in a browser environment
+  private isBrowser(): boolean {
+    return typeof window !== 'undefined' && typeof localStorage !== 'undefined';
+  }
+
   // Load badge count from storage
   private loadBadgeCount(): void {
     try {
-      const stored = localStorage.getItem(this.STORAGE_KEY);
-      this.badgeCount = stored ? parseInt(stored, 10) : 0;
+      if (!this.isBrowser()) {
+        this.badgeCount = 0;
+        return;
+      }
+      
+      // Try multiple storage keys for iOS compatibility
+      const stored = localStorage.getItem(this.STORAGE_KEY) || 
+                   localStorage.getItem('pwa_badge_count') ||
+                   localStorage.getItem('app_badge_count');
+      
+      if (stored) {
+        this.badgeCount = parseInt(stored, 10) || 0;
+        // Ensure all storage keys are synchronized
+        this.saveBadgeCount(this.badgeCount);
+      }
     } catch (error) {
-      console.error('Failed to load badge count:', error);
+      console.error('Failed to load badge count from storage:', error);
       this.badgeCount = 0;
     }
   }
@@ -50,7 +68,18 @@ export class BadgeManager {
   private saveBadgeCount(count: number): void {
     try {
       this.badgeCount = count;
+      
+      if (!this.isBrowser()) {
+        return;
+      }
+      
+      // Save to multiple storage keys for iOS compatibility
       localStorage.setItem(this.STORAGE_KEY, count.toString());
+      localStorage.setItem('pwa_badge_count', count.toString());
+      localStorage.setItem('app_badge_count', count.toString());
+      
+      // Also save to sessionStorage as backup for iOS
+      sessionStorage.setItem(this.STORAGE_KEY, count.toString());
     } catch (error) {
       console.error('Failed to save badge count:', error);
     }
@@ -93,8 +122,8 @@ export class BadgeManager {
 
     this.saveBadgeCount(newCount);
 
-    // Update platform badge
-    await this.updatePlatformBadge(newCount);
+    // Update platform badge with retry logic
+    await this.updatePlatformBadgeWithRetry(newCount);
 
     // Sync with service worker if requested
     if (syncToServiceWorker) {
@@ -103,6 +132,23 @@ export class BadgeManager {
 
     // Notify listeners
     this.notifyListeners(newCount);
+  }
+
+  // Update platform badge with retry logic for mobile
+  private async updatePlatformBadgeWithRetry(count: number, retries: number = 3): Promise<void> {
+    for (let i = 0; i < retries; i++) {
+      try {
+        await this.updatePlatformBadge(count);
+        return; // Success, exit retry loop
+      } catch (error) {
+        console.warn(`Badge update attempt ${i + 1} failed:`, error);
+        if (i === retries - 1) {
+          throw error; // Last attempt failed
+        }
+        // Wait before retry (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 100));
+      }
+    }
   }
 
   // Increment badge count
@@ -244,14 +290,46 @@ export class BadgeManager {
   }
 }
 
-// Export singleton instance
-export const badgeManager = BadgeManager.getInstance();
+// Lazy singleton getter to prevent SSR issues
+export const getBadgeManager = (): BadgeManager => {
+  return BadgeManager.getInstance();
+};
 
-// Convenience functions for easy usage
-export const updateBadgeCount = (count: number) => badgeManager.updateBadgeCount(count);
-export const incrementBadge = (amount?: number) => badgeManager.incrementBadge(amount);
-export const decrementBadge = (amount?: number) => badgeManager.decrementBadge(amount);
-export const clearBadge = () => badgeManager.clearBadge();
-export const getBadgeCount = () => badgeManager.getBadgeCount();
-export const markNotificationsAsRead = (ids: string[]) => badgeManager.markNotificationsAsRead(ids);
-export const addBadgeListener = (callback: (count: number) => void) => badgeManager.addListener(callback);
+// Export singleton instance (lazy)
+export const badgeManager = typeof window !== 'undefined' ? BadgeManager.getInstance() : null;
+
+// Convenience functions for easy usage with SSR safety
+export const updateBadgeCount = (count: number) => {
+  if (typeof window === 'undefined') return Promise.resolve();
+  return getBadgeManager().updateBadgeCount(count);
+};
+
+export const incrementBadge = (amount?: number) => {
+  if (typeof window === 'undefined') return Promise.resolve();
+  return getBadgeManager().incrementBadge(amount);
+};
+
+export const decrementBadge = (amount?: number) => {
+  if (typeof window === 'undefined') return Promise.resolve();
+  return getBadgeManager().decrementBadge(amount);
+};
+
+export const clearBadge = () => {
+  if (typeof window === 'undefined') return Promise.resolve();
+  return getBadgeManager().clearBadge();
+};
+
+export const getBadgeCount = () => {
+  if (typeof window === 'undefined') return 0;
+  return getBadgeManager().getBadgeCount();
+};
+
+export const markNotificationsAsRead = (ids: string[]) => {
+  if (typeof window === 'undefined') return Promise.resolve();
+  return getBadgeManager().markNotificationsAsRead(ids);
+};
+
+export const addBadgeListener = (callback: (count: number) => void) => {
+  if (typeof window === 'undefined') return () => {};
+  return getBadgeManager().addListener(callback);
+};

@@ -9,6 +9,7 @@ import {
   clearBadgeMobile,
   getNotificationSupportMessage
 } from './mobile-detection';
+import { safeGetItem, safeSetItem, safeRemoveItem } from './storage-utils';
 
 const VAPID_KEY = process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_VAPID_KEY;
 
@@ -208,24 +209,19 @@ export const showLocalNotification = (title: string, body: string, data?: any) =
   }, 10000);
 };
 
-// Save FCM token to localStorage
+// Save FCM token to localStorage with error handling
 export const saveFCMToken = async (token: string): Promise<void> => {
-  try {
-    localStorage.setItem('fcm_token', token);
+  const success = safeSetItem('fcm_token', token);
+  if (success) {
     console.log('FCM token saved to localStorage');
-  } catch (error) {
-    console.error('Failed to save FCM token:', error);
+  } else {
+    console.warn('Failed to save FCM token to localStorage');
   }
 };
 
 // Get stored FCM token from localStorage
 export const getStoredFCMToken = (): string | null => {
-  try {
-    return localStorage.getItem('fcm_token');
-  } catch (error) {
-    console.error('Failed to get stored FCM token:', error);
-    return null;
-  }
+  return safeGetItem<string>('fcm_token') || null;
 };
 
 // Badge count management functions with mobile-specific handling
@@ -252,8 +248,11 @@ export const updateBadgeCount = async (count: number): Promise<void> => {
       });
     }
     
-    // Store locally for persistence
-    localStorage.setItem('mapkh_badge_count', count.toString());
+    // Store locally for persistence with safe storage
+    const success = safeSetItem('mapkh_badge_count', count.toString());
+    if (!success) {
+      console.warn('Failed to store badge count in localStorage');
+    }
     
     // Update app badge with mobile-specific handling
     await updateBadgeMobile(count);
@@ -284,8 +283,11 @@ export const clearBadge = async (): Promise<void> => {
       });
     }
     
-    // Clear local storage
-    localStorage.removeItem('mapkh_badge_count');
+    // Clear from safe storage
+    const success = safeRemoveItem('mapkh_badge_count');
+    if (!success) {
+      console.warn('Failed to clear badge count from localStorage');
+    }
     
     // Clear app badge with mobile-specific handling
     await clearBadgeMobile();
@@ -295,13 +297,8 @@ export const clearBadge = async (): Promise<void> => {
 };
 
 export const getBadgeCount = (): number => {
-  try {
-    const stored = localStorage.getItem('mapkh_badge_count');
-    return stored ? parseInt(stored, 10) : 0;
-  } catch (error) {
-    console.error('Failed to get badge count:', error);
-    return 0;
-  }
+  const stored = safeGetItem<string>('mapkh_badge_count');
+  return stored ? parseInt(stored, 10) || 0 : 0;
 };
 
 // Mark notifications as read

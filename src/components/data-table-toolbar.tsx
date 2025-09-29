@@ -2,8 +2,8 @@
 
 'use client';
 
-import { Table } from '@tanstack/react-table';
-import { Trash2, Download, LocateFixed, View, Copy, Check, MapPin, CopyPlus, Save, RotateCcw } from 'lucide-react';
+import { Table, VisibilityState } from '@tanstack/react-table';
+import { Trash2, Download, LocateFixed, View, Copy, Check, MapPin, CopyPlus, Save, RotateCcw, List, LayoutGrid } from 'lucide-react';
 import { Button } from './ui/button';
 import { useAuth } from '@/context/auth-provider';
 import { deleteReports, getReportsForExport, getSubViolationTypes, bulkFetchPlaceIds, bulkUpdateReportsStatus, bulkUpdateReportsProvince, bulkUpdateReportsPriority, bulkUpdateReportsIssueType, bulkCopyDescriptionToKeywords } from '@/app/actions';
@@ -39,11 +39,36 @@ import { Report, SubViolationType, provinces } from '@/lib/types';
 import { format, isValid } from 'date-fns';
 import { Timestamp } from 'firebase/firestore';
 
+// View Profile Types
+type ViewProfile = 'profile1' | 'profile2' | 'profile3' | 'custom';
+
+const VIEW_PROFILES = {
+  profile1: {
+    name: 'Profile 1: Essential + Violations',
+    columns: ['reportNumber', 'description', 'englishLanguage', 'nativeKhmerLanguage', 'thaiLanguage', 'placeId', 'violationTerm', 'subViolationType']
+  },
+  profile2: {
+    name: 'Profile 2: Profile 1 + Province',
+    columns: ['reportNumber', 'description', 'englishLanguage', 'nativeKhmerLanguage', 'thaiLanguage', 'placeId', 'violationTerm', 'subViolationType', 'province']
+  },
+  profile3: {
+    name: 'Profile 3: Basic Info Only',
+    columns: ['reportNumber', 'description', 'englishLanguage', 'nativeKhmerLanguage', 'thaiLanguage', 'placeId']
+  },
+  custom: {
+    name: 'Custom View',
+    columns: []
+  }
+} as const;
+
 interface DataTableToolbarProps<TData> {
   table: Table<TData>;
   refetchData: () => void;
   onCompare: () => void;
   onExport?: () => void;
+  setColumnVisibility?: (visibility: VisibilityState) => void;
+  view?: 'table' | 'grid';
+  onViewChange?: (view: 'table' | 'grid') => void;
 }
 
 const statuses: Report['status'][] = ['not-submitted', 'submitted', 'in-review', 'pending', 'approved', 'rejected', 'archived'];
@@ -54,6 +79,9 @@ export function DataTableToolbar<TData>({
   refetchData,
   onCompare,
   onExport,
+  setColumnVisibility,
+  view = 'table',
+  onViewChange,
 }: DataTableToolbarProps<TData>) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -65,6 +93,7 @@ export function DataTableToolbar<TData>({
   const [isFetchingPlaceIds, setIsFetchingPlaceIds] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [subViolationTypes, setSubViolationTypes] = useState<SubViolationType[]>([]);
+  const [currentProfile, setCurrentProfile] = useState<ViewProfile>('custom');
 
   useEffect(() => {
     const fetchTypes = async () => {
@@ -75,6 +104,48 @@ export function DataTableToolbar<TData>({
     }
     fetchTypes();
   }, []);
+
+  const applyViewProfile = (profile: ViewProfile) => {
+    if (profile === 'custom') {
+      setCurrentProfile('custom');
+      return;
+    }
+
+    if (!setColumnVisibility) {
+      console.warn('setColumnVisibility not provided to DataTableToolbar');
+      return;
+    }
+
+    const profileConfig = VIEW_PROFILES[profile];
+    const allColumns = table.getAllColumns();
+    
+    // Create new visibility state
+    const newVisibility: VisibilityState = {};
+    
+    // Hide all hideable columns first
+    allColumns.forEach(column => {
+      if (column.getCanHide()) {
+        newVisibility[column.id] = false;
+      }
+    });
+
+    // Show only the columns for this profile
+    profileConfig.columns.forEach(columnId => {
+      const column = allColumns.find(col => col.id === columnId);
+      if (column && column.getCanHide()) {
+        newVisibility[columnId] = true;
+      }
+    });
+
+    // Update the column visibility state
+    setColumnVisibility(newVisibility);
+    setCurrentProfile(profile);
+    
+    toast({
+      title: "View Profile Applied",
+      description: `Switched to ${profileConfig.name}`,
+    });
+  };
 
   const selectedRows = table.getFilteredSelectedRowModel().rows;
   const hasSelectedRows = selectedRows.length > 0;
@@ -297,19 +368,42 @@ export function DataTableToolbar<TData>({
 
   return (
     <>
-    <div className="flex items-center justify-between p-2 rounded-md border bg-muted/50">
+    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-2 rounded-md border bg-muted/50 gap-2">
       <div className="flex-1 text-sm text-muted-foreground">
         {hasSelectedRows 
             ? `${selectedRows.length} of ${table.getPreFilteredRowModel().rows.length} row(s) selected.`
             : `Showing ${table.getPreFilteredRowModel().rows.length} item(s).`
         }
       </div>
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center flex-wrap gap-2 w-full sm:w-auto">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm">
               <View className="mr-2 h-4 w-4" />
-              View
+              Profiles
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>View Profiles</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {Object.entries(VIEW_PROFILES).map(([key, profile]) => (
+              <DropdownMenuItem
+                key={key}
+                onClick={() => applyViewProfile(key as ViewProfile)}
+                className={currentProfile === key ? "bg-accent" : ""}
+              >
+                {currentProfile === key && <Check className="mr-2 h-4 w-4" />}
+                {profile.name}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm">
+              <View className="mr-2 h-4 w-4" />
+              Columns
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -327,9 +421,10 @@ export function DataTableToolbar<TData>({
                     key={column.id}
                     className="capitalize"
                     checked={column.getIsVisible()}
-                    onCheckedChange={(value) =>
-                      column.toggleVisibility(!!value)
-                    }
+                    onCheckedChange={(value) => {
+                      column.toggleVisibility(!!value);
+                      setCurrentProfile('custom');
+                    }}
                   >
                     {column.id.replace(/_/g, ' ')}
                   </DropdownMenuCheckboxItem>
@@ -365,6 +460,7 @@ export function DataTableToolbar<TData>({
                       column.toggleVisibility(true);
                     }
                   });
+                  setCurrentProfile('custom');
                   toast({
                     title: "View Reset",
                     description: "Column visibility has been reset to default.",
@@ -400,6 +496,29 @@ export function DataTableToolbar<TData>({
                 </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>
+
+        {onViewChange && (
+          <div className="flex items-center gap-1 border rounded-md shrink-0">
+            <Button 
+              variant={view === 'table' ? 'secondary' : 'ghost'} 
+              size="sm" 
+              onClick={() => onViewChange('table')}
+              className="h-8 px-2 min-w-0"
+            >
+              <List className="h-4 w-4" />
+              <span className="sr-only">Table view</span>
+            </Button>
+            <Button 
+              variant={view === 'grid' ? 'secondary' : 'ghost'} 
+              size="sm" 
+              onClick={() => onViewChange('grid')}
+              className="h-8 px-2 min-w-0"
+            >
+              <LayoutGrid className="h-4 w-4" />
+              <span className="sr-only">Grid view</span>
+            </Button>
+          </div>
+        )}
 
         {hasSelectedRows && (
           <>
