@@ -37,24 +37,22 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
         
         {/* Favicons */}
-        <link rel="icon" type="image/svg+xml" sizes="16x16" href="/favicon-16x16.svg?v=3.0.0" />
-        <link rel="icon" type="image/svg+xml" sizes="32x32" href="/favicon-32x32.svg?v=3.0.0" />
-        <link rel="icon" type="image/svg+xml" sizes="96x96" href="/favicon-96x96.svg?v=3.0.0" />
+        <link rel="icon" type="image/svg+xml" sizes="16x16" href="/favicon-16x16.svg" />
+        <link rel="icon" type="image/svg+xml" sizes="32x32" href="/favicon-32x32.svg" />
+        <link rel="icon" type="image/svg+xml" sizes="96x96" href="/favicon-96x96.svg" />
+        <link rel="shortcut icon" href="/favicon-32x32.svg" />
         
-        {/* Apple Touch Icons */}
-        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-180x180.png" />
-        <link rel="apple-touch-icon" sizes="167x167" href="/apple-touch-icon-167x167.png" />
-        <link rel="apple-touch-icon" sizes="152x152" href="/apple-touch-icon-152x152.png" />
-        <link rel="apple-touch-icon" sizes="120x120" href="/apple-touch-icon-120x120.png" />
+        {/* Apple Touch Icons - iOS specific */}
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="apple-touch-icon" sizes="120x120" href="/apple-touch-icon-120x120.png" />
+        <link rel="apple-touch-icon" sizes="152x152" href="/apple-touch-icon-152x152.png" />
+        <link rel="apple-touch-icon" sizes="167x167" href="/apple-touch-icon-167x167.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-180x180.png" />
         
         {/* iOS PWA Support */}
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="MapCorrect" />
-        <link rel="apple-touch-startup-image" href="/icons/icon-512x512.svg?v=3.0.0" />
-        <link rel="shortcut icon" href="/favicon-32x32.svg?v=3.0.0" />
-        <meta name="msapplication-TileImage" content="/icons/icon-144x144.svg?v=3.0.0" />
+        <link rel="apple-touch-startup-image" href="/apple-touch-icon-180x180.png" />
+        <meta name="msapplication-TileImage" content="/apple-touch-icon-180x180.png" />
         
         {/* Theme colors */}
         <meta name="theme-color" content="#D6001C" media="(prefers-color-scheme: light)" />
