@@ -1,35 +1,37 @@
 const fs = require('fs');
 const { createCanvas } = require('canvas');
 
-// Create iOS icon with Khmer flag colors and Guard symbol
+// Create iOS icon with red center, blue outside, rounded corners
 function createIOSIcon(size, filename) {
   const canvas = createCanvas(size, size);
   const ctx = canvas.getContext('2d');
   
-  // Khmer flag colors
+  // Colors
   const khmerRed = '#DE0000';
   const khmerBlue = '#032EA1';
   const khmerWhite = '#FFFFFF';
   
-  // Create Khmer flag background with horizontal stripes
-  const stripeHeight = size / 3;
+  // Create rounded rectangle background
+  const cornerRadius = size * 0.15; // 15% corner radius for rounded corners
   
-  // Top red stripe
-  ctx.fillStyle = khmerRed;
-  ctx.fillRect(0, 0, size, stripeHeight);
-  
-  // Middle blue stripe
+  // Blue outside background with rounded corners
   ctx.fillStyle = khmerBlue;
-  ctx.fillRect(0, stripeHeight, size, stripeHeight);
+  ctx.beginPath();
+  ctx.roundRect(0, 0, size, size, cornerRadius);
+  ctx.fill();
   
-  // Bottom red stripe
-  ctx.fillStyle = khmerRed;
-  ctx.fillRect(0, stripeHeight * 2, size, stripeHeight);
-  
-  // Draw Guard shield symbol in center
+  // Red center circle
   const centerX = size / 2;
   const centerY = size / 2;
-  const shieldSize = size * 0.4;
+  const centerRadius = size * 0.35; // 35% of size for center circle
+  
+  ctx.fillStyle = khmerRed;
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, centerRadius, 0, 2 * Math.PI);
+  ctx.fill();
+  
+  // Draw white shield symbol in center
+  const shieldSize = size * 0.25;
   
   // Shield background (white)
   ctx.fillStyle = khmerWhite;
@@ -43,14 +45,8 @@ function createIOSIcon(size, filename) {
   ctx.closePath();
   ctx.fill();
   
-  // Shield border (dark blue)
-  ctx.strokeStyle = khmerBlue;
-  ctx.lineWidth = size * 0.01;
-  ctx.stroke();
-  
-  // Add checkmark symbol in the shield
-  ctx.fillStyle = khmerBlue;
-  ctx.lineWidth = size * 0.015;
+  // Add blue checkmark symbol in the shield
+  ctx.lineWidth = size * 0.012;
   ctx.strokeStyle = khmerBlue;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
