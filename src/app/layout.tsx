@@ -23,10 +23,15 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="MapCorrectKH" />
+        <meta name="apple-mobile-web-app-title" content="MapCorrect" />
         <meta name="apple-touch-fullscreen" content="yes" />
         <meta name="format-detection" content="telephone=no" />
         <meta name="msapplication-tap-highlight" content="no" />
+        
+        {/* iOS PWA specific */}
+        <meta name="apple-itunes-app" content="app-id=, app-argument=" />
+        <meta name="apple-mobile-web-app-orientations" content="portrait" />
+        <link rel="mask-icon" href="/apple-touch-icon.png" color="#D6001C" />
         
         {/* Fonts */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -43,10 +48,15 @@ export default function RootLayout({
         <link rel="shortcut icon" href="/favicon-32x32.svg" />
         
         {/* Apple Touch Icons - iOS specific */}
+        <link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="apple-touch-icon-precomposed" sizes="120x120" href="/apple-touch-icon-120x120.png" />
         <link rel="apple-touch-icon" sizes="120x120" href="/apple-touch-icon-120x120.png" />
+        <link rel="apple-touch-icon-precomposed" sizes="152x152" href="/apple-touch-icon-152x152.png" />
         <link rel="apple-touch-icon" sizes="152x152" href="/apple-touch-icon-152x152.png" />
+        <link rel="apple-touch-icon-precomposed" sizes="167x167" href="/apple-touch-icon-167x167.png" />
         <link rel="apple-touch-icon" sizes="167x167" href="/apple-touch-icon-167x167.png" />
+        <link rel="apple-touch-icon-precomposed" sizes="180x180" href="/apple-touch-icon-180x180.png" />
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-180x180.png" />
         
         {/* iOS PWA Support */}
