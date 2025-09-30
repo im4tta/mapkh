@@ -47,17 +47,12 @@ export default function RootLayout({
         <link rel="icon" type="image/svg+xml" sizes="96x96" href="/favicon-96x96.svg" />
         <link rel="shortcut icon" href="/favicon-32x32.svg" />
         
-        {/* Apple Touch Icons - iOS specific */}
-        <link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-        <link rel="apple-touch-icon-precomposed" sizes="120x120" href="/apple-touch-icon-120x120.png" />
-        <link rel="apple-touch-icon" sizes="120x120" href="/apple-touch-icon-120x120.png" />
-        <link rel="apple-touch-icon-precomposed" sizes="152x152" href="/apple-touch-icon-152x152.png" />
-        <link rel="apple-touch-icon" sizes="152x152" href="/apple-touch-icon-152x152.png" />
-        <link rel="apple-touch-icon-precomposed" sizes="167x167" href="/apple-touch-icon-167x167.png" />
-        <link rel="apple-touch-icon" sizes="167x167" href="/apple-touch-icon-167x167.png" />
-        <link rel="apple-touch-icon-precomposed" sizes="180x180" href="/apple-touch-icon-180x180.png" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-180x180.png" />
+        {/* Apple Touch Icons - iOS specific (simplified with cache busting) */}
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20250109" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-180x180.png?v=20250109" />
+        <link rel="apple-touch-icon" sizes="167x167" href="/apple-touch-icon-167x167.png?v=20250109" />
+        <link rel="apple-touch-icon" sizes="152x152" href="/apple-touch-icon-152x152.png?v=20250109" />
+        <link rel="apple-touch-icon" sizes="120x120" href="/apple-touch-icon-120x120.png?v=20250109" />
         
         {/* iOS PWA Support */}
         <meta name="apple-mobile-web-app-title" content="MapCorrect" />
