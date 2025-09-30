@@ -172,7 +172,25 @@ export async function createNotification(userId: string | null, type: Notificati
               icon: '/icons/icon-192x192.svg',
         badge: '/icons/icon-192x192.svg',
             },
-            reportDetails: reportDetails ? JSON.stringify(reportDetails) : "{}",
+            reportDetails: (() => {
+                try {
+                    if (!reportDetails) return "{}";
+                    // Ensure reportDetails is a valid object before stringifying
+                    if (typeof reportDetails === 'object' && reportDetails !== null) {
+                        const serialized = JSON.stringify(reportDetails);
+                        // Verify the serialization worked correctly
+                        if (serialized === '[object Object]' || serialized === 'undefined') {
+                            console.warn('Invalid reportDetails serialization detected, using fallback');
+                            return "{}";
+                        }
+                        return serialized;
+                    }
+                    return "{}";
+                } catch (error) {
+                    console.error('Error serializing reportDetails:', error, reportDetails);
+                    return "{}";
+                }
+            })(),
             read: false,
             createdAt: serverTimestamp(),
             dismissedBy: [], // New field to track dismissals

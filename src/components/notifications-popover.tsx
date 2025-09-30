@@ -32,10 +32,23 @@ const NotificationItem = ({ notification, onClose, onDismiss }: { notification: 
   let reportDetails: any = {};
   let category = '';
   try {
-    reportDetails = JSON.parse(notification.reportDetails);
+    // Check if reportDetails is already an object or a valid JSON string
+    if (typeof notification.reportDetails === 'object' && notification.reportDetails !== null) {
+      reportDetails = notification.reportDetails;
+    } else if (typeof notification.reportDetails === 'string') {
+      // Handle the case where reportDetails might be "[object Object]" or other invalid JSON
+      if (notification.reportDetails === '[object Object]' || notification.reportDetails.trim() === '') {
+        console.warn('Invalid reportDetails detected:', notification.reportDetails);
+        reportDetails = { reportNumber: 0, description: '', position: { lat: 0, lng: 0 }};
+      } else {
+        reportDetails = JSON.parse(notification.reportDetails);
+      }
+    } else {
+      reportDetails = { reportNumber: 0, description: '', position: { lat: 0, lng: 0 }};
+    }
     category = reportDetails.category || '';
   } catch (error) {
-    console.error('Error parsing notification reportDetails:', error);
+    console.error('Error parsing notification reportDetails:', error, 'Raw value:', notification.reportDetails);
     reportDetails = { reportNumber: 0, description: '', position: { lat: 0, lng: 0 }};
   }
   
