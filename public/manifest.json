@@ -19,85 +19,85 @@
   },
   "icons": [
     {
-      "src": "/apple-touch-icon.jpg?v=20250109h",
+      "src": "/apple-touch-icon.jpg?v=20250109i",
       "sizes": "180x180",
       "type": "image/jpeg",
       "purpose": "any"
     },
     {
-      "src": "/apple-touch-icon-120x120.jpg?v=20250109h",
+      "src": "/apple-touch-icon-120x120.jpg?v=20250109i",
       "sizes": "120x120",
       "type": "image/jpeg",
       "purpose": "any"
     },
     {
-      "src": "/apple-touch-icon-152x152.jpg?v=20250109h",
+      "src": "/apple-touch-icon-152x152.jpg?v=20250109i",
       "sizes": "152x152",
       "type": "image/jpeg",
       "purpose": "any"
     },
     {
-      "src": "/apple-touch-icon-167x167.jpg?v=20250109h",
+      "src": "/apple-touch-icon-167x167.jpg?v=20250109i",
       "sizes": "167x167",
       "type": "image/jpeg",
       "purpose": "any"
     },
     {
-      "src": "/apple-touch-icon-180x180.jpg?v=20250109h",
+      "src": "/apple-touch-icon-180x180.jpg?v=20250109i",
       "sizes": "180x180",
       "type": "image/jpeg",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-96x96.jpg?v=20250109h",
+      "src": "/icons/icon-96x96.jpg?v=20250109i",
       "sizes": "96x96",
       "type": "image/jpeg",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-128x128.jpg?v=20250109h",
+      "src": "/icons/icon-128x128.jpg?v=20250109i",
       "sizes": "128x128",
       "type": "image/jpeg",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-144x144.jpg?v=20250109h",
+      "src": "/icons/icon-144x144.jpg?v=20250109i",
       "sizes": "144x144",
       "type": "image/jpeg",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-152x152.jpg?v=20250109h",
+      "src": "/icons/icon-152x152.jpg?v=20250109i",
       "sizes": "152x152",
       "type": "image/jpeg",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-192x192.jpg?v=20250109h",
+      "src": "/icons/icon-192x192.jpg?v=20250109i",
       "sizes": "192x192",
       "type": "image/jpeg",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-256x256.jpg?v=20250109h",
+      "src": "/icons/icon-256x256.jpg?v=20250109i",
       "sizes": "256x256",
       "type": "image/jpeg",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-384x384.jpg?v=20250109h",
+      "src": "/icons/icon-384x384.jpg?v=20250109i",
       "sizes": "384x384",
       "type": "image/jpeg",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-512x512.jpg?v=20250109h",
+      "src": "/icons/icon-512x512.jpg?v=20250109i",
       "sizes": "512x512",
       "type": "image/jpeg",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-512x512.jpg?v=20250109h",
+      "src": "/icons/icon-512x512.jpg?v=20250109i",
       "sizes": "512x512",
       "type": "image/jpeg",
       "purpose": "maskable"
@@ -109,7 +109,7 @@
       "short_name": "Report",
       "description": "Report a map error",
       "url": "/map",
-      "icons": [{ "src": "/icons/icon-192x192.jpg?v=20250109h", "sizes": "192x192", "type": "image/jpeg" }]
+      "icons": [{ "src": "/icons/icon-192x192.jpg?v=20250109i", "sizes": "192x192", "type": "image/jpeg" }]
     }
   ]
 }

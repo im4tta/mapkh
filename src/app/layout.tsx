@@ -47,17 +47,17 @@ export default function RootLayout({
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
         
         {/* Apple Touch Icons - iOS PWA Icons */}
-        <link rel="apple-touch-icon" href="/apple-touch-icon.jpg?v=20250109h" />
-        <link rel="apple-touch-icon" sizes="57x57" href="/apple-touch-icon-57x57.jpg?v=20250109h" />
-        <link rel="apple-touch-icon" sizes="60x60" href="/apple-touch-icon-60x60.jpg?v=20250109h" />
-        <link rel="apple-touch-icon" sizes="72x72" href="/apple-touch-icon-72x72.jpg?v=20250109h" />
-        <link rel="apple-touch-icon" sizes="76x76" href="/apple-touch-icon-76x76.jpg?v=20250109h" />
-        <link rel="apple-touch-icon" sizes="114x114" href="/apple-touch-icon-114x114.jpg?v=20250109h" />
-        <link rel="apple-touch-icon" sizes="120x120" href="/apple-touch-icon-120x120.jpg?v=20250109h" />
-        <link rel="apple-touch-icon" sizes="144x144" href="/apple-touch-icon-144x144.jpg?v=20250109h" />
-        <link rel="apple-touch-icon" sizes="152x152" href="/apple-touch-icon-152x152.jpg?v=20250109h" />
-        <link rel="apple-touch-icon" sizes="167x167" href="/apple-touch-icon-167x167.jpg?v=20250109h" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-180x180.jpg?v=20250109h" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.jpg?v=20250109i" />
+        <link rel="apple-touch-icon" sizes="57x57" href="/apple-touch-icon-57x57.jpg?v=20250109i" />
+        <link rel="apple-touch-icon" sizes="60x60" href="/apple-touch-icon-60x60.jpg?v=20250109i" />
+        <link rel="apple-touch-icon" sizes="72x72" href="/apple-touch-icon-72x72.jpg?v=20250109i" />
+        <link rel="apple-touch-icon" sizes="76x76" href="/apple-touch-icon-76x76.jpg?v=20250109i" />
+        <link rel="apple-touch-icon" sizes="114x114" href="/apple-touch-icon-114x114.jpg?v=20250109i" />
+        <link rel="apple-touch-icon" sizes="120x120" href="/apple-touch-icon-120x120.jpg?v=20250109i" />
+        <link rel="apple-touch-icon" sizes="144x144" href="/apple-touch-icon-144x144.jpg?v=20250109i" />
+        <link rel="apple-touch-icon" sizes="152x152" href="/apple-touch-icon-152x152.jpg?v=20250109i" />
+        <link rel="apple-touch-icon" sizes="167x167" href="/apple-touch-icon-167x167.jpg?v=20250109i" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-180x180.jpg?v=20250109i" />
         
         {/* iOS PWA Meta Tags */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -66,7 +66,7 @@ export default function RootLayout({
         <meta name="format-detection" content="telephone=no" />
         
         {/* iOS Splash Screens */}
-        <link rel="apple-touch-startup-image" href="/apple-touch-icon-180x180.jpg?v=20250109h" />
+        <link rel="apple-touch-startup-image" href="/apple-touch-icon-180x180.jpg?v=20250109i" />
         
         {/* Additional iOS Meta Tags */}
         <meta name="mobile-web-app-capable" content="yes" />
