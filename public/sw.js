@@ -357,92 +357,139 @@ const syncNotifications = async (data) => {
 };
 
 // Handle notification click events with badge management
-self.addEventListener('notificationclick', async (event) => {
-  console.log('[sw.js] Notification clicked:', event.notification.data);
+self.addEventListener('notificationclick', (event) => {
+  console.log('[sw.js] Notification clicked:', event.notification?.data);
   
-  event.notification.close();
+  // Close notification safely
+  try {
+    event.notification.close();
+  } catch (error) {
+    console.warn('[sw.js] Failed to close notification:', error);
+  }
   
-  const data = event.notification.data || {};
+  const data = event.notification?.data || {};
   const action = event.action;
   
   if (action === 'dismiss') {
     // Just close the notification and update badge
     event.waitUntil(
       (async () => {
-        await loadBadgeCount();
-        const newCount = Math.max(0, badgeCount - 1);
-        await saveBadgeCount(newCount);
-        await updateBadge();
+        try {
+          await loadBadgeCount();
+          const newCount = Math.max(0, badgeCount - 1);
+          await saveBadgeCount(newCount);
+          await updateBadge();
+        } catch (error) {
+          console.error('[sw.js] Error handling dismiss action:', error);
+        }
       })()
     );
     return;
   }
   
-  // Determine URL to open
+  // Determine URL to open with safe fallbacks
   let urlToOpen = '/analytics';
   
-  if (action === 'view') {
-    if (data?.reportId) {
-      urlToOpen = `/records/${data.reportId}`;
-    } else if (data?.url) {
-      urlToOpen = data.url;
-    } else if (data?.type === 'verification') {
-      urlToOpen = `/records/${data.recordId}/verification`;
-    } else if (data?.type === 'team_invite') {
-      urlToOpen = `/teams/${data.teamId}`;
+  try {
+    if (action === 'view') {
+      if (data?.reportId) {
+        urlToOpen = `/records/${data.reportId}`;
+      } else if (data?.url) {
+        urlToOpen = data.url;
+      } else if (data?.type === 'verification' && data?.recordId) {
+        urlToOpen = `/records/${data.recordId}/verification`;
+      } else if (data?.type === 'team_invite' && data?.teamId) {
+        urlToOpen = `/teams/${data.teamId}`;
+      }
+    } else {
+      // Default action - use data URL or fallback
+      urlToOpen = data?.url || '/analytics';
     }
-  } else {
-    // Default action - use data URL or fallback
-    urlToOpen = data?.url || '/analytics';
+  } catch (error) {
+    console.warn('[sw.js] Error determining URL, using fallback:', error);
+    urlToOpen = '/analytics';
   }
   
   event.waitUntil(
     (async () => {
       try {
-        // Get all clients
-        const clientList = await clients.matchAll({ 
-          type: 'window', 
-          includeUncontrolled: true 
-        });
+        // Get all clients with error handling
+        let clientList = [];
+        try {
+          clientList = await clients.matchAll({ 
+            type: 'window', 
+            includeUncontrolled: true 
+          });
+        } catch (error) {
+          console.warn('[sw.js] Failed to get client list:', error);
+        }
         
         // Check if there's already a window/tab open
+        let clientFound = false;
         for (const client of clientList) {
-          if (client.url.includes(new URL(urlToOpen, self.location.origin).pathname) && 'focus' in client) {
-            await client.focus();
-            // Send message to client to navigate to specific URL
-            client.postMessage({
-              type: 'NOTIFICATION_CLICK',
-              url: urlToOpen,
-              data: data
-            });
-            return;
+          try {
+            if (client.url && client.url.includes(new URL(urlToOpen, self.location.origin).pathname)) {
+              if ('focus' in client) {
+                await client.focus();
+              }
+              // Send message to client to navigate to specific URL
+              if ('postMessage' in client) {
+                client.postMessage({
+                  type: 'NOTIFICATION_CLICK',
+                  url: urlToOpen,
+                  data: data
+                });
+              }
+              clientFound = true;
+              break;
+            }
+          } catch (error) {
+            console.warn('[sw.js] Error handling client:', error);
+            continue;
           }
         }
         
         // If no existing window/tab, open a new one
-        if (clients.openWindow) {
-          await clients.openWindow(urlToOpen);
+        if (!clientFound && clients.openWindow) {
+          try {
+            await clients.openWindow(urlToOpen);
+          } catch (error) {
+            console.warn('[sw.js] Failed to open specific URL, trying fallback:', error);
+            try {
+              await clients.openWindow('/');
+            } catch (fallbackError) {
+              console.error('[sw.js] Failed to open fallback URL:', fallbackError);
+            }
+          }
         }
       } catch (error) {
-        console.error('[sw.js] Error handling notification click:', error);
-        // Fallback: try to open the main URL
-        if (clients.openWindow) {
-          await clients.openWindow('/');
+        console.error('[sw.js] Error in notification click handler:', error);
+        // Final fallback: try to open the main URL
+        try {
+          if (clients.openWindow) {
+            await clients.openWindow('/');
+          }
+        } catch (fallbackError) {
+          console.error('[sw.js] Final fallback failed:', fallbackError);
         }
       } finally {
-        // Mark notification as read and update badge
+        // Mark notification as read and update badge with error handling
         try {
-          if (data.notificationId) {
+          if (data?.notificationId) {
             await markNotificationAsRead(data.notificationId);
           }
-          
+        } catch (error) {
+          console.warn('[sw.js] Failed to mark notification as read:', error);
+        }
+        
+        try {
           // Update badge count
           await loadBadgeCount();
           const newCount = Math.max(0, badgeCount - 1);
           await saveBadgeCount(newCount);
           await updateBadge();
         } catch (error) {
-          console.error('[sw.js] Error updating badge after notification click:', error);
+          console.warn('[sw.js] Error updating badge after notification click:', error);
         }
       }
     })()

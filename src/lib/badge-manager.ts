@@ -169,6 +169,20 @@ export class BadgeManager {
   // Update platform-specific badge
   private async updatePlatformBadge(count: number): Promise<void> {
     try {
+      // Try native Badge API first (supported on some platforms)
+      if ('navigator' in globalThis && 'setAppBadge' in navigator) {
+        try {
+          if (count > 0) {
+            await (navigator as any).setAppBadge(count);
+          } else {
+            await (navigator as any).clearAppBadge();
+          }
+          return;
+        } catch (badgeError) {
+          console.warn('Native badge API failed:', badgeError);
+        }
+      }
+
       const capabilities = getNotificationCapabilities();
       
       if (!capabilities.canUseBadging) {
@@ -176,7 +190,7 @@ export class BadgeManager {
         return;
       }
 
-      // Use mobile-specific badge update
+      // Use mobile-specific badge update as fallback
       if (count > 0) {
         await updateBadgeMobile(count);
       } else {

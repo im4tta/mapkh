@@ -41,21 +41,38 @@ export default function RootLayout({
         {/* PWA Manifest */}
         <link rel="manifest" href="/manifest.json" />
         
-        {/* Favicons */}
-        <link rel="icon" type="image/svg+xml" sizes="16x16" href="/favicon-16x16.svg" />
-        <link rel="icon" type="image/svg+xml" sizes="32x32" href="/favicon-32x32.svg" />
-        <link rel="icon" type="image/svg+xml" sizes="96x96" href="/favicon-96x96.svg" />
-        <link rel="shortcut icon" href="/favicon-32x32.svg" />
+        {/* Favicon */}
+        <link rel="icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
         
-        {/* Apple Touch Icons - iOS specific (simplified with cache busting) */}
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20250109d" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-180x180.png?v=20250109d" />
-        <link rel="apple-touch-icon" sizes="167x167" href="/apple-touch-icon-167x167.png?v=20250109d" />
-        <link rel="apple-touch-icon" sizes="152x152" href="/apple-touch-icon-152x152.png?v=20250109d" />
-        <link rel="apple-touch-icon" sizes="120x120" href="/apple-touch-icon-120x120.png?v=20250109d" />
+        {/* Apple Touch Icons - iOS PWA Icons */}
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20250109e" />
+        <link rel="apple-touch-icon" sizes="57x57" href="/apple-touch-icon.png?v=20250109e" />
+        <link rel="apple-touch-icon" sizes="60x60" href="/apple-touch-icon.png?v=20250109e" />
+        <link rel="apple-touch-icon" sizes="72x72" href="/apple-touch-icon.png?v=20250109e" />
+        <link rel="apple-touch-icon" sizes="76x76" href="/apple-touch-icon.png?v=20250109e" />
+        <link rel="apple-touch-icon" sizes="114x114" href="/apple-touch-icon.png?v=20250109e" />
+        <link rel="apple-touch-icon" sizes="120x120" href="/apple-touch-icon-120x120.png?v=20250109e" />
+        <link rel="apple-touch-icon" sizes="144x144" href="/apple-touch-icon.png?v=20250109e" />
+        <link rel="apple-touch-icon" sizes="152x152" href="/apple-touch-icon-152x152.png?v=20250109e" />
+        <link rel="apple-touch-icon" sizes="167x167" href="/apple-touch-icon-167x167.png?v=20250109e" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-180x180.png?v=20250109e" />
+        
+        {/* iOS PWA Meta Tags */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="MapKH" />
+        <meta name="format-detection" content="telephone=no" />
+        
+        {/* iOS Splash Screens */}
+        <link rel="apple-touch-startup-image" href="/apple-touch-icon-180x180.png?v=20250109e" />
+        
+        {/* Additional iOS Meta Tags */}
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="application-name" content="MapKH" />
         
         {/* iOS PWA Support */}
-        <meta name="apple-mobile-web-app-title" content="MapCorrect" />
         <link rel="apple-touch-startup-image" href="/apple-touch-icon-180x180.png" />
         <meta name="msapplication-TileImage" content="/apple-touch-icon-180x180.png" />
         
