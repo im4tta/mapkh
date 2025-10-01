@@ -982,11 +982,29 @@ function MapContent({ initialReports }: { initialReports: Report[] }) {
               </InfoWindow>
             )}
              {poiPin && (
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
-                    <Button onClick={handleOpenReportDialog} size="lg" className="shadow-lg animate-pulse-once">
-                        <Flag className="mr-2 h-5 w-5" />
-                        Report an issue at '{poiPin.name}'
-                    </Button>
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 max-w-[calc(100vw-2rem)] w-auto">
+                    <div className="relative bg-primary text-primary-foreground rounded-lg shadow-lg animate-pulse-once p-3 pr-10">
+                        <Button 
+                            onClick={handleOpenReportDialog} 
+                            variant="ghost" 
+                            className="h-auto p-0 text-left text-primary-foreground hover:bg-transparent hover:text-primary-foreground/90 w-full"
+                        >
+                            <div className="flex items-start gap-2 min-w-0">
+                                <Flag className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                                <span className="text-sm font-medium leading-tight break-words">
+                                    Report an issue at '{poiPin.name}'
+                                </span>
+                            </div>
+                        </Button>
+                        <Button
+                            onClick={() => setPoiPin(null)}
+                            variant="ghost"
+                            size="icon"
+                            className="absolute top-1 right-1 h-8 w-8 text-primary-foreground hover:bg-primary-foreground/20 hover:text-primary-foreground"
+                        >
+                            <X className="h-4 w-4" />
+                        </Button>
+                    </div>
                 </div>
             )}
             <MapClickHandler onMapClick={handleMapClick} />
