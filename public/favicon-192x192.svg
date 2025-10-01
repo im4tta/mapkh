@@ -1,34 +1,62 @@
 <svg width="192" height="192" viewBox="0 0 192 192" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="flagGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" style="stop-color:#D6001C;stop-opacity:1" />
-      <stop offset="33.33%" style="stop-color:#D6001C;stop-opacity:1" />
-      <stop offset="33.33%" style="stop-color:#00209F;stop-opacity:1" />
-      <stop offset="66.66%" style="stop-color:#00209F;stop-opacity:1" />
-      <stop offset="66.66%" style="stop-color:#D6001C;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#D6001C;stop-opacity:1" />
+    <!-- Rounded rectangle mask for iOS-style corners -->
+    <clipPath id="roundedCorners">
+      <rect x="0" y="0" width="192" height="192" rx="28.799999999999997" ry="28.799999999999997"/>
+    </clipPath>
+    
+    <!-- Gradient for 3D shield effect -->
+    <linearGradient id="shieldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#F8F8F8;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#E8E8E8;stop-opacity:1" />
     </linearGradient>
   </defs>
   
-  <!-- Rounded square background with Khmer flag colors -->
-  <rect x="0" y="0" width="192" height="192" rx="29" ry="29" fill="url(#flagGradient)" />
-  
-  <!-- White shield in center -->
-  <g transform="translate(38.5, 38.5)">
-    <!-- Shield shape -->
-    <path d="M 57.5 0 
-             C 92 0, 115 34.5, 115 69
-             C 115 103.5, 57.5 115, 57.5 115
-             C 57.5 115, 0 103.5, 0 69
-             C 0 34.5, 23 0, 57.5 0 Z" 
-          fill="#FFFFFF" stroke="#00209F" stroke-width="2"/>
+  <!-- Apply rounded corners -->
+  <g clip-path="url(#roundedCorners)">
+    <!-- Cambodian flag horizontal stripes (blue-red-blue) -->
+    <!-- Top blue stripe -->
+    <rect x="0" y="0" width="192" height="64" fill="#032EA1"/>
+    
+    <!-- Middle red stripe -->
+    <rect x="0" y="64" width="192" height="64" fill="#DE0000"/>
+    
+    <!-- Bottom blue stripe -->
+    <rect x="0" y="128" width="192" height="64" fill="#032EA1"/>
+    
+    <!-- Shield shadow for 3D effect -->
+    <path d="M 98 69.2 
+             L 117.2 69.2 
+             L 117.2 107.6 
+             L 98 126.8 
+             L 78.8 107.6 
+             L 78.8 69.2 Z" 
+          fill="rgba(0,0,0,0.3)"/>
+    
+    <!-- White shield with gradient -->
+    <path d="M 96 67.2 
+             L 115.2 67.2 
+             L 115.2 105.6 
+             L 96 124.8 
+             L 76.8 105.6 
+             L 76.8 67.2 Z" 
+          fill="url(#shieldGradient)" 
+          stroke="#CCCCCC" 
+          stroke-width="1"/>
     
     <!-- Blue checkmark inside shield -->
-    <g transform="translate(28.75, 34.5)">
-      <path d="M 0 23 
-               L 18.400000000000002 41.4 
-               L 46 0" 
-            stroke="#00209F" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <g stroke="#032EA1" stroke-width="3.4559999999999995" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <!-- Checkmark shadow -->
+      <path d="M 88.36 97 
+               L 92.68 103.48 
+               L 105.64 90.52" 
+            stroke="rgba(0,0,0,0.2)"/>
+      
+      <!-- Main checkmark -->
+      <path d="M 87.36 96 
+               L 91.68 102.48 
+               L 104.64 89.52"/>
     </g>
   </g>
 </svg>

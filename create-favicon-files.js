@@ -1,82 +1,106 @@
 const fs = require('fs');
-const path = require('path');
 
-// Khmer flag colors
-const RED = '#D6001C';
-const BLUE = '#00209F';
-const WHITE = '#FFFFFF';
+// Cambodian flag colors (matching existing design)
+const cambodianRed = '#DE0000';
+const cambodianBlue = '#032EA1';
+const white = '#FFFFFF';
 
-function createFaviconSVG(size) {
-  const cornerRadius = Math.round(size * 0.15); // 15% corner radius for rounded square
-  const shieldSize = Math.round(size * 0.6); // Shield takes 60% of icon
-  const checkSize = Math.round(shieldSize * 0.4); // Check mark is 40% of shield
+// Create SVG favicon that matches existing icon design
+function createSVGFavicon(size, filename) {
+  // Calculate proportional values
+  const stripeHeight = size / 3;
+  const cornerRadius = size * 0.15; // Rounded corners like existing design
+  const shieldSize = size * 0.3;
+  const centerX = size / 2;
+  const centerY = size / 2;
+  const checkSize = shieldSize * 0.45;
   
-  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
+  const svg = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="flagGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" style="stop-color:${RED};stop-opacity:1" />
-      <stop offset="33.33%" style="stop-color:${RED};stop-opacity:1" />
-      <stop offset="33.33%" style="stop-color:${BLUE};stop-opacity:1" />
-      <stop offset="66.66%" style="stop-color:${BLUE};stop-opacity:1" />
-      <stop offset="66.66%" style="stop-color:${RED};stop-opacity:1" />
-      <stop offset="100%" style="stop-color:${RED};stop-opacity:1" />
+    <!-- Rounded rectangle mask for iOS-style corners -->
+    <clipPath id="roundedCorners">
+      <rect x="0" y="0" width="${size}" height="${size}" rx="${cornerRadius}" ry="${cornerRadius}"/>
+    </clipPath>
+    
+    <!-- Gradient for 3D shield effect -->
+    <linearGradient id="shieldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#F8F8F8;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#E8E8E8;stop-opacity:1" />
     </linearGradient>
   </defs>
   
-  <!-- Rounded square background with Khmer flag colors -->
-  <rect x="0" y="0" width="${size}" height="${size}" rx="${cornerRadius}" ry="${cornerRadius}" fill="url(#flagGradient)" />
-  
-  <!-- White shield in center -->
-  <g transform="translate(${(size - shieldSize) / 2}, ${(size - shieldSize) / 2})">
-    <!-- Shield shape -->
-    <path d="M ${shieldSize/2} 0 
-             C ${shieldSize * 0.8} 0, ${shieldSize} ${shieldSize * 0.3}, ${shieldSize} ${shieldSize * 0.6}
-             C ${shieldSize} ${shieldSize * 0.9}, ${shieldSize/2} ${shieldSize}, ${shieldSize/2} ${shieldSize}
-             C ${shieldSize/2} ${shieldSize}, 0 ${shieldSize * 0.9}, 0 ${shieldSize * 0.6}
-             C 0 ${shieldSize * 0.3}, ${shieldSize * 0.2} 0, ${shieldSize/2} 0 Z" 
-          fill="${WHITE}" stroke="${BLUE}" stroke-width="2"/>
+  <!-- Apply rounded corners -->
+  <g clip-path="url(#roundedCorners)">
+    <!-- Cambodian flag horizontal stripes (blue-red-blue) -->
+    <!-- Top blue stripe -->
+    <rect x="0" y="0" width="${size}" height="${stripeHeight}" fill="${cambodianBlue}"/>
+    
+    <!-- Middle red stripe -->
+    <rect x="0" y="${stripeHeight}" width="${size}" height="${stripeHeight}" fill="${cambodianRed}"/>
+    
+    <!-- Bottom blue stripe -->
+    <rect x="0" y="${stripeHeight * 2}" width="${size}" height="${stripeHeight}" fill="${cambodianBlue}"/>
+    
+    <!-- Shield shadow for 3D effect -->
+    <path d="M ${centerX + 2} ${centerY - shieldSize/2 + 2} 
+             L ${centerX + shieldSize/3 + 2} ${centerY - shieldSize/2 + 2} 
+             L ${centerX + shieldSize/3 + 2} ${centerY + shieldSize/6 + 2} 
+             L ${centerX + 2} ${centerY + shieldSize/2 + 2} 
+             L ${centerX - shieldSize/3 + 2} ${centerY + shieldSize/6 + 2} 
+             L ${centerX - shieldSize/3 + 2} ${centerY - shieldSize/2 + 2} Z" 
+          fill="rgba(0,0,0,0.3)"/>
+    
+    <!-- White shield with gradient -->
+    <path d="M ${centerX} ${centerY - shieldSize/2} 
+             L ${centerX + shieldSize/3} ${centerY - shieldSize/2} 
+             L ${centerX + shieldSize/3} ${centerY + shieldSize/6} 
+             L ${centerX} ${centerY + shieldSize/2} 
+             L ${centerX - shieldSize/3} ${centerY + shieldSize/6} 
+             L ${centerX - shieldSize/3} ${centerY - shieldSize/2} Z" 
+          fill="url(#shieldGradient)" 
+          stroke="#CCCCCC" 
+          stroke-width="1"/>
     
     <!-- Blue checkmark inside shield -->
-    <g transform="translate(${shieldSize * 0.25}, ${shieldSize * 0.3})">
-      <path d="M 0 ${checkSize * 0.5} 
-               L ${checkSize * 0.4} ${checkSize * 0.9} 
-               L ${checkSize} 0" 
-            stroke="${BLUE}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <g stroke="${cambodianBlue}" stroke-width="${size * 0.018}" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <!-- Checkmark shadow -->
+      <path d="M ${centerX - checkSize/3 + 1} ${centerY + 1} 
+               L ${centerX - checkSize/6 + 1} ${centerY + checkSize/4 + 1} 
+               L ${centerX + checkSize/3 + 1} ${centerY - checkSize/4 + 1}" 
+            stroke="rgba(0,0,0,0.2)"/>
+      
+      <!-- Main checkmark -->
+      <path d="M ${centerX - checkSize/3} ${centerY} 
+               L ${centerX - checkSize/6} ${centerY + checkSize/4} 
+               L ${centerX + checkSize/3} ${centerY - checkSize/4}"/>
     </g>
   </g>
 </svg>`;
+
+  fs.writeFileSync(`public/${filename}`, svg);
+  console.log(`Created public/${filename}`);
 }
 
-function createFaviconFiles() {
-  console.log('Creating favicon files...');
-  
-  try {
-    // Create favicon.svg (scalable)
-    const faviconSVG = createFaviconSVG(32);
-    fs.writeFileSync(path.join(__dirname, 'public', 'favicon.svg'), faviconSVG);
-    console.log('✅ Created favicon.svg');
-    
-    // Create different sized SVG favicons
-    const sizes = [16, 32, 48, 64, 96, 128, 192, 256];
-    
-    for (const size of sizes) {
-      const svg = createFaviconSVG(size);
-      fs.writeFileSync(path.join(__dirname, 'public', `favicon-${size}x${size}.svg`), svg);
-      console.log(`✅ Created favicon-${size}x${size}.svg`);
-    }
-    
-    // Create a simple ICO file content (base64 encoded PNG data)
-    // For now, we'll create a simple placeholder that browsers can use
-    const simpleICO = faviconSVG;
-    fs.writeFileSync(path.join(__dirname, 'public', 'favicon.ico'), simpleICO);
-    console.log('✅ Created favicon.ico (as SVG)');
-    
-    console.log('🎉 All favicon files created successfully!');
-    console.log('Note: SVG favicons work in modern browsers. For better ICO support, consider using an online converter.');
-    
-  } catch (error) {
-    console.error('❌ Error creating favicon files:', error);
-  }
-}
+// Create all required favicon sizes
+const faviconSizes = [
+  { size: 16, filename: 'favicon-16x16.svg' },
+  { size: 32, filename: 'favicon-32x32.svg' },
+  { size: 48, filename: 'favicon-48x48.svg' },
+  { size: 64, filename: 'favicon-64x64.svg' },
+  { size: 96, filename: 'favicon-96x96.svg' },
+  { size: 128, filename: 'favicon-128x128.svg' },
+  { size: 192, filename: 'favicon-192x192.svg' },
+  { size: 256, filename: 'favicon-256x256.svg' }
+];
 
-createFaviconFiles();
+// Create main favicon.svg (32x32 as default)
+createSVGFavicon(32, 'favicon.svg');
+
+// Create all favicon sizes
+console.log('Creating SVG favicon files that match existing icon design...');
+faviconSizes.forEach(({ size, filename }) => {
+  createSVGFavicon(size, filename);
+});
+
+console.log('All SVG favicon files created successfully with correct Cambodian flag design!');

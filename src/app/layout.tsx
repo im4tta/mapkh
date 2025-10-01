@@ -42,16 +42,16 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
         
         {/* Favicon - Multiple formats for maximum compatibility */}
-        <link rel="icon" href="/favicon.ico?v=20250109i" />
-        <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=20250109i" />
-        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=20250109i" />
-        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=20250109i" />
-        <link rel="shortcut icon" href="/favicon.ico?v=20250109i" />
+        <link rel="icon" href="/favicon.ico?v=20250109j" />
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=20250109j" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=20250109j" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=20250109j" />
+        <link rel="shortcut icon" href="/favicon.ico?v=20250109j" />
         
-        {/* Additional favicon sizes for better browser support */}
-        <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.svg?v=20250109i" />
-        <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.svg?v=20250109i" />
-        <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192x192.svg?v=20250109i" />
+        {/* Additional SVG favicon sizes for modern browsers */}
+        <link rel="icon" type="image/svg+xml" sizes="48x48" href="/favicon-48x48.svg?v=20250109j" />
+        <link rel="icon" type="image/svg+xml" sizes="96x96" href="/favicon-96x96.svg?v=20250109j" />
+        <link rel="icon" type="image/svg+xml" sizes="192x192" href="/favicon-192x192.svg?v=20250109j" />
         
         {/* Apple Touch Icons - iOS PWA Icons */}
         <link rel="apple-touch-icon" href="/apple-touch-icon.jpg?v=20250109i" />
