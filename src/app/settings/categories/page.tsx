@@ -8,6 +8,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '@/context/auth-provider';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -608,7 +610,27 @@ const ManagePlaceTypes = () => {
 
 
 
+const ADMIN_UID = 'ADMIN_UID_REDACTED';
+
 export default function CategoriesSettingsPage() {
+    const { user, loading } = useAuth();
+    const router = useRouter();
+    
+    // Admin check
+    useEffect(() => {
+        if (!loading && (!user || user.uid !== ADMIN_UID)) {
+            router.push('/settings');
+        }
+    }, [user, loading, router]);
+    
+    if (loading || !user || user.uid !== ADMIN_UID) {
+        return (
+            <div className="flex h-[calc(100vh_-_theme(spacing.14))] w-full items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+        );
+    }
+    
     return (
         <div className="space-y-6">
             <ManageViolationTerms />

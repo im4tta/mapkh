@@ -72,7 +72,7 @@
     },
     "login": {
         "welcome_title": "Welcome to MapKHCorrect",
-        "welcome_description": "Sign in to report issues or manage the platform.",
+        "welcome_description": "Sign in to report issues and help improve the map.",
         "community_signin": "Community Sign-In",
         "google_signin_button": "Sign in with Google",
         "or": "Or",

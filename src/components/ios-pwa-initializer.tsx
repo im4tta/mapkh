@@ -103,10 +103,7 @@ export function IOSPWAInitializer({ children }: IOSPWAInitializerProps) {
     }
   };
 
-  // Don't render children until iOS PWA is properly initialized
-  if (!isInitialized) {
-    return null;
-  }
-
+  // Always render children - don't block app rendering for iOS PWA initialization
+  // This ensures mobile users can access login page even during initialization
   return <>{children}</>;
 }

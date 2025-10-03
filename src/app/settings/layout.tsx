@@ -22,31 +22,30 @@ export default function SettingsLayout({
   const { t } = useTranslation();
   const [isMounted, setIsMounted] = useState(false);
   
-  const navItems = [
-    { href: '/settings', label: t('settings.nav.general'), icon: SettingsIcon },
-    { href: '/settings/users', label: t('settings.nav.users'), icon: Users },
-    { href: '/settings/categories', label: t('settings.nav.categories'), icon: Grip },
-    { href: '/settings/history', label: t('settings.nav.history'), icon: History },
+  const isAdmin = user?.uid === ADMIN_UID;
+  
+  const allNavItems = [
+    { href: '/settings', label: t('settings.nav.general'), icon: SettingsIcon, adminOnly: false },
+    { href: '/settings/users', label: t('settings.nav.users'), icon: Users, adminOnly: true },
+    { href: '/settings/categories', label: t('settings.nav.categories'), icon: Grip, adminOnly: true },
+    { href: '/settings/history', label: t('settings.nav.history'), icon: History, adminOnly: true },
   ];
+  
+  const navItems = allNavItems.filter(item => !item.adminOnly || isAdmin);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
   useEffect(() => {
-    if (!loading) {
-      if (!user) {
-        // Not logged in, redirect to login
-        router.push('/login');
-      } else if (user.uid !== ADMIN_UID) {
-        // Logged in but not admin, redirect to home
-        router.push('/');
-      }
+    if (!loading && !user) {
+      // Not logged in, redirect to login
+      router.push('/login');
     }
   }, [user, loading, router]);
 
-  if (loading || !isMounted || (user && user.uid !== ADMIN_UID)) {
-    // Show a loading spinner or a blank page while checking auth or if not an admin
+  if (loading || !isMounted || !user) {
+    // Show a loading spinner while checking auth
     return (
       <div className="flex h-[calc(100vh_-_theme(spacing.14))] w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

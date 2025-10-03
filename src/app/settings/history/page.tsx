@@ -5,6 +5,8 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import { getHistory } from '@/app/actions';
 import { HistoryLog } from '@/lib/types';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '@/context/auth-provider';
+import { useRouter } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DataTable } from '@/components/data-table';
@@ -13,7 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import { Timestamp } from 'firebase/firestore';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { AlertTriangle, BookOpen, MessageSquare, StickyNote, Users, User, Folder, File as FileIcon } from 'lucide-react';
+import { AlertTriangle, BookOpen, MessageSquare, StickyNote, Users, User, Folder, File as FileIcon, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import * as Papa from 'papaparse';
@@ -75,12 +77,31 @@ const toDate = (value: any): Date | null => {
 };
 
 
+const ADMIN_UID = 'ADMIN_UID_REDACTED';
+
 const HistoryPage = () => {
     const { t } = useTranslation();
     const { toast } = useToast();
+    const { user, loading } = useAuth();
+    const router = useRouter();
     const [history, setHistory] = useState<HistoryLog[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('all');
+    
+    // Admin check
+    useEffect(() => {
+        if (!loading && (!user || user.uid !== ADMIN_UID)) {
+            router.push('/settings');
+        }
+    }, [user, loading, router]);
+    
+    if (loading || !user || user.uid !== ADMIN_UID) {
+        return (
+            <div className="flex h-[calc(100vh_-_theme(spacing.14))] w-full items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+        );
+    }
 
     const fetchHistory = useCallback(async (entityType: string) => {
         setIsLoading(true);

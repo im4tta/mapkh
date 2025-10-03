@@ -1,115 +1,122 @@
-
 {
-  "name": "MapKHCorrect",
-  "short_name": "MapCorrect",
-  "description": "Fix the Map, Help the Nation. A user-friendly map error reporting app for community contributions.",
+  "name": "MapKH Correct - Fix the Map, Help the Nation",
+  "short_name": "MapKH",
+  "description": "A user-friendly map error reporting app for community contributions to improve Cambodia's digital maps.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
+  "background_color": "#D6001C",
   "theme_color": "#D6001C",
-  "gcm_sender_id": "951132208154",
+  "orientation": "portrait-primary",
   "scope": "/",
   "lang": "en",
-  "categories": ["productivity", "utilities"],
-  "prefer_related_applications": false,
-  "orientation": "portrait-primary",
-  "display_override": ["window-controls-overlay", "standalone", "minimal-ui", "browser"],
-  "launch_handler": {
-    "client_mode": "navigate-existing"
-  },
+  "categories": ["navigation", "utilities", "productivity"],
   "icons": [
     {
-      "src": "/apple-touch-icon.jpg?v=20250109i",
-      "sizes": "180x180",
-      "type": "image/jpeg",
+      "src": "/icon-36x36.png",
+      "sizes": "36x36",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/apple-touch-icon-120x120.jpg?v=20250109i",
-      "sizes": "120x120",
-      "type": "image/jpeg",
+      "src": "/icon-48x48.png",
+      "sizes": "48x48",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/apple-touch-icon-152x152.jpg?v=20250109i",
-      "sizes": "152x152",
-      "type": "image/jpeg",
+      "src": "/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/apple-touch-icon-167x167.jpg?v=20250109i",
-      "sizes": "167x167",
-      "type": "image/jpeg",
-      "purpose": "any"
-    },
-    {
-      "src": "/apple-touch-icon-180x180.jpg?v=20250109i",
-      "sizes": "180x180",
-      "type": "image/jpeg",
-      "purpose": "any"
-    },
-    {
-      "src": "/icons/icon-96x96.jpg?v=20250109i",
+      "src": "/favicon-96x96.png",
       "sizes": "96x96",
-      "type": "image/jpeg",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-128x128.jpg?v=20250109i",
+      "src": "/icons/icon-128x128.png",
       "sizes": "128x128",
-      "type": "image/jpeg",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-144x144.jpg?v=20250109i",
+      "src": "/icons/icon-144x144.png",
       "sizes": "144x144",
-      "type": "image/jpeg",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-152x152.jpg?v=20250109i",
+      "src": "/icons/icon-152x152.png",
       "sizes": "152x152",
-      "type": "image/jpeg",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-192x192.jpg?v=20250109i",
+      "src": "/apple-touch-icon-180x180.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192x192.png",
       "sizes": "192x192",
-      "type": "image/jpeg",
-      "purpose": "any"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
-      "src": "/icons/icon-256x256.jpg?v=20250109i",
+      "src": "/icons/icon-256x256.png",
       "sizes": "256x256",
-      "type": "image/jpeg",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-384x384.jpg?v=20250109i",
+      "src": "/icons/icon-384x384.png",
       "sizes": "384x384",
-      "type": "image/jpeg",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-512x512.jpg?v=20250109i",
+      "src": "/icon-512x512.png",
       "sizes": "512x512",
-      "type": "image/jpeg",
-      "purpose": "any"
-    },
-    {
-      "src": "/icons/icon-512x512.jpg?v=20250109i",
-      "sizes": "512x512",
-      "type": "image/jpeg",
-      "purpose": "maskable"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ],
   "shortcuts": [
     {
       "name": "Report Issue",
       "short_name": "Report",
-      "description": "Report a map error",
+      "description": "Quickly report a map issue",
+      "url": "/map?action=report",
+      "icons": [
+        {
+          "src": "/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "View Map",
+      "short_name": "Map",
+      "description": "View the interactive map",
       "url": "/map",
-      "icons": [{ "src": "/icons/icon-192x192.jpg?v=20250109i", "sizes": "192x192", "type": "image/jpeg" }]
+      "icons": [
+        {
+          "src": "/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "MapKH application interface"
     }
   ]
 }

@@ -6,6 +6,8 @@ import { useEffect, useState, useMemo } from 'react';
 import { getUsers, deleteUser, addUserByAdmin, updateUserByAdmin, resetUserPassword } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '@/context/auth-provider';
+import { useRouter } from 'next/navigation';
 import { DataTable } from '@/components/data-table';
 import { ColumnDef, useReactTable, getCoreRowModel, getPaginationRowModel, getSortedRowModel, SortingState } from '@tanstack/react-table';
 import { format } from 'date-fns';
@@ -227,11 +229,30 @@ const UserActionsCell = ({ user, onEdit, onDelete, onResetPassword }: { user: Us
 };
 
 
+const ADMIN_UID = 'ADMIN_UID_REDACTED';
+
 export default function UserManagementPage() {
     const { t } = useTranslation();
+    const { user, loading } = useAuth();
+    const router = useRouter();
     const [users, setUsers] = useState<UserForAdmin[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const { toast } = useToast();
+    
+    // Admin check
+    useEffect(() => {
+        if (!loading && (!user || user.uid !== ADMIN_UID)) {
+            router.push('/settings');
+        }
+    }, [user, loading, router]);
+    
+    if (loading || !user || user.uid !== ADMIN_UID) {
+        return (
+            <div className="flex h-[calc(100vh_-_theme(spacing.14))] w-full items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+        );
+    }
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [sorting, setSorting] = useState<SortingState>([{ id: 'activityScore', desc: true }]);
     
