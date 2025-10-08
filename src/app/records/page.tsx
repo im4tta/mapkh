@@ -3,7 +3,7 @@
 "use client";
 
 import { RecordsTable } from '@/components/records-table';
-import { getReports, getViolationTerms, getSubViolationTypes, getAllReports } from '@/app/actions';
+import { getViolationTerms, getSubViolationTypes } from '@/app/actions';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Report, ViolationTerm, SubViolationType } from '@/lib/types';
@@ -12,9 +12,10 @@ import { useTranslation } from 'react-i18next';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { X, Search } from 'lucide-react';
+import { X, Search, RefreshCw } from 'lucide-react';
 import { useDebounce } from 'use-debounce';
 import { SortingState, PaginationState, ColumnDef } from '@tanstack/react-table';
+import { useRecordsCache } from '@/hooks/use-records-cache';
 
 function RecordsTableSkeleton() {
     return (
@@ -44,10 +45,18 @@ export default function RecordsPage() {
     const searchParams = useSearchParams();
     const { t } = useTranslation();
     
-    // Data state
-    const [data, setData] = useState<Report[] | null>(null);
-    const [pageCount, setPageCount] = useState(0);
-    const [isLoading, setIsLoading] = useState(true);
+    // Use the new caching hook for high-speed search
+    const {
+        allRecords,
+        isLoading: isCacheLoading,
+        error: cacheError,
+        totalCount,
+        getFilteredRecords,
+        fetchAllRecords,
+        invalidateCache,
+        isStale,
+        isCacheReady,
+    } = useRecordsCache();
 
     // Filter options state
     const [violationTerms, setViolationTerms] = useState<ViolationTerm[]>([]);
@@ -67,7 +76,7 @@ export default function RecordsPage() {
     const searchQuery = searchParams.get('search') ?? '';
     
     const [localSearch, setLocalSearch] = useState(searchQuery);
-    const [debouncedSearch] = useDebounce(localSearch, 500);
+    const [debouncedSearch] = useDebounce(localSearch, 300); // Reduced debounce for faster response
 
     const sorting = useMemo<SortingState>(() => ([
         { id: sort, desc: order === 'desc' },
@@ -77,6 +86,50 @@ export default function RecordsPage() {
         pageIndex,
         pageSize,
     }), [pageIndex, pageSize]);
+
+    // Get filtered and paginated data from cache
+    const { data, pageCount } = useMemo(() => {
+        if (!isCacheReady) {
+            return { data: [], pageCount: 0 };
+        }
+
+        const filters = {
+            violationTerm: violationTerm !== 'all' ? violationTerm : undefined,
+            status: status !== 'all' ? status : undefined,
+            priority: priority !== 'all' ? priority : undefined,
+            subViolationType: subViolationType !== 'all' ? subViolationType : undefined,
+            province: province !== 'all' ? province : undefined,
+            search: debouncedSearch || undefined,
+        };
+
+        const sortingOptions = { id: sort, desc: order === 'desc' };
+        const paginationOptions = { pageIndex, pageSize };
+
+        return getFilteredRecords(filters, sortingOptions, paginationOptions);
+    }, [
+        isCacheReady,
+        violationTerm,
+        status,
+        priority,
+        subViolationType,
+        province,
+        debouncedSearch,
+        sort,
+        order,
+        pageIndex,
+        pageSize,
+        getFilteredRecords,
+    ]);
+
+    // Extract available provinces from cached data
+    useEffect(() => {
+        if (isCacheReady && allRecords.length > 0) {
+            const provincesFromRecords = allRecords
+                .map(r => r.province)
+                .filter((p): p is string => !!p && p.trim() !== '');
+            setAvailableProvinces([...new Set(provincesFromRecords)].sort());
+        }
+    }, [isCacheReady, allRecords]);
 
     const createQueryString = useCallback((newParams: Record<string, string | number | null>) => {
       const params = new URLSearchParams(searchParams.toString());
@@ -90,51 +143,6 @@ export default function RecordsPage() {
       return params.toString();
     }, [searchParams]);
 
-    // This is the main data fetching function with scroll position persistence.
-    const fetchData = useCallback(async (preserveScrollPosition = false) => {
-        // Save current scroll position if requested
-        let savedScrollPosition = 0;
-        if (preserveScrollPosition) {
-            savedScrollPosition = window.scrollY;
-        }
-        
-        setIsLoading(true);
-        const currentSorting = { id: sort, desc: order === 'desc' };
-        
-        const reportsResult = await getReports({
-            pageIndex: pageIndex,
-            pageSize: pageSize,
-            sorting: currentSorting,
-            filters: { violationTerm, status, priority, subViolationType, province, search: searchQuery },
-        });
-
-        if (reportsResult.success) {
-            setData(reportsResult.data || []);
-            setPageCount(reportsResult.pageCount || 0);
-        } else {
-            setData([]);
-            setPageCount(0);
-        }
-        setIsLoading(false);
-        
-        // Restore scroll position if requested
-        if (preserveScrollPosition && savedScrollPosition > 0) {
-            // Use requestAnimationFrame to ensure DOM has updated
-            requestAnimationFrame(() => {
-                window.scrollTo({
-                    top: savedScrollPosition,
-                    behavior: 'instant'
-                });
-            });
-        }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [pageIndex, pageSize, sort, order, violationTerm, status, priority, subViolationType, province, searchQuery]);
-    
-    // Effect to fetch data whenever a dependency changes.
-    useEffect(() => {
-        fetchData();
-    }, [fetchData]);
-
     // Handle debounced search updates
     useEffect(() => {
         if (debouncedSearch !== searchQuery) {
@@ -146,19 +154,12 @@ export default function RecordsPage() {
     // Fetch static filter options once
     useEffect(() => {
         const fetchFilters = async () => {
-            const [termsResult, issuesResult, allReportsResult] = await Promise.all([
+            const [termsResult, issuesResult] = await Promise.all([
                 getViolationTerms(), 
                 getSubViolationTypes(),
-                getAllReports()
             ]);
             if (termsResult.success && termsResult.data) setViolationTerms(termsResult.data);
             if (issuesResult.success && issuesResult.data) setSubViolationTypes(issuesResult.data);
-            if (allReportsResult.success && allReportsResult.data) {
-                const provincesFromReports = allReportsResult.data
-                    .map(r => r.province)
-                    .filter((p): p is string => !!p && p.trim() !== ''); // Filter out null, undefined, and empty strings
-                setAvailableProvinces([...new Set(provincesFromReports)].sort());
-            }
         };
         fetchFilters();
     }, []);
@@ -195,13 +196,33 @@ export default function RecordsPage() {
         setLocalSearch('');
         router.push(pathname);
     };
+
+    const handleRefresh = () => {
+        invalidateCache();
+    };
     
     const activeFiltersCount = useMemo(() => {
         return [violationTerm, status, priority, subViolationType, province, searchQuery].filter(f => f && f !== 'all' && f !== '').length;
     }, [violationTerm, status, priority, subViolationType, province, searchQuery]);
 
-    if (isLoading || data === null) {
+    // Show loading state only when cache is loading and no data is available
+    const isLoading = isCacheLoading && !isCacheReady;
+
+    if (isLoading) {
         return <RecordsTableSkeleton />;
+    }
+
+    // Show error state if cache failed to load
+    if (cacheError && !isCacheReady) {
+        return (
+            <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                <p className="text-destructive">Error loading records: {cacheError}</p>
+                <Button onClick={handleRefresh} variant="outline">
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Retry
+                </Button>
+            </div>
+        );
     }
 
     return (
@@ -289,7 +310,7 @@ export default function RecordsPage() {
                 onPaginationChange={handlePaginationChange}
                 sorting={sorting}
                 onSortingChange={handleSortingChange}
-                refetchData={(preserveScrollPosition = true) => fetchData(preserveScrollPosition)}
+                refetchData={handleRefresh} // Use cache refresh instead of server refetch
             />
         </>
     );

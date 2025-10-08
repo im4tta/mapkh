@@ -431,6 +431,9 @@ export function RecordsTable({
   const [evidenceReport, setEvidenceReport] = useState<Report | null>(null);
   const [subViolationTypes, setSubViolationTypes] = useState<SubViolationType[]>([]);
   const [editingPlaceId, setEditingPlaceId] = useState<{ id: string, value: string } | null>(null);
+  const [editingEnglish, setEditingEnglish] = useState<{ id: string, value: string } | null>(null);
+  const [editingKhmer, setEditingKhmer] = useState<{ id: string, value: string } | null>(null);
+  const [editingThai, setEditingThai] = useState<{ id: string, value: string } | null>(null);
   const [evidenceCounts, setEvidenceCounts] = useState<Record<string, number>>({});
   const [loadingEvidenceCounts, setLoadingEvidenceCounts] = useState<Set<string>>(new Set());
 
@@ -616,6 +619,42 @@ export function RecordsTable({
         toast({ variant: "destructive", title: "Update Failed", description: result.error });
     }
   }
+
+  const handleUpdateEnglish = async () => {
+    if (!editingEnglish || !user) return;
+    const result = await updateReport(editingEnglish.id, { englishLanguage: editingEnglish.value }, user.uid, user.displayName, user.email);
+    if (result.success) {
+        toast({ title: "English Translation Updated" });
+        setEditingEnglish(null);
+        refetchData();
+    } else {
+        toast({ variant: "destructive", title: "Update Failed", description: result.error });
+    }
+  }
+
+  const handleUpdateKhmer = async () => {
+    if (!editingKhmer || !user) return;
+    const result = await updateReport(editingKhmer.id, { nativeKhmerLanguage: editingKhmer.value }, user.uid, user.displayName, user.email);
+    if (result.success) {
+        toast({ title: "Khmer Translation Updated" });
+        setEditingKhmer(null);
+        refetchData();
+    } else {
+        toast({ variant: "destructive", title: "Update Failed", description: result.error });
+    }
+  }
+
+  const handleUpdateThai = async () => {
+    if (!editingThai || !user) return;
+    const result = await updateReport(editingThai.id, { thaiLanguage: editingThai.value }, user.uid, user.displayName, user.email);
+    if (result.success) {
+        toast({ title: "Thai Translation Updated" });
+        setEditingThai(null);
+        refetchData();
+    } else {
+        toast({ variant: "destructive", title: "Update Failed", description: result.error });
+    }
+  }
   
   const handleSetKeywords = (report: Report) => {
     setKeywordReport(report);
@@ -714,7 +753,46 @@ export function RecordsTable({
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
         ),
-        cell: ({ row }) => row.original.englishLanguage,
+        cell: ({ row }) => {
+          const report = row.original;
+          const isEditing = editingEnglish?.id === report.id;
+          
+          return (
+            <div className="flex items-center gap-2">
+              {isEditing ? (
+                <div className="flex items-center gap-1">
+                  <Input
+                    value={editingEnglish?.value || ''}
+                    onChange={(e) => setEditingEnglish({ ...editingEnglish, value: e.target.value })}
+                    className="h-8 text-sm"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleUpdateEnglish();
+                      if (e.key === 'Escape') setEditingEnglish(null);
+                    }}
+                  />
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleUpdateEnglish}>
+                    <Save className="h-4 w-4 text-green-600" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingEnglish(null)}>
+                    <XCircle className="h-4 w-4 text-red-600" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span>{report.englishLanguage}</span>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-7 w-7 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400" 
+                    onClick={() => setEditingEnglish({ id: report.id, value: report.englishLanguage || '' })}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          );
+        },
     },
     {
         accessorKey: 'nativeKhmerLanguage',
@@ -727,7 +805,46 @@ export function RecordsTable({
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
         ),
-        cell: ({ row }) => <span className="font-khmer">{row.original.nativeKhmerLanguage}</span>,
+        cell: ({ row }) => {
+          const report = row.original;
+          const isEditing = editingKhmer?.id === report.id;
+          
+          return (
+            <div className="flex items-center gap-2">
+              {isEditing ? (
+                <div className="flex items-center gap-1">
+                  <Input
+                    value={editingKhmer?.value || ''}
+                    onChange={(e) => setEditingKhmer({ ...editingKhmer, value: e.target.value })}
+                    className="h-8 text-sm font-khmer"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleUpdateKhmer();
+                      if (e.key === 'Escape') setEditingKhmer(null);
+                    }}
+                  />
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleUpdateKhmer}>
+                    <Save className="h-4 w-4 text-green-600" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingKhmer(null)}>
+                    <XCircle className="h-4 w-4 text-red-600" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="font-khmer">{report.nativeKhmerLanguage}</span>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-7 w-7 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400" 
+                    onClick={() => setEditingKhmer({ id: report.id, value: report.nativeKhmerLanguage || '' })}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          );
+        },
     },
     {
         accessorKey: 'thaiLanguage',
@@ -740,7 +857,46 @@ export function RecordsTable({
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
         ),
-        cell: ({ row }) => row.original.thaiLanguage,
+        cell: ({ row }) => {
+          const report = row.original;
+          const isEditing = editingThai?.id === report.id;
+          
+          return (
+            <div className="flex items-center gap-2">
+              {isEditing ? (
+                <div className="flex items-center gap-1">
+                  <Input
+                    value={editingThai?.value || ''}
+                    onChange={(e) => setEditingThai({ ...editingThai, value: e.target.value })}
+                    className="h-8 text-sm"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleUpdateThai();
+                      if (e.key === 'Escape') setEditingThai(null);
+                    }}
+                  />
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleUpdateThai}>
+                    <Save className="h-4 w-4 text-green-600" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingThai(null)}>
+                    <XCircle className="h-4 w-4 text-red-600" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span>{report.thaiLanguage}</span>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-7 w-7 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400" 
+                    onClick={() => setEditingThai({ id: report.id, value: report.thaiLanguage || '' })}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          );
+        },
     },
     {
       accessorKey: 'violationTerm',
@@ -841,12 +997,12 @@ export function RecordsTable({
               <span className="text-xs font-mono text-muted-foreground">{report.placeId || 'N/A'}</span>
               <div className="flex">
                 {report.placeId && (
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={copyToClipboard}>
-                        <Copy className="h-3 w-3" />
+                    <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-gray-100 dark:hover:bg-gray-800" onClick={copyToClipboard}>
+                        <Copy className="h-4 w-4" />
                     </Button>
                 )}
-                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setEditingPlaceId({ id: report.id, value: report.placeId || '' })}>
-                    <Pencil className="h-3 w-3" />
+                <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400" onClick={() => setEditingPlaceId({ id: report.id, value: report.placeId || '' })}>
+                    <Pencil className="h-4 w-4" />
                 </Button>
               </div>
             </div>
@@ -1051,7 +1207,7 @@ export function RecordsTable({
       id: 'actions',
       cell: ({ row }) => <ActionsCell report={row.original} onEdit={() => handleEdit(row.original)} onActivity={(tab) => handleActivity(row.original, tab)} onTogglePin={() => handleTogglePin(row.original)} onVerify={() => handleVerify(row.original)} onUpload={() => handleUpload(row.original)} onCreateFolder={() => handleCreateFolder(row.original)} onCreatePlaceId={() => handleCreatePlaceId(row.original)} onSetKeywords={() => handleSetKeywords(row.original)} onCopyDescriptionToKeywords={() => handleCopyDescriptionToKeywords(row.original)} refetch={refetchData} />,
     },
-  ], [t, refetchData, user, subViolationTypes, selectedVerifiers, editingPlaceId]);
+  ], [t, refetchData, user, subViolationTypes, selectedVerifiers, editingPlaceId, editingEnglish, editingKhmer, editingThai]);
   
   
   const [isMounted, setIsMounted] = useState(false);

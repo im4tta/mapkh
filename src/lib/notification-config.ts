@@ -98,6 +98,31 @@ export const defaultRegistrationFlow: RegistrationFlowConfig = {
 };
 
 /**
+ * Get registration flow config based on environment
+ */
+export function getRegistrationFlowConfig(): RegistrationFlowConfig {
+  // Check if running as PWA (standalone mode)
+  const isPWA = typeof window !== 'undefined' && 
+    (window.matchMedia('(display-mode: standalone)').matches ||
+     (window.navigator as any).standalone === true ||
+     document.referrer.includes('android-app://'));
+  
+  // For PWA installations, enable automatic permission request
+  if (isPWA) {
+    return {
+      ...defaultRegistrationFlow,
+      showOnAppStart: true,
+      showAfterDelay: 2000, // Shorter delay for PWA
+      showExplanationDialog: true,
+      explanationTitle: 'Enable Notifications',
+      explanationMessage: 'Stay updated with real-time notifications about reports and important information in your area.',
+    };
+  }
+  
+  return defaultRegistrationFlow;
+}
+
+/**
  * Notification categories and their configurations
  */
 export interface NotificationCategory {

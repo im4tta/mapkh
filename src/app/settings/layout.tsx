@@ -41,11 +41,14 @@ export default function SettingsLayout({
     if (!loading && !user) {
       // Not logged in, redirect to login
       router.push('/login');
+    } else if (!loading && user && !isAdmin) {
+      // Not admin, redirect to dashboard
+      router.push('/');
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, isAdmin]);
 
-  if (loading || !isMounted || !user) {
-    // Show a loading spinner while checking auth
+  if (loading || !isMounted || !user || (user && !isAdmin)) {
+    // Show a loading spinner while checking auth or redirect is happening
     return (
       <div className="flex h-[calc(100vh_-_theme(spacing.14))] w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

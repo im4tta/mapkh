@@ -11,6 +11,7 @@ import {
   sendTestNotification
 } from '@/lib/firebase-messaging';
 import { getBadgeManager, addBadgeListener } from '@/lib/badge-manager';
+import { getRegistrationFlowConfig } from '@/lib/notification-config';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { BellRing, BellOff } from 'lucide-react';
@@ -160,6 +161,38 @@ const PushNotificationProvider: React.FC<PushNotificationProviderProps> = ({ chi
       const unsubscribe = addBadgeListener((count) => {
         setBadgeCount(count);
       });
+
+      // Check if we should automatically request permissions for PWA
+      const config = getRegistrationFlowConfig();
+      if (config.showOnAppStart && Notification.permission === 'default') {
+        // Delay the permission request slightly to allow the app to fully load
+        const timer = setTimeout(async () => {
+          try {
+            console.log('PWA detected - automatically requesting notification permissions');
+            const granted = await requestNotificationPermission();
+            setPermission(Notification.permission);
+            
+            if (granted) {
+              toast({
+                title: config.explanationTitle,
+                description: "Notifications enabled! You'll receive important updates.",
+              });
+              
+              // Initialize push notifications after permission is granted
+              await handleInitialize();
+            } else {
+              console.log('Notification permission denied by user');
+            }
+          } catch (error) {
+            console.error('Failed to request notification permission:', error);
+          }
+        }, config.showAfterDelay);
+
+        return () => {
+          clearTimeout(timer);
+          unsubscribe();
+        };
+      }
 
       return unsubscribe;
     }

@@ -27,7 +27,7 @@ export function Nav({
         { href: "/teams", label: t('nav.teams'), adminOnly: false },
         { href: "/contributions", label: t('nav.contributions'), adminOnly: false },
         { href: "/analytics", label: t('nav.analytics'), adminOnly: false },
-        { href: "/settings", label: t('nav.settings'), adminOnly: false },
+        { href: "/settings", label: t('nav.settings'), adminOnly: true },
     ];
 
     const links = allLinks.filter(link => !link.adminOnly || isAdmin);

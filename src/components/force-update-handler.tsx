@@ -25,6 +25,19 @@ export const ForceUpdateHandler: React.FC = () => {
       return;
     }
 
+    // Guard against environments where the document isn't fully active (e.g., sandboxed iframes)
+    const isIframe = window.top !== window.self;
+    const isLocalhost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+    const isSecureOrLocal = window.isSecureContext || isLocalhost;
+
+    const shouldAttemptSWCheck = () => {
+      // Skip in iframe or non-secure, non-local contexts which can cause InvalidStateError
+      if (isIframe || !isSecureOrLocal) return false;
+      // Skip when page isn't visible to avoid prerender/invalid document state
+      if (document.visibilityState === 'hidden') return false;
+      return true;
+    };
+
     const handleServiceWorkerMessage = (event: MessageEvent) => {
       const { data } = event;
       
@@ -56,7 +69,30 @@ export const ForceUpdateHandler: React.FC = () => {
     // Check for existing service worker updates
     const checkForExistingUpdates = async () => {
       try {
-        const registration = await navigator.serviceWorker.getRegistration();
+        // Avoid InvalidStateError in certain preview/dev iframe contexts
+        if (!shouldAttemptSWCheck()) return;
+
+        // Ensure document is fully loaded before querying registration
+        if (document.readyState !== 'complete') {
+          await new Promise<void>((resolve) => {
+            window.addEventListener('load', () => resolve(), { once: true });
+          });
+        }
+
+        let registration = undefined as ServiceWorkerRegistration | undefined;
+
+        // Prefer ready() when available; it's safer in some environments
+        try {
+          registration = await navigator.serviceWorker.ready;
+        } catch (_) {
+          // Fall back to getRegistration if ready fails
+          try {
+            registration = await navigator.serviceWorker.getRegistration();
+          } catch (_) {
+            registration = undefined;
+          }
+        }
+
         if (registration?.waiting) {
           // There's a waiting service worker, show update prompt
           setUpdateAvailable(true);
@@ -69,7 +105,8 @@ export const ForceUpdateHandler: React.FC = () => {
           });
         }
       } catch (error) {
-        console.error('Failed to check for existing updates:', error);
+        // Log as a warning to avoid alarming users in non-critical contexts
+        console.warn('Skipped service worker update check due to environment:', error);
       }
     };
 
