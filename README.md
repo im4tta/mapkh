@@ -5,6 +5,23 @@ This is a NextJS starter in Firebase Studio.
 
 To get started, take a look at src/app/page.tsx.
 
+## Quick Start (Local Development)
+
+- Install Node.js LTS (v18+ recommended). On Windows, download from `https://nodejs.org/en` and ensure `node` and `npm` are in your PATH.
+- Install dependencies: `npm install`
+- Copy `.env.example` to `.env.local` and fill all required values:
+  - Client Firebase keys: `NEXT_PUBLIC_FIREBASE_*`
+  - Firebase Admin keys: `FIREBASE_ADMIN_*`
+  - NextAuth config: `NEXTAUTH_URL`, `NEXTAUTH_SECRET`
+  - Google integrations: `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`, `GOOGLE_DRIVE_PARENT_FOLDER_ID`, `GCP_SERVICE_ACCOUNT_EMAIL`, `GCP_SERVICE_ACCOUNT_PRIVATE_KEY`
+- Start the dev server: `npm run dev`
+- Open `http://localhost:3000/`
+
+Notes:
+- If any `NEXT_PUBLIC_FIREBASE_*` variables are missing, the app will not render and you’ll see an error logged.
+- For NextAuth, generate a strong `NEXTAUTH_SECRET` (e.g., using Node crypto).
+- The login page is at `/login`. Most routes require an authenticated user.
+
 ## Google Drive Integration Setup
 
 To enable automatic Google Drive folder creation for new reports, you need to configure a Google Cloud Service Account and share a "parent" folder with it. Follow these steps carefully.
@@ -117,3 +134,17 @@ An API key can be restricted to only work on certain websites. For development, 
 4.  **Save** your changes.
 
 After checking these two settings, the map should load correctly. There is no code change required to fix this issue.
+
+## Problems & Diagnostics
+<a id="problems_and_diagnostics"></a>
+
+Use this checklist to diagnose common local and deployment issues:
+
+- Node/npm missing: Install Node.js LTS (v18+) and verify `node -v` and `npm -v`.
+- Dev server fails: Ensure dependencies are installed with `npm install`. Restart with `npm run dev`.
+- Firebase not configured: Provide all `NEXT_PUBLIC_FIREBASE_*` and `FIREBASE_ADMIN_*` env vars.
+- Google Maps key missing: Set `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`; otherwise map features will not render.
+- Service worker/PWA debug: Check registration via browser devtools; confirm manifest loads.
+- Vercel build errors: See `docs/vercel-deployment.md` Troubleshooting for CI/CD specifics.
+
+For detailed deployment troubleshooting, see `docs/vercel-deployment.md#problems_and_diagnostics`.

@@ -20,20 +20,20 @@ const missingVars = Object.entries(requiredEnvVars)
   .filter(([key, value]) => !value)
   .map(([key]) => `NEXT_PUBLIC_FIREBASE_${key.toUpperCase()}`);
 
-if (missingVars.length > 0) {
-  console.error('Missing Firebase environment variables:', missingVars);
-  throw new Error(`Missing required Firebase environment variables: ${missingVars.join(', ')}`);
+export const isFirebaseConfigured = missingVars.length === 0;
+if (!isFirebaseConfigured) {
+  console.warn('Firebase is not fully configured. Missing env vars:', missingVars);
 }
 
 // Your web app's Firebase configuration is now loaded from environment variables
-const firebaseConfig = {
+const firebaseConfig = isFirebaseConfigured ? {
   apiKey: requiredEnvVars.apiKey!,
   authDomain: requiredEnvVars.authDomain!,
   projectId: requiredEnvVars.projectId!,
   storageBucket: requiredEnvVars.storageBucket!,
   messagingSenderId: requiredEnvVars.messagingSenderId!,
   appId: requiredEnvVars.appId!,
-};
+} : null;
 
 
 // Initialize Firebase for SSR and SSG
@@ -41,22 +41,33 @@ let app: FirebaseApp;
 let auth: Auth;
 let db: Firestore;
 
-if (getApps().length === 0) {
-  app = initializeApp(firebaseConfig);
+if (isFirebaseConfigured && firebaseConfig) {
+  if (getApps().length === 0) {
+    app = initializeApp(firebaseConfig);
+  } else {
+    app = getApp();
+  }
+  auth = getAuth(app);
+  // Use initializeFirestore with experimentalForceLongPolling to fix WebChannel transport errors
+  db = initializeFirestore(app, {
+    experimentalForceLongPolling: true
+  });
 } else {
-  app = getApp();
+  // Export safe placeholders to avoid hard crashes during local setup
+  // Cast to expected types to keep imports working; callers should gate on isFirebaseConfigured.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  app = undefined as unknown as FirebaseApp;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  auth = undefined as unknown as Auth;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  db = undefined as unknown as Firestore;
 }
 
-auth = getAuth(app);
-// Use initializeFirestore with experimentalForceLongPolling to fix WebChannel transport errors
-db = initializeFirestore(app, {
-  experimentalForceLongPolling: true
-});
-
-const storage = getStorage(app);
+const storage = isFirebaseConfigured && app ? getStorage(app) : (undefined as unknown as ReturnType<typeof getStorage>);
 
 // Messaging is now initialized only on the client-side in firebase-messaging.ts
 const getClientMessaging = () => {
+    if (!isFirebaseConfigured) return null;
     if (typeof window !== 'undefined' && getApps().length > 0) {
         try {
             // Get messaging with service worker configuration
@@ -69,6 +80,5 @@ const getClientMessaging = () => {
     }
     return null;
 }
-
 
 export { app, auth, db, storage, getClientMessaging };

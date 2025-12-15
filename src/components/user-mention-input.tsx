@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect, forwardRef } from 'react';
+import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { UserInfo } from '@/lib/types';
 import { getUsers } from '@/app/actions';
@@ -12,6 +12,9 @@ interface UserMentionInputProps {
   placeholder?: string;
   className?: string;
   disabled?: boolean;
+  onEnterToSend?: () => void;
+  autoFocus?: boolean;
+  rows?: number;
 }
 
 interface MentionUser {
@@ -22,7 +25,7 @@ interface MentionUser {
 }
 
 export const UserMentionInput = forwardRef<HTMLTextAreaElement, UserMentionInputProps>(
-  ({ value, onChange, onMention, placeholder, className, disabled }, ref) => {
+  ({ value, onChange, onMention, placeholder, className, disabled, onEnterToSend, autoFocus, rows = 3 }, ref) => {
     const [users, setUsers] = useState<MentionUser[]>([]);
     const [showMentions, setShowMentions] = useState(false);
     const [mentionQuery, setMentionQuery] = useState('');
@@ -52,6 +55,9 @@ export const UserMentionInput = forwardRef<HTMLTextAreaElement, UserMentionInput
       };
       loadUsers();
     }, []);
+
+    // Expose inner textarea to parent refs
+    useImperativeHandle(ref, () => textareaRef.current as HTMLTextAreaElement);
 
     // Handle text change and detect @ mentions
     const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -118,8 +124,17 @@ export const UserMentionInput = forwardRef<HTMLTextAreaElement, UserMentionInput
       }, 0);
     };
 
-    // Handle key events for mention navigation
+    // Handle key events for mention navigation and Enter-to-send
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      // When mention dropdown is NOT active, allow Enter-to-send
+      if (!showMentions) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          onEnterToSend?.();
+          return;
+        }
+      }
+
       if (showMentions && filteredUsers.length > 0) {
         if (e.key === 'ArrowDown') {
           e.preventDefault();
@@ -147,7 +162,8 @@ export const UserMentionInput = forwardRef<HTMLTextAreaElement, UserMentionInput
           placeholder={placeholder}
           className={className}
           disabled={disabled}
-          rows={3}
+          rows={rows}
+          autoFocus={autoFocus}
         />
         
         {showMentions && filteredUsers.length > 0 && (

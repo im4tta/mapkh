@@ -6,7 +6,7 @@ importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js'
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
 
 // Service Worker version for cache busting - increment this to force updates
-const SW_VERSION = '4.0.0';
+const SW_VERSION = '4.0.1';
 const APP_VERSION = '0.1.0'; // Should match package.json version
 const CACHE_PREFIX = 'mapkh';
 const CACHE_NAME = `${CACHE_PREFIX}-cache-v${SW_VERSION}`;
@@ -28,7 +28,6 @@ const CURRENT_CACHES = {
 
 // Assets to cache immediately - Updated with PNG Apple touch icons
 const STATIC_ASSETS = [
-  '/',
   '/manifest.json',
   '/favicon-32x32.svg',
   '/icons/icon-192x192.svg',
@@ -901,6 +900,16 @@ self.addEventListener('activate', (event) => {
         // Perform standard activation tasks
         await Promise.all([
           self.clients.claim(),
+          // Enable navigation preload to improve first-load performance on mobile
+          (async () => {
+            try {
+              if (self.registration.navigationPreload) {
+                await self.registration.navigationPreload.enable();
+              }
+            } catch (e) {
+              // Ignore if not supported
+            }
+          })(),
           loadBadgeCount(),
           forceUpdatePerformed ? Promise.resolve() : cleanupOldCaches(), // Skip if force cleanup already done
           notifyClientsOfUpdate()
@@ -975,6 +984,32 @@ self.addEventListener('fetch', (event) => {
   
   // Skip non-GET requests
   if (request.method !== 'GET') {
+    return;
+  }
+
+  // IMPORTANT: Do not intercept cross-origin requests (Firebase/Firestore/etc.)
+  // Intercepting and caching these can break streaming APIs and cause mobile failures.
+  if (url.origin !== self.location.origin) {
+    return; // Let the browser handle it normally
+  }
+
+  // Ensure navigations (HTML document requests) always go to network first
+  // This prevents serving a cached root shell ('/') for all routes on mobile
+  // and fixes the issue where the app appears stuck on the dashboard.
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      (async () => {
+        try {
+          // Bypass caches for navigation to avoid stale shell
+          const networkResponse = await fetch(request);
+          return networkResponse;
+        } catch (err) {
+          // Fallback to offline page if available
+          const offline = await caches.match('/offline.html');
+          return offline || new Response('Offline', { status: 503 });
+        }
+      })()
+    );
     return;
   }
   

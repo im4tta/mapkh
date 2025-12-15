@@ -106,6 +106,7 @@ service cloud.firestore {
 - You can configure deployment branches in project settings
 
 ## Troubleshooting
+<a id="problems_and_diagnostics"></a>
 
 ### Common Issues
 

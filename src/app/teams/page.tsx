@@ -184,10 +184,27 @@ const TeamDialog = ({
 
     useEffect(() => {
         if (team && isOpen) {
+            const normalizeProvinces = (input: unknown): Province[] => {
+                if (Array.isArray(input)) {
+                    return (input as unknown[]).filter(Boolean).map(String) as Province[];
+                }
+                if (typeof input === 'string' && input) {
+                    return [input as Province];
+                }
+                return [];
+            };
+            const normalizeMemberIds = (input: unknown): string[] => {
+                if (Array.isArray(input)) {
+                    return (input as unknown[])
+                        .map((m: any) => (m && typeof m === 'object' && m.uid) ? String(m.uid) : (typeof m === 'string' ? m : ''))
+                        .filter(Boolean);
+                }
+                return [];
+            };
             form.reset({
                 name: team.name,
-                members: team.members.map(m => m.uid),
-                provinces: team.provinces,
+                members: normalizeMemberIds(team.members as unknown),
+                provinces: normalizeProvinces((team as unknown as { provinces?: unknown }).provinces),
                 goal: team.goal,
                 targetDate: team.targetDate ? new Date(team.targetDate as string) : undefined,
             });
@@ -408,13 +425,25 @@ export default function TeamsPage() {
             byProvince: Record<string, { total: number; approved: number; unsolved: number }>;
         }> = {};
 
+        const normalizeProvinces = (input: unknown): Province[] => {
+            if (Array.isArray(input)) {
+                return (input as unknown[]).filter(Boolean).map(String) as Province[];
+            }
+            if (typeof input === 'string' && input) {
+                return [input as Province];
+            }
+            return [];
+        };
+
         teams.forEach(team => {
+            const teamProvinces = normalizeProvinces((team as unknown as { provinces?: unknown }).provinces);
+
             const teamReports = allReports.filter(report =>
-                team.provinces.includes(report.province as Province)
+                teamProvinces.includes(report.province as Province)
             );
 
             const byProvince: Record<string, { total: number; approved: number; unsolved: number }> = {};
-            team.provinces.forEach(province => {
+            teamProvinces.forEach(province => {
                 byProvince[province] = { total: 0, approved: 0, unsolved: 0 };
             });
 
@@ -485,7 +514,7 @@ export default function TeamsPage() {
                                         </div>
                                     </div>
                                     <CardDescription className="flex items-center gap-2 pt-2">
-                                        <Users className="h-4 w-4" /> {team.members.length} Members
+                                        <Users className="h-4 w-4" /> {Array.isArray(team.members) ? team.members.length : 0} Members
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-4 flex-1 flex flex-col">
@@ -500,26 +529,42 @@ export default function TeamsPage() {
                                         </div>
                                         <div>
                                             <h4 className="text-sm font-semibold flex items-center gap-2"><MapPin className="h-4 w-4"/> Province Permissions</h4>
-                                             <div className="flex flex-wrap gap-1 mt-1">
-                                                {team.provinces.map(p => <Badge key={p} variant="secondary">{p}</Badge>)}
+                                            <div className="flex flex-wrap gap-1 mt-1">
+                                                {(() => {
+                                                    const normalizeProvinces = (input: unknown): Province[] => {
+                                                        if (Array.isArray(input)) {
+                                                            return (input as unknown[]).filter(Boolean).map(String) as Province[];
+                                                        }
+                                                        if (typeof input === 'string' && input) {
+                                                            return [input as Province];
+                                                        }
+                                                        return [];
+                                                    };
+                                                    return normalizeProvinces((team as unknown as { provinces?: unknown }).provinces)
+                                                        .map(p => <Badge key={p} variant="secondary">{p}</Badge>);
+                                                })()}
                                             </div>
                                         </div>
                                         <div>
                                             <h4 className="text-sm font-semibold flex items-center gap-2"><Users className="h-4 w-4"/> Members</h4>
                                              <div className="flex flex-wrap gap-2 mt-1">
-                                                {team.members.map(member => (
-                                                    <TooltipProvider key={member.uid}>
-                                                        <Tooltip>
-                                                            <TooltipTrigger>
-                                                                <Avatar className="h-8 w-8">
-                                                                    <AvatarImage src={member.avatar || undefined} alt={member.name || 'User'} />
-                                                                    <AvatarFallback>{member.name?.charAt(0) || 'U'}</AvatarFallback>
-                                                                </Avatar>
-                                                            </TooltipTrigger>
-                                                            <TooltipContent>{member.name}</TooltipContent>
-                                                        </Tooltip>
-                                                    </TooltipProvider>
-                                                ))}
+                                                {Array.isArray(team.members)
+                                                    ? team.members
+                                                        .filter((m: any) => m && typeof m === 'object')
+                                                        .map((member: any, idx: number) => (
+                                                            <TooltipProvider key={member.uid || member.name || idx}>
+                                                                <Tooltip>
+                                                                    <TooltipTrigger>
+                                                                        <Avatar className="h-8 w-8">
+                                                                            <AvatarImage src={member.avatar || undefined} alt={member.name || 'User'} />
+                                                                            <AvatarFallback>{member.name?.charAt(0) || 'U'}</AvatarFallback>
+                                                                        </Avatar>
+                                                                    </TooltipTrigger>
+                                                                    <TooltipContent>{member.name}</TooltipContent>
+                                                                </Tooltip>
+                                                            </TooltipProvider>
+                                                        ))
+                                                    : null}
                                             </div>
                                         </div>
                                     </div>

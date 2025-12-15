@@ -3,7 +3,7 @@
 'use server';
 
 import { z } from 'zod';
-import { db } from '@/lib/firebase';
+import { db, isFirebaseConfigured } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp, Timestamp, doc, updateDoc, deleteDoc, query, where, getDocs, orderBy, getDoc, limit, startAfter, writeBatch, runTransaction, DocumentReference, arrayUnion, setDoc, FieldValue, arrayRemove } from 'firebase/firestore';
 import { type Report, UserInfo, type Notification, NOTIFICATION_TYPES, LeaderboardEntry, CommunityPost, Tip, TipIcon, BadgeId, badges, SubViolationType, PlaceType, Team, HistoryLog, ViolationTerm, iconMap, Province } from '@/lib/types';
 import { reverseGeocode } from '@/ai/flows/get-province-from-latlng';
@@ -1636,6 +1636,9 @@ export async function deleteTip(tipId: string, userId: string): Promise<{ succes
 type UserRecord = UserInfo & { email?: string | null; createdAt?: string; activityScore?: number; reports?: number };
 
 export async function getUsers(uids?: string[]): Promise<{ success: boolean, data?: UserRecord[], error?: string }> {
+    if (!isFirebaseConfigured) {
+        return { success: true, data: [] };
+    }
     try {
         const usersMap = new Map<string, UserRecord>();
         const activityCounts = new Map<string, number>();
@@ -2014,6 +2017,9 @@ export async function createUser(data: z.infer<typeof createUserSchema>, uid: st
 }
 
 export async function getAllReports() {
+    if (!isFirebaseConfigured) {
+        return { success: true, data: [] };
+    }
     try {
         const reportsRef = collection(db, 'reports');
         const q = query(reportsRef, orderBy('createdAt', 'desc'));
@@ -2056,6 +2062,9 @@ const subViolationTypeSchema = z.object({
 });
 
 export async function getViolationTerms(): Promise<{ success: boolean; data?: ViolationTerm[]; error?: string }> {
+    if (!isFirebaseConfigured) {
+        return { success: true, data: [] };
+    }
     try {
         const q = query(collection(db, 'violationTerms'), orderBy('name', 'asc'));
         const snapshot = await getDocs(q);
@@ -2103,6 +2112,9 @@ export async function deleteViolationTerm(id: string): Promise<{ success: boolea
 }
 
 export async function getSubViolationTypes(): Promise<{ success: boolean; data?: SubViolationType[]; error?: string }> {
+    if (!isFirebaseConfigured) {
+        return { success: true, data: [] };
+    }
     try {
         const q = query(collection(db, 'subViolationTypes'), orderBy('label', 'asc'));
         const snapshot = await getDocs(q);
@@ -2167,6 +2179,9 @@ export async function deleteSubViolationType(id: string): Promise<{ success: boo
 }
 
 export async function getPlaceTypes(): Promise<{ success: boolean; data?: PlaceType[]; error?: string }> {
+    if (!isFirebaseConfigured) {
+        return { success: true, data: [] };
+    }
     try {
         const q = query(collection(db, 'placeTypes'), orderBy('name', 'asc'));
         const snapshot = await getDocs(q);
@@ -2604,6 +2619,9 @@ export async function addTeam(data: AddTeamFormValues, createdByUid: string): Pr
 }
 
 export async function getTeams(): Promise<{ success: boolean; data?: Team[]; error?: string }> {
+  if (!isFirebaseConfigured) {
+    return { success: true, data: [] };
+  }
   try {
     const q = query(collection(db, 'teams'), orderBy('createdAt', 'desc'));
     const snapshot = await getDocs(q);
@@ -2854,6 +2872,9 @@ const serializeHistoryTimestamps = (data: { [key: string]: any }) => {
 
 
 export async function getHistory(filters: { entityType?: string } = {}): Promise<{ success: boolean; data?: HistoryLog[]; error?: string }> {
+    if (!isFirebaseConfigured) {
+        return { success: true, data: [] };
+    }
     try {
         const historyCollectionRef = collection(db, 'history');
         const queryConstraints = [];
@@ -3466,6 +3487,9 @@ export async function getActiveGeoJSON(): Promise<{ success: boolean; data?: Pro
 }
 
 export async function getAllGeoJSON(): Promise<{ success: boolean; data?: Array<{ id: string; name: string; description?: string; createdAt: any; createdByName: string; isActive: boolean }>; error?: string }> {
+  if (!isFirebaseConfigured) {
+    return { success: true, data: [] };
+  }
   try {
     const q = query(
       collection(db, 'provinceGeoJSON'),
@@ -3536,6 +3560,9 @@ export async function deleteGeoJSON(
   id: string,
   userId: string
 ): Promise<{ success: boolean; error?: string }> {
+  if (!isFirebaseConfigured) {
+    return { success: false, error: 'Firebase not configured' };
+  }
   try {
     await deleteDoc(doc(db, 'provinceGeoJSON', id));
     

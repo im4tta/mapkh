@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { useEffect, useState, useMemo, useRef, useCallback, ReactElement } from 'react';
 import { collection, onSnapshot, query, orderBy, Timestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, isFirebaseConfigured } from '@/lib/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Report, SubViolationType, HistoryLog, Team, provinces as cambodiaProvinces, PlaceType, ViolationTerm } from "@/lib/types";
 import { useTranslation } from 'react-i18next';
@@ -241,6 +241,13 @@ export default function AnalyticsPage() {
             if (teamsResult.success && teamsResult.data) setTeams(teamsResult.data);
             if (historyResult.success && historyResult.data) setHistory(historyResult.data);
 
+            // Guard Firestore subscription when Firebase isn't configured
+            if (!isFirebaseConfigured) {
+                setReports([]);
+                setIsLoading(false);
+                return undefined;
+            }
+
             const q = query(collection(db, "reports"), orderBy("createdAt", "desc"));
             const unsubscribe = onSnapshot(q, (querySnapshot) => {
                 const reportsData = querySnapshot.docs.map(doc => {
@@ -387,7 +394,19 @@ export default function AnalyticsPage() {
         });
 
         const teamStats = teams.map(team => {
-            const teamReports = filteredReports.filter(report => team.provinces.includes(report.province as any));
+            const normalizeProvinces = (input: unknown): string[] => {
+                if (Array.isArray(input)) {
+                    return (input as unknown[]).filter(Boolean).map(String);
+                }
+                if (typeof input === 'string' && input) {
+                    return [input];
+                }
+                return [];
+            };
+            const teamProvinces = normalizeProvinces((team as unknown as { provinces?: unknown }).provinces);
+            const teamReports = filteredReports.filter(report =>
+                teamProvinces.includes(String(report.province ?? ''))
+            );
             const resolvedTeamReports = teamReports.filter(r => (r.status === 'approved' || r.status === 'rejected') && toDate(r.createdAt) && toDate(r.resolvedAt));
             const totalResolutionDays = resolvedTeamReports.reduce((acc, report) => {
                 const resolvedDate = toDate(report.resolvedAt)!;
@@ -633,8 +652,7 @@ export default function AnalyticsPage() {
         );
     }
     
-    return (
-        <APIProvider apiKey={apiKey!}>
+    const DashboardContent = (
             <div className="container mx-auto py-10 px-4">
                 <div className="space-y-8">
                     <div>
@@ -643,6 +661,26 @@ export default function AnalyticsPage() {
                             An overview of all report activities and trends.
                         </p>
                     </div>
+
+                    {/* Configuration notices */}
+                    {!isFirebaseConfigured && (
+                        <Card>
+                            <CardContent className="py-3">
+                                <p className="text-sm text-amber-800">
+                                    Firebase is not configured. Live analytics and data will be limited.
+                                </p>
+                            </CardContent>
+                        </Card>
+                    )}
+                    {!apiKey && (
+                        <Card>
+                            <CardContent className="py-3">
+                                <p className="text-sm text-amber-800">
+                                    Google Maps API key is missing. Map features are disabled.
+                                </p>
+                            </CardContent>
+                        </Card>
+                    )}
 
                     <div className="flex items-center gap-4">
                         <label htmlFor="month-select" className="text-sm font-medium">
@@ -1078,7 +1116,12 @@ export default function AnalyticsPage() {
                     }}
                 />
             </div>
-        </APIProvider>
+    );
+
+    return apiKey ? (
+        <APIProvider apiKey={apiKey!}>{DashboardContent}</APIProvider>
+    ) : (
+        DashboardContent
     );
 }
 

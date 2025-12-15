@@ -12,6 +12,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@databuddy/sdk": "^2.2.0",
     "@genkit-ai/firebase": "^1.15.5",
     "@genkit-ai/googleai": "^1.15.5",
     "@genkit-ai/next": "^1.15.5",
