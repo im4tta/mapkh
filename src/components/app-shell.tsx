@@ -7,6 +7,7 @@ import { Footer } from './footer';
 import { useActivityDialog } from '@/context/activity-dialog-provider';
 import { ReportActivityDialog } from './report-activity-dialog';
 import { ScrollToTopButton } from './scroll-to-top';
+import { UserGuideButton } from './user-guide-button';
 import { usePathname } from 'next/navigation';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -32,6 +33,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         />
       )}
       <ScrollToTopButton />
+      <UserGuideButton variant="floating" />
     </div>
   );
 }

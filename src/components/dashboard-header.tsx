@@ -5,6 +5,7 @@ import { useAuth } from "@/context/auth-provider";
 import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
 import { formatToKhmerLunarDate, formatToKhmerGregorian } from "@/lib/khmer-date";
+import { UserGuideButton } from "./user-guide-button";
 
 export function DashboardHeader() {
   const { user } = useAuth();
@@ -34,9 +35,14 @@ export function DashboardHeader() {
   
   if (!currentDate) {
       return (
-        <div>
-            <h2 className="text-2xl font-bold tracking-tight">{`${t('dashboard.greetings.morning')}, ${userName}!`}</h2>
-            <p className="text-muted-foreground">&nbsp;</p>
+        <div className="flex justify-between items-start">
+            <div>
+                <h2 className="text-2xl font-bold tracking-tight">{`${t('dashboard.greetings.morning')}, ${userName}!`}</h2>
+                <p className="text-muted-foreground">&nbsp;</p>
+            </div>
+            <div className="flex gap-2">
+                <UserGuideButton variant="outline" size="sm" />
+            </div>
         </div>
       )
   }
@@ -48,23 +54,28 @@ export function DashboardHeader() {
   });
 
   return (
-    <div>
-        <h2 className="text-2xl font-bold tracking-tight">{greetingMessage}</h2>
-        <p className="text-muted-foreground">
-            {i18n.language === 'km' ? (
-                <>
-                    <span>{formatToKhmerLunarDate(currentDate)}</span>
-                    <span className="font-khmer"> | {formatToKhmerGregorian(currentDate)}</span>
-                    <span className="font-mono"> | {formattedTime}</span>
-                </>
-            ) : (
-                <span>
-                    {currentDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                    {' | '}
-                    {formattedTime}
-                </span>
-            )}
-        </p>
+    <div className="flex justify-between items-start">
+        <div>
+            <h2 className="text-2xl font-bold tracking-tight">{greetingMessage}</h2>
+            <p className="text-muted-foreground">
+                {i18n.language === 'km' ? (
+                    <>
+                        <span>{formatToKhmerLunarDate(currentDate)}</span>
+                        <span className="font-khmer"> | {formatToKhmerGregorian(currentDate)}</span>
+                        <span className="font-mono"> | {formattedTime}</span>
+                    </>
+                ) : (
+                    <span>
+                        {currentDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                        {' | '}
+                        {formattedTime}
+                    </span>
+                )}
+            </p>
+        </div>
+        <div className="flex gap-2">
+            <UserGuideButton variant="outline" size="sm" />
+        </div>
     </div>
   );
 }

@@ -564,5 +564,165 @@
         "svay_rieng": "Svay Rieng",
         "takéo": "Takéo",
         "tboung_khmum": "Tboung Khmum"
+    },
+    "user_guide": {
+        "title": "How to Submit a Report to MapKH",
+        "description": "Complete guide to reporting map issues and contributing to better maps for Cambodia",
+        "close": "Close Guide",
+        "button": {
+            "text": "User Guide",
+            "tooltip": "How to Submit Reports"
+        },
+        "tabs": {
+            "overview": "Overview",
+            "steps": "Step by Step",
+            "tips": "Tips & Best Practices",
+            "faq": "FAQ"
+        },
+        "overview": {
+            "welcome": {
+                "title": "Welcome to MapKH",
+                "description": "MapKH is a community-driven platform for improving map data in Cambodia. Your reports help make maps more accurate and useful for everyone."
+            },
+            "what_to_report": {
+                "title": "What to Report",
+                "item1": "Incorrect place names or information",
+                "item2": "Missing or wrong addresses",
+                "item3": "Outdated business information",
+                "item4": "Road and navigation issues",
+                "item5": "Language and translation errors"
+            },
+            "process": {
+                "title": "Report Process",
+                "step1": "Submit your report with details",
+                "step2": "Community volunteers review it",
+                "step3": "Approved reports are processed",
+                "step4": "Maps are updated with corrections",
+                "step5": "Everyone benefits from better maps"
+            },
+            "important": {
+                "title": "Important Guidelines",
+                "dont": {
+                    "title": "Don't Report",
+                    "item1": "Personal information or private data",
+                    "item2": "Spam or irrelevant content",
+                    "item3": "Duplicate reports (check first!)"
+                },
+                "do": {
+                    "title": "Do Report",
+                    "item1": "Factual, verifiable information",
+                    "item2": "Clear, detailed descriptions",
+                    "item3": "Respectful, constructive feedback"
+                }
+            }
+        },
+        "steps": {
+            "location": {
+                "title": "Select Location",
+                "description": "Click on the map to select the exact location where you found the issue",
+                "detail1": "Use the map to navigate to the problem area",
+                "detail2": "Click precisely on the location with the issue",
+                "detail3": "The system will automatically detect the province and coordinates",
+                "detail4": "You can zoom in for more precise location selection"
+            },
+            "category": {
+                "title": "Choose Issue Category",
+                "description": "Select the type of map issue you want to report",
+                "detail1": "First select a violation group (e.g., Place Information, Road Data)",
+                "detail2": "Then choose specific issue types that apply",
+                "detail3": "You can select multiple issue types if relevant",
+                "detail4": "Use \"General\" for issues not covered by other categories"
+            },
+            "description": {
+                "title": "Describe the Issue",
+                "description": "Provide a clear and detailed description of the problem",
+                "detail1": "Write at least 10 characters describing the issue",
+                "detail2": "Be specific about what is wrong or missing",
+                "detail3": "Include what the correct information should be",
+                "detail4": "Use clear language that others can understand"
+            },
+            "languages": {
+                "title": "Add Language Information",
+                "description": "Provide names in English, Khmer, and Thai languages",
+                "detail1": "Enter the correct name in English if available",
+                "detail2": "Add the native Khmer name for local accuracy",
+                "detail3": "Include Thai name if the location has one",
+                "detail4": "Use translation buttons to help with language conversion"
+            },
+            "details": {
+                "title": "Additional Details",
+                "description": "Set priority, add notes, and provide additional context",
+                "detail1": "Set priority level: Low, Medium, or High",
+                "detail2": "Add any additional notes or context",
+                "detail3": "Include links to supporting documentation if available",
+                "detail4": "Review all information before submitting"
+            },
+            "submit": {
+                "title": "Submit Report",
+                "description": "Review and submit your report for processing",
+                "detail1": "Review all entered information for accuracy",
+                "detail2": "The system will check for duplicate reports",
+                "detail3": "Confirm submission if no duplicates are found",
+                "detail4": "Track your report status in the Records section"
+            }
+        },
+        "tips": {
+            "accuracy": {
+                "title": "Be Accurate",
+                "description": "Precise location and detailed descriptions help resolve issues faster"
+            },
+            "evidence": {
+                "title": "Provide Evidence",
+                "description": "Include links to photos or documentation when possible"
+            },
+            "community": {
+                "title": "Community First",
+                "description": "Check if someone else has already reported the same issue"
+            },
+            "patience": {
+                "title": "Be Patient",
+                "description": "Reports are reviewed by volunteers and may take time to process"
+            },
+            "writing": {
+                "title": "Writing Effective Descriptions",
+                "good": {
+                    "title": "Good Example",
+                    "example": "\"The restaurant name is shown as 'Old Name' but it has been renamed to 'New Restaurant Name' since 2023. The correct Khmer name is 'ឈ្មោះថ្មី' and it serves traditional Cambodian cuisine.\""
+                },
+                "bad": {
+                    "title": "Poor Example",
+                    "example": "\"Wrong name\""
+                }
+            }
+        },
+        "faq": {
+            "q1": {
+                "question": "How long does it take to process a report?",
+                "answer": "Reports are typically reviewed within 1-7 days, depending on complexity and volunteer availability."
+            },
+            "q2": {
+                "question": "Can I edit my report after submission?",
+                "answer": "Yes, you can edit your reports from the Records page before they are approved."
+            },
+            "q3": {
+                "question": "What happens if my report is rejected?",
+                "answer": "Rejected reports include feedback explaining why. You can revise and resubmit with corrections."
+            },
+            "q4": {
+                "question": "How do I know if my report was successful?",
+                "answer": "Check the Records page to see your report status and any updates from reviewers."
+            },
+            "q5": {
+                "question": "Can I report issues in multiple languages?",
+                "answer": "Yes! Providing names in English, Khmer, and Thai helps make maps more accessible to everyone."
+            },
+            "support": {
+                "title": "Need More Help?",
+                "description": "If you have questions not covered here, you can:",
+                "option1": "Check the community discussions in the Teams section",
+                "option2": "Look at examples from other approved reports",
+                "option3": "Start with simple reports to learn the process"
+            }
+        }
     }
 }
