@@ -1,150 +1,240 @@
+# MapKH - Community-Driven Map Correction Platform
 
-# Firebase Studio
+MapKH is a comprehensive community-driven platform for improving map data in Cambodia. Built with Next.js, Firebase, and modern web technologies, it enables users to report map issues, collaborate on corrections, and contribute to better mapping data for Cambodia.
 
-This is a NextJS starter in Firebase Studio.
+## 🌟 Features
 
-To get started, take a look at src/app/page.tsx.
+- **📍 Interactive Map Interface**: Report issues directly on an interactive map
+- **🤝 Community Collaboration**: Team-based review and approval system
+- **🌐 Multi-language Support**: Full English and Khmer language support
+- **📱 Progressive Web App**: Works offline and can be installed on mobile devices
+- **🔔 Real-time Notifications**: Push notifications for report updates
+- **📊 Analytics Dashboard**: Comprehensive reporting and analytics
+- **🎯 AI-Powered Features**: Duplicate detection and automatic translation
+- **📚 Comprehensive User Guide**: Built-in help system for new users
 
-## Quick Start (Local Development)
+## 🚀 Quick Start (Local Development)
 
-- Install Node.js LTS (v18+ recommended). On Windows, download from `https://nodejs.org/en` and ensure `node` and `npm` are in your PATH.
-- Install dependencies: `npm install`
-- Copy `.env.example` to `.env.local` and fill all required values:
-  - Client Firebase keys: `NEXT_PUBLIC_FIREBASE_*`
-  - Firebase Admin keys: `FIREBASE_ADMIN_*`
-  - NextAuth config: `NEXTAUTH_URL`, `NEXTAUTH_SECRET`
-  - Google integrations: `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`, `GOOGLE_DRIVE_PARENT_FOLDER_ID`, `GCP_SERVICE_ACCOUNT_EMAIL`, `GCP_SERVICE_ACCOUNT_PRIVATE_KEY`
-- Start the dev server: `npm run dev`
-- Open `http://localhost:3000/`
+### Prerequisites
+- Node.js LTS (v18+ recommended)
+- NPM or Yarn package manager
+- Firebase project with Firestore and Authentication enabled
+- Google Maps API key
 
-Notes:
-- If any `NEXT_PUBLIC_FIREBASE_*` variables are missing, the app will not render and you’ll see an error logged.
-- For NextAuth, generate a strong `NEXTAUTH_SECRET` (e.g., using Node crypto).
-- The login page is at `/login`. Most routes require an authenticated user.
+### Installation
 
-## Google Drive Integration Setup
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/tmeta-sudo/mapkh.git
+   cd mapkh
+   ```
 
-To enable automatic Google Drive folder creation for new reports, you need to configure a Google Cloud Service Account and share a "parent" folder with it. Follow these steps carefully.
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-### Step 1: Create the Service Account
+3. **Configure environment variables**
+   ```bash
+   cp .env.example .env.local
+   ```
+   
+   Fill in all required values in `.env.local`:
+   - Client Firebase keys: `NEXT_PUBLIC_FIREBASE_*`
+   - Firebase Admin keys: `FIREBASE_ADMIN_*`
+   - NextAuth config: `NEXTAUTH_URL`, `NEXTAUTH_SECRET`
+   - Google integrations: `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`, etc.
 
-1.  **Go to the Google Cloud Console:**
-    *   Open the [Service Accounts page](https://console.cloud.google.com/iam-admin/serviceaccounts) for your project.
+4. **Start the development server**
+   ```bash
+   npm run dev
+   ```
 
-2.  **Start Creating:**
-    *   Click the **+ CREATE SERVICE ACCOUNT** button at the top of the page.
+5. **Open your browser**
+   Navigate to `http://localhost:3000`
 
-3.  **Fill in Service Account Details:**
-    *   **Service account name:** Enter a descriptive name. For example: `MapCorrect Drive Manager`.
-    *   **Service account ID:** This will be automatically generated based on the name. You can leave it as is.
-    *   **Service account description:** Briefly describe what this account will do. For example: `Manages Google Drive folders for MapCorrect reports.`
-    *   Click **CREATE AND CONTINUE**.
+## 📁 Project Structure
 
-4.  **Grant Permissions (Optional):**
-    *   You can skip this step for now. The necessary permissions will be granted by sharing the Google Drive folder directly.
-    *   Click **CONTINUE**.
+For a detailed overview of the project structure, see [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md).
 
-5.  **Grant User Access (Optional):**
-    *   You can also skip this step.
-    *   Click **DONE**.
+```
+MapKH/
+├── 📁 src/
+│   ├── 📁 app/                 # Next.js App Router pages
+│   ├── 📁 components/          # Reusable React components
+│   ├── 📁 ai/                  # AI flows and ML functionality
+│   ├── 📁 locales/             # Internationalization files
+│   └── 📁 lib/                 # Utilities and configurations
+├── 📁 public/                  # Static assets and PWA files
+├── 📁 docs/                    # Project documentation
+└── 📄 Configuration files...
+```
 
-### Step 2: Enable the Google Drive & Maps APIs
+## 🔧 Configuration
 
-1.  **Go to the API Library:**
-    *   Navigate to the [API Library page](https://console.cloud.google.com/apis/library) in the Google Cloud Console.
+### Firebase Setup
 
-2.  **Enable the Google Drive API:**
-    *   Search for "Google Drive API" and click on it.
-    *   If the API is not already enabled, click the **ENABLE** button. **This is a required step.**
+1. Create a Firebase project at [Firebase Console](https://console.firebase.google.com)
+2. Enable Authentication (Google OAuth recommended)
+3. Enable Firestore Database
+4. Enable Firebase Storage (for file uploads)
+5. Copy your Firebase configuration to environment variables
 
-3.  **Enable the Maps JavaScript API:**
-    *   Go back to the [API Library](https://console.cloud.google.com/apis/library).
-    *   Search for "Maps JavaScript API" and click on it.
-    *   If it's not already enabled, click the **ENABLE** button.
+### Google Maps API Setup
 
-### Step 3: Generate a Service Account Key
+1. Enable Maps JavaScript API in [Google Cloud Console](https://console.cloud.google.com)
+2. Create an API key
+3. Add the key to `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`
 
-1.  **Go back to your Service Account list:**
-    *   Find the service account you just created. Click on its email address to manage it.
+### Google Drive Integration (Optional)
 
-2.  **Create a New Key:**
-    *   Go to the **KEYS** tab.
-    *   Click **ADD KEY > Create new key**.
-    *   Select **JSON** as the key type and click **CREATE**. A JSON file containing the credentials will download to your computer. Keep this file safe.
+For automatic folder creation for reports:
 
-### Step 4: Create and Share a Google Drive Folder
+1. Create a Google Cloud Service Account
+2. Enable Google Drive API
+3. Share a parent folder with the service account
+4. Configure environment variables:
+   - `GOOGLE_DRIVE_PARENT_FOLDER_ID`
+   - `GCP_SERVICE_ACCOUNT_EMAIL`
+   - `GCP_SERVICE_ACCOUNT_PRIVATE_KEY`
 
-1.  **Create a Parent Folder:**
-    *   Open your Google Drive.
-    *   Create a new folder. This will be the main folder where all report subfolders are stored (e.g., "MapCorrect Reports").
+## 🌐 Internationalization
 
-2.  **Share the Folder with the Service Account:**
-    *   Right-click the folder you just created and select **Share**.
-    *   In the sharing dialog, copy the `client_email` from the JSON key file you downloaded (it looks like `<name>@<project-id>.iam.gserviceaccount.com`) and paste it into the "Add people and groups" field.
-    *   **IMPORTANT:** Assign it the **Content manager** role. The application needs this permission to create new folders for each report.
-    *   Click **Send**.
+MapKH supports multiple languages:
+- **English (en)**: Primary language
+- **Khmer (km)**: Native Cambodian language
 
-3.  **Get the Parent Folder ID:**
-    *   Open the parent folder in your browser. The URL will look like `https://drive.google.com/drive/folders/1a2b3c4d5e6f7g8h9i0j`.
-    *   **Copy ONLY the long string of letters and numbers at the end of the URL.** This is the **Folder ID**.
+Language files are located in `src/locales/`. To add a new language:
+1. Create a new directory in `src/locales/`
+2. Copy `translation.json` from an existing language
+3. Translate all keys
+4. Update the i18n configuration
 
-### Step 5: Get Your Google Maps API Key
+## 📱 Progressive Web App (PWA)
 
-1.  **Go to the Credentials Page:**
-    *   Open the [Credentials page](https://console.cloud.google.com/apis/credentials) in the Google Cloud Console.
-2.  **Find Your Key:**
-    *   Under the "API Keys" section, you should see an API key. It might be named "Browser key" or something similar.
-    *   Click the **Show key** icon (an eye) to reveal the key, then copy it.
-    *   **Note:** For security in a production app, you should restrict this key to your website's domain.
+MapKH is configured as a PWA with:
+- **Offline Support**: Core functionality works without internet
+- **Push Notifications**: Real-time updates for report status
+- **App Installation**: Can be installed on mobile devices
+- **Service Worker**: Caches resources for better performance
 
-### Step 6: Set Your Environment Variables
+## 🤖 AI Features
 
-1.  **Open the `.env` file** in this project.
-2.  **Fill in the values** using the information from your JSON key file and the IDs you just copied:
-    *   `GOOGLE_DRIVE_PARENT_FOLDER_ID`: Paste **ONLY the Folder ID** from Step 4 (e.g., `1a2b3c4d5e6f7g8h9i0j`). **DO NOT paste the full URL.**
-    *   `GCP_SERVICE_ACCOUNT_EMAIL`: Paste the `client_email` from your downloaded JSON key file (Step 3).
-    *   `GCP_SERVICE_ACCOUNT_PRIVATE_KEY`: Paste the entire `private_key` from your JSON key file. It must start with `-----BEGIN PRIVATE KEY-----` and end with `-----END PRIVATE KEY-----`. It's best to wrap the key in double quotes (`"`).
-    *   `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`: Paste the **API Key** you copied from Step 5.
+### Duplicate Detection
+Automatically detects potential duplicate reports using AI analysis of:
+- Location proximity
+- Description similarity
+- Issue type matching
 
-## Troubleshooting Map Errors
+### Translation Services
+Automatic translation between English, Khmer, and Thai using AI translation flows.
 
-If the map shows a "This page can't load Google Maps correctly" error, and you see `BillingNotEnabledMapError` in the browser console, follow these steps.
+### Geocoding
+Converts addresses to coordinates for precise location mapping.
 
-### 1. Verify Maps Platform Billing (Most Common Fix)
+## 🔐 Security
 
-Even if your project has a billing account, you need to ensure the "Maps" product itself is linked to it. This is a common point of confusion.
+- **Firebase Authentication**: Secure user authentication
+- **Firestore Security Rules**: Database access control
+- **Environment Variables**: Secure configuration management
+- **CORS Configuration**: Proper cross-origin resource sharing
 
-1.  **Go to the Maps Billing Page:**
-    *   Open the [Google Maps Platform Billing Page](https://console.cloud.google.com/google/maps-platform/billing).
-    *   Make sure your project (`mapcorrect-z5n3v`) is selected.
-2.  **Check the Status:**
-    *   The page should show your active billing account. If it prompts you to select a billing account, it means the Maps Platform is not yet linked. Please select your active billing account to link it.
+## 📊 Analytics
 
-### 2. Check API Key Restrictions
+Built-in analytics track:
+- Report submission rates
+- User engagement metrics
+- Geographic distribution of reports
+- Resolution timeframes
+- Community contribution statistics
 
-An API key can be restricted to only work on certain websites. For development, it's often easiest to temporarily remove restrictions.
+## 🚀 Deployment
 
-1.  **Go to the Credentials Page:**
-    *   Open the [Credentials page](https://console.cloud.google.com/apis/credentials).
-2.  **Select Your API Key:**
-    *   Click on the name of the API key you are using.
-3.  **Check for Restrictions:**
-    *   Under **"Application restrictions"**, ensure **"None"** is selected for now. You can add restrictions later for production.
-    *   Under **"API restrictions"**, ensure **"Don't restrict key"** is selected.
-4.  **Save** your changes.
+### Vercel (Recommended)
 
-After checking these two settings, the map should load correctly. There is no code change required to fix this issue.
+1. Connect your GitHub repository to Vercel
+2. Configure environment variables in Vercel dashboard
+3. Deploy automatically on push to main branch
 
-## Problems & Diagnostics
-<a id="problems_and_diagnostics"></a>
+See [docs/vercel-deployment.md](docs/vercel-deployment.md) for detailed deployment instructions.
 
-Use this checklist to diagnose common local and deployment issues:
+### Firebase Hosting
 
-- Node/npm missing: Install Node.js LTS (v18+) and verify `node -v` and `npm -v`.
-- Dev server fails: Ensure dependencies are installed with `npm install`. Restart with `npm run dev`.
-- Firebase not configured: Provide all `NEXT_PUBLIC_FIREBASE_*` and `FIREBASE_ADMIN_*` env vars.
-- Google Maps key missing: Set `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`; otherwise map features will not render.
-- Service worker/PWA debug: Check registration via browser devtools; confirm manifest loads.
-- Vercel build errors: See `docs/vercel-deployment.md` Troubleshooting for CI/CD specifics.
+1. Configure Firebase hosting in `firebase.json`
+2. Build the project: `npm run build`
+3. Deploy: `firebase deploy`
 
-For detailed deployment troubleshooting, see `docs/vercel-deployment.md#problems_and_diagnostics`.
+## 🤝 Contributing
+
+We welcome contributions from the community! Please read our contributing guidelines:
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+### Development Guidelines
+
+- Follow TypeScript best practices
+- Use the existing component patterns
+- Add translations for new UI text
+- Test on both desktop and mobile
+- Ensure accessibility compliance
+
+## 📚 User Guide
+
+MapKH includes a comprehensive built-in user guide accessible through:
+- The "User Guide" button in the dashboard header
+- The floating help button (question mark icon) on all pages
+
+The guide covers:
+- Step-by-step report submission process
+- Best practices for effective reporting
+- Community guidelines and tips
+- Frequently asked questions
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**Map not loading:**
+- Verify `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` is set
+- Check Google Maps API billing is enabled
+- Ensure Maps JavaScript API is enabled
+
+**Firebase errors:**
+- Verify all Firebase environment variables are set
+- Check Firebase project configuration
+- Ensure Firestore security rules allow access
+
+**Build failures:**
+- Clear `.next` directory: `rm -rf .next`
+- Reinstall dependencies: `rm -rf node_modules && npm install`
+- Check TypeScript errors: `npm run lint`
+
+For detailed troubleshooting, see [docs/vercel-deployment.md#problems_and_diagnostics](docs/vercel-deployment.md#problems_and_diagnostics).
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- Built with [Next.js](https://nextjs.org/) and [React](https://reactjs.org/)
+- UI components from [shadcn/ui](https://ui.shadcn.com/)
+- Maps powered by [Google Maps Platform](https://developers.google.com/maps)
+- Backend services by [Firebase](https://firebase.google.com/)
+- Deployed on [Vercel](https://vercel.com/)
+
+## 📞 Support
+
+For support and questions:
+- Check the built-in User Guide
+- Review the documentation in the `docs/` directory
+- Open an issue on GitHub
+- Join our community discussions
+
+---
+
+**MapKH** - Fix the Map, Help the Nation 🇰🇭
