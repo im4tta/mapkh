@@ -1633,7 +1633,7 @@ export async function deleteTip(tipId: string, userId: string): Promise<{ succes
     }
 }
 
-type UserRecord = UserInfo & { email?: string | null; createdAt?: string; activityScore?: number; reports?: number; lastLogin?: Date | null };
+type UserRecord = UserInfo & { email?: string | null; createdAt?: string; activityScore?: number; reports?: number; lastLogin?: string | null };
 
 export async function getUsers(uids?: string[]): Promise<{ success: boolean, data?: UserRecord[], error?: string }> {
     if (!isFirebaseConfigured) {
@@ -1746,7 +1746,7 @@ export async function getUsers(uids?: string[]): Promise<{ success: boolean, dat
                 avatar: data.photoURL || null,
                 email: data.email,
                 createdAt: data.createdAt ? (data.createdAt as Timestamp).toDate().toISOString() : undefined,
-                lastLogin: data.lastLogin ? toDateSafe(data.lastLogin) : null,
+                lastLogin: data.lastLogin ? toDateSafe(data.lastLogin)?.toISOString() : null,
                 activityScore: 0, // Will be calculated below with comprehensive scoring
                 reports: reportCounts.get(uid) || 0,
             });
@@ -3600,6 +3600,7 @@ export async function updateUserLastLogin(userId: string): Promise<{ success: bo
         // If user document doesn't exist, create it
         if (error.code === 'not-found') {
             try {
+                const userRef = doc(db, 'users', userId);
                 await setDoc(userRef, {
                     lastLogin: serverTimestamp(),
                     createdAt: serverTimestamp()

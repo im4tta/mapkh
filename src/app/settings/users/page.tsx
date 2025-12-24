@@ -53,7 +53,7 @@ type UserForAdmin = {
     name: string;
     email?: string;
     createdAt?: string;
-    lastLogin?: Date | null;
+    lastLogin?: string | null;
     activityScore?: number;
     reports?: number;
 };
@@ -381,10 +381,11 @@ export default function UserManagementPage() {
             cell: ({ row }) => {
                 const lastLogin = row.original.lastLogin;
                 if (!lastLogin) return 'Never';
+                const lastLoginDate = new Date(lastLogin);
                 return (
                     <div className="flex flex-col">
-                        <span className="text-sm">{format(lastLogin, 'PPP')}</span>
-                        <span className="text-xs text-muted-foreground">{format(lastLogin, 'p')}</span>
+                        <span className="text-sm">{format(lastLoginDate, 'PPP')}</span>
+                        <span className="text-xs text-muted-foreground">{format(lastLoginDate, 'p')}</span>
                     </div>
                 );
             },
