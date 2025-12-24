@@ -5,6 +5,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
+import { updateUserLastLogin } from '@/app/actions';
 
 interface AuthContextType {
   user: User | null;
@@ -25,10 +26,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     try {
-      const unsubscribe = onAuthStateChanged(auth, (user) => {
+      const unsubscribe = onAuthStateChanged(auth, async (user) => {
         setUser(user);
         setLoading(false);
         setError(null);
+        
+        // Track user login when user signs in
+        if (user) {
+          try {
+            await updateUserLastLogin(user.uid);
+          } catch (error) {
+            console.error('Failed to update user last login:', error);
+          }
+        }
       }, (error) => {
         console.error('Auth state change error:', error);
         setError(error.message);

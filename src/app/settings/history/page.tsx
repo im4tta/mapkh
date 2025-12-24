@@ -105,12 +105,19 @@ const HistoryPage = () => {
 
     const fetchHistory = useCallback(async (entityType: string) => {
         setIsLoading(true);
-        const result = await getHistory({ entityType });
+        const result = await getHistory({ entityType: entityType === 'all' ? undefined : entityType });
         if (result.success && result.data) {
             setHistory(result.data);
+        } else {
+            console.error('Failed to fetch history:', result.error);
+            toast({ 
+                variant: 'destructive', 
+                title: 'Error Loading History', 
+                description: result.error || 'Failed to load delivery history: Internal server error' 
+            });
         }
         setIsLoading(false);
-    }, []);
+    }, [toast]);
 
     useEffect(() => {
         fetchHistory(activeTab);

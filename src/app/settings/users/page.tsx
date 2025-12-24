@@ -53,6 +53,7 @@ type UserForAdmin = {
     name: string;
     email?: string;
     createdAt?: string;
+    lastLogin?: Date | null;
     activityScore?: number;
     reports?: number;
 };
@@ -367,6 +368,25 @@ export default function UserManagementPage() {
                 if (!date) return 'N/A';
                 const dateObj = typeof date === 'string' ? new Date(date) : (date as any).toDate();
                 return format(dateObj, 'PPP');
+            },
+        },
+        {
+            accessorKey: 'lastLogin',
+            header: ({ column }) => (
+                <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}>
+                    Last Login
+                    <ArrowUpDown className="ml-2 h-4 w-4" />
+                </Button>
+            ),
+            cell: ({ row }) => {
+                const lastLogin = row.original.lastLogin;
+                if (!lastLogin) return 'Never';
+                return (
+                    <div className="flex flex-col">
+                        <span className="text-sm">{format(lastLogin, 'PPP')}</span>
+                        <span className="text-xs text-muted-foreground">{format(lastLogin, 'p')}</span>
+                    </div>
+                );
             },
         },
         {

@@ -7,6 +7,7 @@ export type UserInfo = {
   name: string | null;
   avatar: string | null;
   email?: string | null;
+  lastLogin?: Timestamp | null;
 }
 
 export type ChangeDetail = {

@@ -1633,7 +1633,7 @@ export async function deleteTip(tipId: string, userId: string): Promise<{ succes
     }
 }
 
-type UserRecord = UserInfo & { email?: string | null; createdAt?: string; activityScore?: number; reports?: number };
+type UserRecord = UserInfo & { email?: string | null; createdAt?: string; activityScore?: number; reports?: number; lastLogin?: Date | null };
 
 export async function getUsers(uids?: string[]): Promise<{ success: boolean, data?: UserRecord[], error?: string }> {
     if (!isFirebaseConfigured) {
@@ -1746,6 +1746,7 @@ export async function getUsers(uids?: string[]): Promise<{ success: boolean, dat
                 avatar: data.photoURL || null,
                 email: data.email,
                 createdAt: data.createdAt ? (data.createdAt as Timestamp).toDate().toISOString() : undefined,
+                lastLogin: data.lastLogin ? toDateSafe(data.lastLogin) : null,
                 activityScore: 0, // Will be calculated below with comprehensive scoring
                 reports: reportCounts.get(uid) || 0,
             });
@@ -3581,6 +3582,62 @@ export async function deleteGeoJSON(
 // Alias functions for compatibility with analytics page
 export const getAllGeoJSONBoundaries = getAllGeoJSON;
 export const deleteGeoJSONBoundaries = deleteGeoJSON;
+
+// User Login Tracking Functions
+export async function updateUserLastLogin(userId: string): Promise<{ success: boolean; error?: string }> {
+    if (!isFirebaseConfigured) {
+        return { success: true };
+    }
+    
+    try {
+        const userRef = doc(db, 'users', userId);
+        await updateDoc(userRef, {
+            lastLogin: serverTimestamp()
+        });
+        
+        return { success: true };
+    } catch (error: any) {
+        // If user document doesn't exist, create it
+        if (error.code === 'not-found') {
+            try {
+                await setDoc(userRef, {
+                    lastLogin: serverTimestamp(),
+                    createdAt: serverTimestamp()
+                }, { merge: true });
+                return { success: true };
+            } catch (createError: any) {
+                console.error('Error creating user document for login tracking:', createError);
+                return { success: false, error: createError.message };
+            }
+        }
+        
+        console.error('Error updating user last login:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+export async function getUserLastLogin(userId: string): Promise<{ success: boolean; lastLogin?: Date | null; error?: string }> {
+    if (!isFirebaseConfigured) {
+        return { success: true, lastLogin: null };
+    }
+    
+    try {
+        const userRef = doc(db, 'users', userId);
+        const userDoc = await getDoc(userRef);
+        
+        if (!userDoc.exists()) {
+            return { success: true, lastLogin: null };
+        }
+        
+        const userData = userDoc.data();
+        const lastLogin = userData.lastLogin ? toDateSafe(userData.lastLogin) : null;
+        
+        return { success: true, lastLogin };
+    } catch (error: any) {
+        console.error('Error getting user last login:', error);
+        return { success: false, error: error.message };
+    }
+}
     
 
 
