@@ -41,10 +41,14 @@ export type FindDuplicateReportsOutput = z.infer<typeof FindDuplicateReportsOutp
 export async function findDuplicateReports(
   input: FindDuplicateReportsInput
 ): Promise<FindDuplicateReportsOutput> {
+  if (!findDuplicateReportsFlow) {
+    console.error('Duplicate detection not available - AI not initialized');
+    return { duplicates: [] };
+  }
   return findDuplicateReportsFlow(input);
 }
 
-const prompt = ai.definePrompt({
+const prompt = ai ? ai.definePrompt({
   name: 'findDuplicateReportsPrompt',
   input: {
     schema: z.object({
@@ -73,10 +77,10 @@ Existing Reports:
 {{/each}}
 ---
 `,
-});
+}) : null;
 
 
-const findDuplicateReportsFlow = ai.defineFlow(
+const findDuplicateReportsFlow = ai ? ai.defineFlow(
   {
     name: 'findDuplicateReportsFlow',
     inputSchema: FindDuplicateReportsInputSchema,
@@ -107,6 +111,11 @@ const findDuplicateReportsFlow = ai.defineFlow(
     }
 
     // If no exact match, proceed with the AI-based check
+    if (!prompt) {
+      console.warn('AI prompt not available, skipping AI-based duplicate check');
+      return { duplicates: [] };
+    }
+    
     const { output } = await prompt({
         newReport: input,
         existingReports: reportsResult.data,
@@ -124,4 +133,4 @@ const findDuplicateReportsFlow = ai.defineFlow(
 
     return { duplicates: typedDuplicates };
   }
-);
+) : null;

@@ -26,7 +26,7 @@ const GeocodeAddressOutputSchema = z.object({
 });
 export type GeocodeAddressOutput = z.infer<typeof GeocodeAddressOutputSchema>;
 
-const geocodeTool = ai.defineTool(
+const geocodeTool = ai ? ai.defineTool(
   {
     name: 'geocodeTool',
     description: 'Get geographic coordinates and a Place ID for a given address or place name within Cambodia.',
@@ -72,19 +72,23 @@ const geocodeTool = ai.defineTool(
       return { location: null, placeId: null };
     }
   }
-);
+) : null;
 
-const geocodeAddressFlow = ai.defineFlow(
+const geocodeAddressFlow = ai ? ai.defineFlow(
   {
     name: 'geocodeAddressFlow',
     inputSchema: GeocodeAddressInputSchema,
     outputSchema: GeocodeAddressOutputSchema,
   },
   async (input) => {
-    return geocodeTool(input);
+    return geocodeTool!(input);
   }
-);
+) : null;
 
 export async function geocodeAddress(input: GeocodeAddressInput): Promise<GeocodeAddressOutput> {
+  if (!geocodeAddressFlow) {
+    console.error('Geocoding not available - AI not initialized');
+    return { location: null, placeId: null };
+  }
   return geocodeAddressFlow(input);
 }

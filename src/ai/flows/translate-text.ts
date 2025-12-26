@@ -9,6 +9,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { translateTextCombined } from './google-translate-free';
 
 const TranslateTextInputSchema = z.object({
   text: z.string().describe('The text to translate.'),
@@ -23,18 +24,40 @@ export type TranslateTextOutput = z.infer<typeof TranslateTextOutputSchema>;
 
 export async function translateText(input: TranslateTextInput): Promise<TranslateTextOutput> {
   console.log('translateText called with:', input);
+  
+  // Check if Gemini API is available
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY;
+  
+  if (apiKey && translateTextFlow) {
+    console.log('Gemini API key found, trying Gemini translation first');
+    try {
+      const result = await translateTextFlow(input);
+      console.log('Gemini translateText result:', result);
+      
+      if (result.translatedText) {
+        return result;
+      }
+    } catch (error) {
+      console.error('Gemini translateText error:', error);
+      console.error('Error details:', error instanceof Error ? error.message : 'Unknown error');
+    }
+  } else {
+    console.log('No Gemini API key found or flow not initialized, skipping Gemini translation');
+  }
+  
+  // Fallback to free Google Translate
+  console.log('Falling back to free Google Translate');
   try {
-    const result = await translateTextFlow(input);
-    console.log('translateText result:', result);
-    return result;
+    const freeResult = await translateTextCombined(input);
+    console.log('Free translation result:', freeResult);
+    return freeResult;
   } catch (error) {
-    console.error('translateText error:', error);
-    console.error('Error details:', error instanceof Error ? error.message : 'Unknown error');
+    console.error('Free translation error:', error);
     return { translatedText: null };
   }
 }
 
-const prompt = ai.definePrompt({
+const prompt = ai ? ai.definePrompt({
     name: 'translateTextPrompt',
     input: { schema: TranslateTextInputSchema },
     output: { schema: TranslateTextOutputSchema },
@@ -57,9 +80,9 @@ IMPORTANT:
 - Ensure the translation is accurate and contextually appropriate
 
 Provide the translation in {{targetLanguage}} language only:`,
-});
+}) : null;
 
-const translateTextFlow = ai.defineFlow(
+const translateTextFlow = ai ? ai.defineFlow(
   {
     name: 'translateTextFlow',
     inputSchema: TranslateTextInputSchema,
@@ -69,7 +92,7 @@ const translateTextFlow = ai.defineFlow(
     if (!input.text) {
         return { translatedText: null };
     }
-    const { output } = await prompt(input);
+    const { output } = await prompt!(input);
     return output || { translatedText: null };
   }
-);
+) : null;

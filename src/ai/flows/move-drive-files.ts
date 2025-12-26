@@ -48,7 +48,7 @@ const getDriveService = () => {
 }
 
 
-const moveDriveFilesTool = ai.defineTool(
+const moveDriveFilesTool = ai ? ai.defineTool(
     {
         name: 'moveDriveFilesTool',
         description: 'Moves all files from a source Google Drive folder to a destination folder, then deletes the source folder.',
@@ -118,20 +118,24 @@ const moveDriveFilesTool = ai.defineTool(
 
         return { success: true, movedFiles: movedFilesCount, error: null };
     }
-);
+) : null;
 
 
-const moveDriveFilesFlow = ai.defineFlow(
+const moveDriveFilesFlow = ai ? ai.defineFlow(
     {
         name: 'moveDriveFilesFlow',
         inputSchema: MoveDriveFilesInputSchema,
         outputSchema: MoveDriveFilesOutputSchema,
     },
     async (input) => {
-        return await moveDriveFilesTool(input);
+        return await moveDriveFilesTool!(input);
     }
-);
+) : null;
 
 export async function moveDriveFiles(input: MoveDriveFilesInput): Promise<MoveDriveFilesOutput> {
+    if (!moveDriveFilesFlow) {
+        console.error('Move drive files not available - AI not initialized');
+        return { success: false, movedFiles: 0, error: 'AI service not available' };
+    }
     return moveDriveFilesFlow(input);
 }

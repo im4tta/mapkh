@@ -36,10 +36,14 @@ export type UploadFileToDriveOutput = z.infer<typeof UploadFileToDriveOutputSche
 export async function uploadFileToDrive(
   input: UploadFileToDriveInput
 ): Promise<UploadFileToDriveOutput> {
+  if (!uploadFileToDriveFlow) {
+    console.error('Upload to drive not available - AI not initialized');
+    return { fileUrl: null, error: 'AI service not available' };
+  }
   return uploadFileToDriveFlow(input);
 }
 
-const uploadFileToDriveTool = ai.defineTool(
+const uploadFileToDriveTool = ai ? ai.defineTool(
   {
     name: 'uploadFileToDriveTool',
     description: 'Uploads a file to a specific Google Drive folder.',
@@ -112,17 +116,17 @@ const uploadFileToDriveTool = ai.defineTool(
       return { fileUrl: null, error: errorMessage };
     }
   }
-);
+) : null;
 
-const uploadFileToDriveFlow = ai.defineFlow(
+const uploadFileToDriveFlow = ai ? ai.defineFlow(
   {
     name: 'uploadFileToDriveFlow',
     inputSchema: UploadFileToDriveInputSchema,
     outputSchema: UploadFileToDriveOutputSchema,
   },
   async (input) => {
-    return await uploadFileToDriveTool(input);
+    return await uploadFileToDriveTool!(input);
   }
-);
+) : null;
 
 

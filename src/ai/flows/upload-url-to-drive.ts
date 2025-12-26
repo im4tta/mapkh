@@ -32,10 +32,14 @@ export type SaveUrlToDriveOutput = z.infer<typeof SaveUrlToDriveOutputSchema>;
 export async function saveUrlToDrive(
   input: SaveUrlToDriveInput
 ): Promise<SaveUrlToDriveOutput> {
+  if (!saveUrlToDriveFlow) {
+    console.error('Save URL to drive not available - AI not initialized');
+    return { fileUrl: null, error: 'AI service not available' };
+  }
   return saveUrlToDriveFlow(input);
 }
 
-const saveUrlToDriveTool = ai.defineTool(
+const saveUrlToDriveTool = ai ? ai.defineTool(
   {
     name: 'saveUrlToDriveTool',
     description: 'Saves a given URL as a text file to a specific Google Drive folder.',
@@ -97,15 +101,15 @@ const saveUrlToDriveTool = ai.defineTool(
       return { fileUrl: null, error: errorMessage };
     }
   }
-);
+) : null;
 
-const saveUrlToDriveFlow = ai.defineFlow(
+const saveUrlToDriveFlow = ai ? ai.defineFlow(
   {
     name: 'saveUrlToDriveFlow',
     inputSchema: SaveUrlToDriveInputSchema,
     outputSchema: SaveUrlToDriveOutputSchema,
   },
   async (input) => {
-    return await saveUrlToDriveTool(input);
+    return await saveUrlToDriveTool!(input);
   }
-);
+) : null;

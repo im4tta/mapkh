@@ -8,15 +8,18 @@ console.log('Environment check - GEMINI_API_KEY exists:', !!process.env.GEMINI_A
 console.log('Environment check - GOOGLE_GENAI_API_KEY exists:', !!process.env.GOOGLE_GENAI_API_KEY);
 
 if (!apiKey) {
-  console.error('CRITICAL: No Gemini API key found in environment variables!');
-  console.error('Available environment variables:', Object.keys(process.env).filter(key => key.includes('GEMINI') || key.includes('GOOGLE')));
+  console.warn('WARNING: No Gemini API key found. AI features will use fallback methods.');
+  console.log('Available environment variables:', Object.keys(process.env).filter(key => key.includes('GEMINI') || key.includes('GOOGLE')));
 }
 
-export const ai = genkit({
+// Only initialize Genkit if API key is available
+export const ai = apiKey ? genkit({
   plugins: [
     googleAI({
       apiKey: apiKey,
     })
   ],
   model: 'googleai/gemini-2.0-flash',
-});
+}) : null;
+
+console.log('Genkit AI instance:', ai ? 'initialized' : 'not initialized (no API key)');

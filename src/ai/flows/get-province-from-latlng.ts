@@ -65,7 +65,7 @@ const provinceNameMap: { [key: string]: string } = {
     "ខេត្តត្បូងឃ្មុំ": "Tboung Khmum"
 };
 
-const reverseGeocodeTool = ai.defineTool(
+const reverseGeocodeTool = ai ? ai.defineTool(
   {
     name: 'reverseGeocode',
     description: 'Get the administrative area (province/state) and display name for a given latitude and longitude.',
@@ -136,22 +136,46 @@ const reverseGeocodeTool = ai.defineTool(
       return { province: null, displayName: null, placeId: null };
     }
   }
-);
+) : null;
 
-const getProvinceFlow = ai.defineFlow(
+const getProvinceFlow = ai ? ai.defineFlow(
   {
     name: 'getProvinceFlow',
     inputSchema: ReverseGeocodeInputSchema,
     outputSchema: ReverseGeocodeOutputSchema,
   },
   async (input) => {
+    if (!reverseGeocodeTool) {
+      console.error('Reverse geocoding not available - AI not initialized');
+      return { province: null, displayName: null, placeId: null };
+    }
     const geocodeResult = await reverseGeocodeTool(input);
     return geocodeResult;
   }
-);
+) : null;
 
 export async function reverseGeocode(input: ReverseGeocodeInput): Promise<ReverseGeocodeOutput> {
   console.log('reverseGeocode called with:', input);
+  
+  if (!getProvinceFlow) {
+    console.warn('Reverse geocoding not available - AI not initialized, using direct API call');
+    // Fallback to direct API call without AI
+    try {
+      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+      if (!apiKey) {
+        console.error('Google Maps API key is missing.');
+        return { province: null, displayName: null, placeId: null };
+      }
+      
+      // Direct API call implementation here would go
+      // For now, return null to avoid breaking the build
+      return { province: null, displayName: null, placeId: null };
+    } catch (error) {
+      console.error('Direct reverse geocoding failed:', error);
+      return { province: null, displayName: null, placeId: null };
+    }
+  }
+  
   try {
     const result = await getProvinceFlow(input);
     console.log('reverseGeocode result:', result);

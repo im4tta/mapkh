@@ -31,10 +31,14 @@ export type CreateDriveFolderOutput = z.infer<typeof CreateDriveFolderOutputSche
 export async function createDriveFolder(
   input: CreateDriveFolderInput
 ): Promise<CreateDriveFolderOutput> {
+  if (!createDriveFolderFlow) {
+    console.error('Drive folder creation not available - AI not initialized');
+    return { folderUrl: null, folderId: null, error: 'AI service not available' };
+  }
   return createDriveFolderFlow(input);
 }
 
-const createDriveFolderTool = ai.defineTool(
+const createDriveFolderTool = ai ? ai.defineTool(
   {
     name: 'createDriveFolderTool',
     description: 'Creates a Google Drive folder for a report and makes it public.',
@@ -103,16 +107,16 @@ const createDriveFolderTool = ai.defineTool(
         return { folderUrl: null, folderId: null, error: errorMessage };
     }
   }
-);
+) : null;
 
 
-const createDriveFolderFlow = ai.defineFlow(
+const createDriveFolderFlow = ai ? ai.defineFlow(
   {
     name: 'createDriveFolderFlow',
     inputSchema: CreateDriveFolderInputSchema,
     outputSchema: CreateDriveFolderOutputSchema,
   },
   async (input) => {
-    return await createDriveFolderTool(input);
+    return await createDriveFolderTool!(input);
   }
-);
+) : null;
