@@ -34,7 +34,7 @@ import {
   DialogFooter
 } from '@/components/ui/dialog';
 import { Loader2, PlusCircle, Trash2, Edit, Save, Grip, AlertCircle } from 'lucide-react';
-import { getViolationTerms, getSubViolationTypes, addViolationTerm, updateViolationTerm, deleteViolationTerm, addSubViolationType, updateSubViolationType, deleteSubViolationType, seedDefaultViolationTerms, getPlaceTypes, addPlaceType, updatePlaceType, deletePlaceType, seedDefaultSubViolationTypes } from '@/app/actions';
+import { getViolationTerms, getSubViolationTypes, addViolationTerm, updateViolationTerm, deleteViolationTerm, addSubViolationType, updateSubViolationType, deleteSubViolationType, seedDefaultViolationTerms, getPlaceTypes, addPlaceType, updatePlaceType, deletePlaceType, seedDefaultSubViolationTypes, removeUnwantedViolationTerms } from '@/app/actions';
 import { ViolationTerm, SubViolationType, iconMap, PlaceType } from '@/lib/types';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -54,6 +54,7 @@ const subViolationTypeSchema = z.object({
 const ManageViolationTerms = () => {
     const { t } = useTranslation();
     const { toast } = useToast();
+    const { user } = useAuth();
     const [violationTerms, setViolationTerms] = useState<ViolationTerm[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -74,11 +75,14 @@ const ManageViolationTerms = () => {
 
     useEffect(() => {
         const setup = async () => {
+            if (!user?.uid) return;
+            // Remove unwanted violation terms first
+            await removeUnwantedViolationTerms(user.uid);
             await seedDefaultViolationTerms();
             await fetchTerms();
         }
         setup();
-    }, []);
+    }, [user?.uid]);
 
     const handleAddTerm = async () => {
         if (!newTermName.trim()) return;
@@ -122,6 +126,26 @@ const ManageViolationTerms = () => {
         setIsSubmitting(false);
     }
 
+    const handleCleanupUnwantedTerms = async () => {
+        if (!user?.uid) return;
+        setIsSubmitting(true);
+        const result = await removeUnwantedViolationTerms(user.uid);
+        if (result.success) {
+            toast({ 
+                title: "Cleanup Complete", 
+                description: `Removed ${result.removed} unwanted violation terms.` 
+            });
+            await fetchTerms();
+        } else {
+            toast({ 
+                variant: 'destructive', 
+                title: "Cleanup Failed", 
+                description: result.error 
+            });
+        }
+        setIsSubmitting(false);
+    };
+
     return (
         <Card>
             <CardHeader>
@@ -139,6 +163,15 @@ const ManageViolationTerms = () => {
                     <Button onClick={handleAddTerm} disabled={isSubmitting || !newTermName.trim()}>
                         {isSubmitting && !editingTerm ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <PlusCircle className="mr-2 h-4 w-4" />}
                         {t('settings.categories.add_new')}
+                    </Button>
+                    <Button 
+                        onClick={handleCleanupUnwantedTerms} 
+                        disabled={isSubmitting}
+                        variant="outline"
+                        className="text-red-600 hover:text-red-700"
+                    >
+                        {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Trash2 className="mr-2 h-4 w-4" />}
+                        Remove Unwanted
                     </Button>
                 </div>
                 {isLoading ? (

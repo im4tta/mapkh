@@ -6,6 +6,23 @@ import { useEffect, useCallback, useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+
+// Helper function to generate Google Maps URLs
+const generateGoogleMapsUrl = (
+  lat: number, 
+  lng: number, 
+  placeId?: string | null, 
+  placeName?: string | null
+): string => {
+  if (placeId && placeName) {
+    // Generate full Google Maps place URL with place name and ID
+    const encodedPlaceName = encodeURIComponent(placeName.replace(/\s+/g, '+'));
+    return `https://www.google.com/maps/place/${encodedPlaceName}/@${lat},${lng},17z/data=!3m1!4b1!4m6!3m5!1s${placeId}!8m2!3d${lat}!4d${lng}!16s%2Fg%2F11c0q8t8qx?entry=ttu&g_ep=EgoyMDI0MTIxMS4wIKXMDSoASAFQAw%3D%3D`;
+  } else {
+    // Fallback to simple coordinate URL
+    return `https://www.google.com/maps?q=${lat},${lng}`;
+  }
+};
 import {
   Dialog,
   DialogContent,
@@ -152,6 +169,11 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
   const [potentialDuplicates, setPotentialDuplicates] = useState<FindDuplicateReportsOutput | null>(null);
   const [formValuesForSubmission, setFormValuesForSubmission] = useState<ReportFormValues | null>(null);
 
+  // Form is never disabled for editing - allow free editing
+  const isFormDisabled = useMemo(() => {
+    return false; // Always allow editing
+  }, []);
+
   const form = useForm<ReportFormValues>({
     resolver: zodResolver(reportFormSchema),
     defaultValues: {
@@ -255,7 +277,12 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
         impactCategory: currentValues.impactCategory || '',
         priority: (currentValues.priority as 'low' | 'medium' | 'high') || 'low',
         violationTerm: currentValues.violationTerm || 'None',
-        locationWithin: `https://www.google.com/maps?q=${position.lat},${position.lng}`,
+        locationWithin: generateGoogleMapsUrl(
+          position.lat, 
+          position.lng, 
+          placeId, 
+          englishName || khmerName || thaiName
+        ),
         reportedBy: user?.uid,
         reportedByName: user?.displayName || user?.email || 'Community User',
         submittedBy: currentValues.submittedBy || '',
@@ -590,38 +617,47 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
   const proceedWithSubmission = async (values: ReportFormValues) => {
     const dataWithPosition = { ...values, lat: position.lat, lng: position.lng };
     
-    let result;
-    if (isEditMode && report) {
-      result = await updateReport(report.id, dataWithPosition, user?.uid, user?.displayName, user?.email);
-    } else {
-      result = await submitReport(dataWithPosition, user?.uid, user?.displayName, user?.email);
-    }
-
-    if (result.success) {
-      toast({ title: isEditMode ? t('report_dialog.update_success') : t('report_dialog.submit_success') });
-      handleClose();
-    } else if (result.errors) {
-      const serverErrors = (result.errors as any)._server?.[0];
-      if (serverErrors) {
-          toast({
-            variant: 'destructive',
-            title: t('report_dialog.submission_failed_title'),
-            description: serverErrors,
-          });
+    try {
+      let result;
+      if (isEditMode && report) {
+        result = await updateReport(report.id, dataWithPosition, user?.uid, user?.displayName, user?.email);
+      } else {
+        result = await submitReport(dataWithPosition, user?.uid, user?.displayName, user?.email);
       }
-      Object.keys(result.errors).forEach((key) => {
-          const fieldName = key as keyof ReportFormValues;
-          const message = (result.errors as any)[fieldName]?.[0];
-          if (message && form.getFieldState(fieldName)) {
-              form.setError(fieldName, { type: 'server', message });
-          }
-      });
-    } else if (result.error) {
-         toast({
+
+      if (result.success) {
+        toast({ title: isEditMode ? t('report_dialog.update_success') : t('report_dialog.submit_success') });
+        handleClose();
+      } else if ('errors' in result && result.errors) {
+        const serverErrors = (result.errors as any)._server?.[0];
+        if (serverErrors) {
+            toast({
+              variant: 'destructive',
+              title: t('report_dialog.submission_failed_title'),
+              description: serverErrors,
+            });
+        }
+        Object.keys(result.errors).forEach((key) => {
+            const fieldName = key as keyof ReportFormValues;
+            const message = (result.errors as any)[fieldName]?.[0];
+            if (message && form.getFieldState(fieldName)) {
+                form.setError(fieldName, { type: 'server', message });
+            }
+        });
+      } else if (result.error) {
+        toast({
             variant: 'destructive',
             title: t('report_dialog.submission_failed_title'),
             description: result.error,
           });
+      }
+    } catch (error) {
+      console.error('Unexpected error in proceedWithSubmission:', error);
+      toast({
+        variant: 'destructive',
+        title: t('report_dialog.submission_failed_title'),
+        description: 'An unexpected error occurred. Please try again.',
+      });
     }
     
     // Cleanup state
@@ -630,12 +666,13 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
   }
 
   const handleFormSubmit = async (values: ReportFormValues) => {
-      // For editing, we skip the duplicate check
-      if(isEditMode) {
+      // For editing, allow all users to edit directly
+      if(isEditMode && report) {
           await proceedWithSubmission(values);
           return;
       }
       
+      // For new reports, check for duplicates
       setIsCheckingDuplicates(true);
       setFormValuesForSubmission(values); // Save form data
       try {
@@ -679,11 +716,14 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
     <Dialog open={isOpen} onOpenChange={(open) => {if(!open) { handleClose() }}}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{isEditMode ? t('report_dialog.edit_title') : t('report_dialog.create_title')}</DialogTitle>
+          <DialogTitle>
+            {isEditMode ? t('report_dialog.edit_title') : t('report_dialog.create_title')}
+          </DialogTitle>
           <DialogDescription>
             {isEditMode ? t('report_dialog.edit_description') : t('report_dialog.create_description')}
           </DialogDescription>
         </DialogHeader>
+        
         <ScrollArea className="max-h-[70vh] pr-6">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 px-1">
@@ -693,7 +733,9 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>{t('report_dialog.group_label')}</FormLabel>
-                        <Select onValueChange={(value) => {
+                        <Select 
+                          disabled={isFormDisabled}
+                          onValueChange={(value) => {
                           field.onChange(value);
                           form.setValue('subViolationType', []); // Reset sub-violations when term changes
                         }} value={field.value} defaultValue={field.value || 'None'}>
@@ -736,6 +778,7 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
                                       >
                                           <FormControl>
                                           <Checkbox
+                                              disabled={isFormDisabled}
                                               checked={field.value?.includes(option.id)}
                                               onCheckedChange={(checked) => {
                                                   return checked
@@ -774,7 +817,12 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
                           <FormItem>
                             <FormLabel>{t('report_dialog.please_specify_label')}</FormLabel>
                             <FormControl>
-                              <Input placeholder={t('report_dialog.please_specify_placeholder')} {...field} value={field.value ?? ''}/>
+                              <Input 
+                                placeholder={t('report_dialog.please_specify_placeholder')} 
+                                {...field} 
+                                value={field.value ?? ''}
+                                disabled={isFormDisabled}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -788,7 +836,11 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
                       <FormItem>
                         <FormLabel>{t('report_dialog.description_label')}</FormLabel>
                         <FormControl>
-                          <Textarea placeholder={t('report_dialog.description_placeholder')} {...field} />
+                          <Textarea 
+                            placeholder={t('report_dialog.description_placeholder')} 
+                            {...field} 
+                            disabled={isFormDisabled}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -824,7 +876,12 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
                                 <FormLabel>{t('report_dialog.english_name_label')}</FormLabel>
                                 <div className="flex items-center gap-2">
                                  <FormControl>
-                                     <Input placeholder={t('report_dialog.english_name_placeholder')} {...field} value={field.value ?? ''}/>
+                                     <Input 
+                                       placeholder={t('report_dialog.english_name_placeholder')} 
+                                       {...field} 
+                                       value={field.value ?? ''}
+                                       disabled={isFormDisabled}
+                                     />
                                  </FormControl>
                                  <Button type="button" size="icon" variant="outline" onClick={() => handleAITranslate(field.value || '', 'en', 'englishLanguage')} title="Translate to English" disabled={isTranslating}>
                         <Languages className="h-4 w-4" />
@@ -845,7 +902,13 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
                             <FormLabel>{t('report_dialog.khmer_name_label')}</FormLabel>
                             <div className="flex items-center gap-2">
                                 <FormControl>
-                                    <Input placeholder="ឈ្មោះជាភាសាខ្មែរ" {...field} className="font-khmer" value={field.value ?? ''} />
+                                    <Input 
+                                      placeholder="ឈ្មោះជាភាសាខ្មែរ" 
+                                      {...field} 
+                                      className="font-khmer" 
+                                      value={field.value ?? ''} 
+                                      disabled={isFormDisabled}
+                                    />
                                 </FormControl>
                                 <Button type="button" size="icon" variant="outline" onClick={() => handleAITranslate(field.value || '', 'km', 'nativeKhmerLanguage')} title="Translate to Khmer" disabled={isTranslating}>
                         <Languages className="h-4 w-4" />
@@ -1030,7 +1093,12 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
                       <FormItem>
                         <FormLabel>{t('report_dialog.notes_label')}</FormLabel>
                         <FormControl>
-                          <Textarea placeholder={t('report_dialog.notes_placeholder')} {...field} value={field.value ?? ''}/>
+                          <Textarea 
+                            placeholder={t('report_dialog.notes_placeholder')} 
+                            {...field} 
+                            value={field.value ?? ''}
+                            disabled={isFormDisabled}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -1068,7 +1136,7 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
                   <Button type="button" variant="outline" onClick={handleClose}>
                     {t('report_dialog.cancel')}
                   </Button>
-                <Button type="submit" disabled={isSubmitting || isCheckingDuplicates}>
+                <Button type="submit" disabled={isSubmitting || isCheckingDuplicates || isFormDisabled}>
                   {(isSubmitting || isCheckingDuplicates) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   {isEditMode ? t('report_dialog.update_report_button') : t('report_dialog.submit_report_button')}
                 </Button>
@@ -1100,7 +1168,7 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
                             <p><strong>Coords:</strong> {position.lat.toFixed(6)}, {position.lng.toFixed(6)}</p>
                         </div>
                         <Button asChild variant="link" size="sm" className="p-0 h-auto text-xs mt-1">
-                            <a href={`https://www.google.com/maps?q=${position.lat},${position.lng}`} target="_blank" rel="noopener noreferrer">
+                            <a href={generateGoogleMapsUrl(position.lat, position.lng, placeId, englishName || khmerName || thaiName)} target="_blank" rel="noopener noreferrer">
                                 <MapPin className="mr-1 h-3 w-3" />
                                 View on Map
                             </a>
@@ -1118,7 +1186,10 @@ export function ReportDialog({ isOpen, onClose, position, report, province, plac
                                 <p><strong>Coords:</strong> {dup.position.lat.toFixed(6)}, {dup.position.lng.toFixed(6)}</p>
                             </div>
                             <Button asChild variant="link" size="sm" className="p-0 h-auto text-xs mt-1">
-                                <a href={`https://www.google.com/maps?q=${dup.position.lat},${dup.position.lng}`} target="_blank" rel="noopener noreferrer">
+                                <a href={generateGoogleMapsUrl(
+                                    dup.position.lat, 
+                                    dup.position.lng
+                                )} target="_blank" rel="noopener noreferrer">
                                     <MapPin className="mr-1 h-3 w-3" />
                                     View on Map
                                 </a>

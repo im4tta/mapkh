@@ -33,16 +33,38 @@ import { updateReport } from '@/app/actions';
 import { format, formatDistanceToNow } from 'date-fns';
 import { Timestamp } from 'firebase/firestore';
 
+// Helper function to generate Google Maps URLs
+const generateGoogleMapsUrl = (
+  lat: number, 
+  lng: number, 
+  placeId?: string | null, 
+  placeName?: string | null
+): string => {
+  if (placeId && placeName) {
+    // Generate full Google Maps place URL with place name and ID
+    const encodedPlaceName = encodeURIComponent(placeName.replace(/\s+/g, '+'));
+    return `https://www.google.com/maps/place/${encodedPlaceName}/@${lat},${lng},17z/data=!3m1!4b1!4m6!3m5!1s${placeId}!8m2!3d${lat}!4d${lng}!16s%2Fg%2F11c0q8t8qx?entry=ttu&g_ep=EgoyMDI0MTIxMS4wIKXMDSoASAFQAw%3D%3D`;
+  } else {
+    // Fallback to simple coordinate URL
+    return `https://www.google.com/maps?q=${lat},${lng}`;
+  }
+};
+
 
 const MapClickHandler = ({ onMapClick }: { onMapClick: (e: google.maps.MapMouseEvent) => void }) => {
   const map = useMap();
 
   useEffect(() => {
     if (!map) return;
-    const listener = map.addListener('click', (e: google.maps.MapMouseEvent) => {
+    
+    // Handle all map clicks
+    const clickListener = map.addListener('click', (e: google.maps.MapMouseEvent) => {
         onMapClick(e);
     });
-    return () => google.maps.event.removeListener(listener);
+    
+    return () => {
+        google.maps.event.removeListener(clickListener);
+    };
   }, [map, onMapClick]);
 
   return null;
@@ -160,8 +182,18 @@ const Markers = memo(({
                     onCloseClick={onCloseClick}
                     headerDisabled
                 >
-                     <div className="bg-card text-card-foreground p-4 rounded-lg shadow-lg w-80 space-y-3">
-                         <CardTitle className="text-sm font-semibold line-clamp-2">Report #{selectedReport.reportNumber}</CardTitle>
+                     <div className="bg-card text-card-foreground p-4 rounded-lg shadow-lg w-80 space-y-3 relative">
+                         {/* Close Button */}
+                         <Button
+                             variant="ghost"
+                             size="sm"
+                             className="absolute top-2 right-2 h-6 w-6 p-0 hover:bg-muted"
+                             onClick={onCloseClick}
+                         >
+                             <X className="h-4 w-4" />
+                         </Button>
+                         
+                         <CardTitle className="text-sm font-semibold line-clamp-2 pr-8">Report #{selectedReport.reportNumber}</CardTitle>
                          
                          {/* Names Section */}
                          <div className="space-y-2">
@@ -289,7 +321,12 @@ const Markers = memo(({
                                 variant="outline" 
                                 className="w-full h-8 text-xs justify-start" 
                                 onClick={() => {
-                                    const url = `https://www.google.com/maps?q=${selectedReport.position.lat},${selectedReport.position.lng}`;
+                                    const url = generateGoogleMapsUrl(
+                                        selectedReport.position.lat,
+                                        selectedReport.position.lng,
+                                        selectedReport.placeId,
+                                        selectedReport.englishLanguage || selectedReport.nativeKhmerLanguage || selectedReport.thaiLanguage
+                                    );
                                     window.open(url, '_blank');
                                 }}
                             >
@@ -318,8 +355,18 @@ const Markers = memo(({
                         onCloseClick={() => setShowApproveButton(null)}
                         headerDisabled
                     >
-                        <div className="bg-white p-3 rounded-lg shadow-lg border-2 border-green-500">
-                            <div className="flex items-center gap-2">
+                        <div className="bg-white p-3 rounded-lg shadow-lg border-2 border-green-500 relative">
+                            {/* Close Button */}
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="absolute top-1 right-1 h-6 w-6 p-0 hover:bg-muted"
+                                onClick={() => setShowApproveButton(null)}
+                            >
+                                <X className="h-4 w-4" />
+                            </Button>
+                            
+                            <div className="flex items-center gap-2 pr-8">
                                 <Button
                                     size="sm"
                                     className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 shadow-md"
@@ -727,11 +774,19 @@ function MapContent({ initialReports }: { initialReports: Report[] }) {
       name: string,
   } | null>(null);
 
+  // Debug poiPin state changes
+  useEffect(() => {
+    console.log('poiPin state changed:', poiPin);
+    if (poiPin) {
+      console.log('poiPin is set, green popup should render for:', poiPin.name);
+    } else {
+      console.log('poiPin is null, no green popup');
+    }
+  }, [poiPin]);
+
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const map = useMap();
   const placesService = useRef<google.maps.places.PlacesService | null>(null);
-
-
 
   useEffect(() => {
     if (map && !placesService.current) {
@@ -791,41 +846,129 @@ function MapContent({ initialReports }: { initialReports: Report[] }) {
     setEditingReport(null);
     setSelectedReport(null);
     setClickedPosition(positionToReport);
+    
+    // Ensure clickedInfo is properly set for POI clicks
+    if (poiPin) {
+      // For POI clicks, make sure we have the POI data in clickedInfo
+      console.log('Opening report dialog for POI:', poiPin.name);
+      console.log('Current clickedInfo:', clickedInfo);
+      
+      // If clickedInfo is empty or doesn't match the POI, we need to set it
+      if (!clickedInfo.placeId || clickedInfo.placeId !== poiPin.placeId) {
+        console.log('Setting clickedInfo for POI:', poiPin);
+        const updatedClickedInfo = {
+          en: poiPin.name,
+          km: clickedInfo.km || poiPin.name, // Use existing translation or fallback
+          th: clickedInfo.th || poiPin.name, // Use existing translation or fallback
+          province: clickedInfo.province || "Unknown",
+          placeId: poiPin.placeId,
+        };
+        console.log('Updated clickedInfo:', updatedClickedInfo);
+        setClickedInfo(updatedClickedInfo);
+      }
+    }
+    
+    console.log('Opening report dialog with clickedInfo:', clickedInfo);
+    console.log('Position:', positionToReport);
     setIsReportDialogOpen(true);
-  }, [user, toast, temporaryPin, poiPin]);
+  }, [user, toast, temporaryPin, poiPin, clickedInfo]);
 
   const handleMapClick = useCallback(async (e: google.maps.MapMouseEvent) => {
     const pos = e.latLng?.toJSON();
     if (!pos) return;
 
+    console.log('Map click detected at:', pos);
     setSelectedReport(null);
     setClickedPosition(pos);
     setClickedInfo({ en: '', km: '', th: '', province: '', placeId: null });
 
     const iconMouseEvent = e as google.maps.IconMouseEvent;
+    console.log('Checking for placeId:', iconMouseEvent.placeId);
 
     if (iconMouseEvent.placeId) {
+        console.log('POI clicked with placeId:', iconMouseEvent.placeId);
         setTemporaryPin(null);
         placesService.current?.getDetails({ placeId: iconMouseEvent.placeId, fields: ['name'] }, async (place, status) => {
+             console.log('Places API response - Status:', status, 'Place:', place);
              if (status === google.maps.places.PlacesServiceStatus.OK && place?.name) {
-                const { translateText } = await import('@/ai/flows/translate-text');
-                const [enResult, kmResult, thResult] = await Promise.all([
-                    reverseGeocode({ lat: pos.lat, lng: pos.lng, language: 'en' }),
-                    translateText({ text: place.name, targetLanguage: 'km'}),
-                    translateText({ text: place.name, targetLanguage: 'th'}),
-                ]);
+                console.log('POI place details retrieved:', place.name);
+                
+                try {
+                    console.log('Starting AI processing for POI:', place.name);
+                    console.log('Environment check - API key available:', !!process.env.GEMINI_API_KEY);
+                    
+                    const { translateText } = await import('@/ai/flows/translate-text');
+                    console.log('Translation module imported successfully');
+                    
+                    // Call each function individually to better track errors
+                    console.log('Calling reverseGeocode...');
+                    const enResult = await reverseGeocode({ lat: pos.lat, lng: pos.lng, language: 'en' });
+                    console.log('Geocoding result:', enResult);
+                    
+                    console.log('Calling translateText for Khmer...');
+                    const kmResult = await translateText({ text: place.name, targetLanguage: 'km'});
+                    console.log('Khmer translation result:', kmResult);
+                    
+                    console.log('Calling translateText for Thai...');
+                    const thResult = await translateText({ text: place.name, targetLanguage: 'th'});
+                    console.log('Thai translation result:', thResult);
+                    
+                    console.log('All AI calls completed successfully');
 
-                setClickedInfo({
-                  en: place.name,
-                  km: kmResult.translatedText || '',
-                  th: thResult.translatedText || '',
-                  province: enResult.province || "Unknown",
+                    const finalClickedInfo = {
+                      en: place.name,
+                      km: kmResult.translatedText || place.name,
+                      th: thResult.translatedText || place.name,
+                      province: enResult.province || "Unknown",
+                      placeId: iconMouseEvent.placeId!,
+                    };
+                    
+                    console.log('Setting final clickedInfo:', finalClickedInfo);
+                    setClickedInfo(finalClickedInfo);
+                    
+                    console.log('Setting poiPin for:', place.name);
+                    setPoiPin({ position: pos, placeId: iconMouseEvent.placeId!, name: place.name });
+                    console.log('poiPin should now be set with:', { position: pos, placeId: iconMouseEvent.placeId!, name: place.name });
+                } catch (error) {
+                    console.error('Error in POI processing:', error);
+                    console.error('Error details:', error instanceof Error ? error.message : 'Unknown error');
+                    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+                    
+                    // Still set clickedInfo and poiPin even if translation fails
+                    console.log('Setting basic clickedInfo despite error for:', place.name);
+                    const fallbackClickedInfo = {
+                      en: place.name,
+                      km: place.name, // Fallback to original name
+                      th: place.name, // Fallback to original name
+                      province: "Unknown", // Fallback province
+                      placeId: iconMouseEvent.placeId!,
+                    };
+                    console.log('Setting fallback clickedInfo:', fallbackClickedInfo);
+                    setClickedInfo(fallbackClickedInfo);
+                    
+                    console.log('Setting poiPin despite error for:', place.name);
+                    setPoiPin({ position: pos, placeId: iconMouseEvent.placeId!, name: place.name });
+                }
+             } else {
+                console.log('Failed to get POI place details:', status);
+                // Even if we can't get place details, we can still show the popup with placeId
+                console.log('Setting basic clickedInfo with placeId only');
+                const basicClickedInfo = {
+                  en: 'Unknown Place',
+                  km: 'Unknown Place',
+                  th: 'Unknown Place',
+                  province: "Unknown",
                   placeId: iconMouseEvent.placeId!,
-                });
-                setPoiPin({ position: pos, placeId: iconMouseEvent.placeId!, name: place.name });
+                };
+                console.log('Setting basic clickedInfo:', basicClickedInfo);
+                setClickedInfo(basicClickedInfo);
+                
+                console.log('Setting poiPin with placeId only');
+                setPoiPin({ position: pos, placeId: iconMouseEvent.placeId!, name: 'Unknown Place' });
              }
         });
     } else {
+        console.log('Regular map click (no POI)');
         setPoiPin(null);
         
         // Set temporaryPin immediately with basic info
@@ -950,6 +1093,7 @@ function MapContent({ initialReports }: { initialReports: Report[] }) {
             mapTypeId={mapType}
             className="w-full h-full"
             clickableIcons={true}
+            onCameraChanged={(ev) => setZoomLevel(ev.detail.zoom)}
             >
             <Markers 
               reports={reports} 
@@ -974,14 +1118,44 @@ function MapContent({ initialReports }: { initialReports: Report[] }) {
                       <X className="h-4 w-4"/>
                     </button>
                   </div>
-                   <Button onClick={handleOpenReportDialog} size="sm" className="w-full bg-primary/80 hover:bg-primary">
-                        <Flag className="mr-2 h-4 w-4" />
-                        Create New Report Here
-                    </Button>
                 </div>
               </InfoWindow>
             )}
-             {poiPin && (
+            {/* Original design: Google Maps handles POI InfoWindow, we show bottom popup for report button */}
+            {poiPin && (
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 max-w-[calc(100vw-2rem)] w-auto">
+                    <div className="relative bg-green-500 text-white rounded-lg shadow-lg animate-pulse-once p-3 pr-10">
+                        <Button 
+                            onClick={() => {
+                                console.log('Green popup clicked for POI:', poiPin.name);
+                                handleOpenReportDialog();
+                            }} 
+                            variant="ghost" 
+                            className="h-auto p-0 text-left text-white hover:bg-transparent hover:text-white/90 w-full"
+                        >
+                            <div className="flex items-start gap-2 min-w-0">
+                                <Flag className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                                <span className="text-sm font-medium leading-tight break-words">
+                                    Report an issue at '{poiPin.name}'
+                                </span>
+                            </div>
+                        </Button>
+                        <Button
+                            onClick={() => {
+                                console.log('Closing green popup');
+                                setPoiPin(null);
+                            }}
+                            variant="ghost"
+                            size="icon"
+                            className="absolute top-1 right-1 h-8 w-8 text-white hover:bg-white/20 hover:text-white"
+                        >
+                            <X className="h-4 w-4" />
+                        </Button>
+                    </div>
+                </div>
+            )}
+            {/* Regular map clicks still show InfoWindow with report button */}
+            {temporaryPin && !poiPin && (
                 <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 max-w-[calc(100vw-2rem)] w-auto">
                     <div className="relative bg-primary text-primary-foreground rounded-lg shadow-lg animate-pulse-once p-3 pr-10">
                         <Button 
@@ -992,12 +1166,12 @@ function MapContent({ initialReports }: { initialReports: Report[] }) {
                             <div className="flex items-start gap-2 min-w-0">
                                 <Flag className="h-5 w-5 flex-shrink-0 mt-0.5" />
                                 <span className="text-sm font-medium leading-tight break-words">
-                                    Report an issue at '{poiPin.name}'
+                                    Add Report Here
                                 </span>
                             </div>
                         </Button>
                         <Button
-                            onClick={() => setPoiPin(null)}
+                            onClick={() => setTemporaryPin(null)}
                             variant="ghost"
                             size="icon"
                             className="absolute top-1 right-1 h-8 w-8 text-primary-foreground hover:bg-primary-foreground/20 hover:text-primary-foreground"

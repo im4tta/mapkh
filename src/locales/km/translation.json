@@ -124,8 +124,8 @@
         "filter_by_reportNumber": "របាយការណ៍ #",
         "all_reports": "របាយការណ៍ទាំងអស់",
         "all_values": "ទាំងអស់",
-        "all_violation_terms": "លក្ខខណ្ឌ​ລະເມີດ​ទាំងអស់",
-        "all_sub_violation_types": "ប្រភេទ​រង​ការ​ລະເມີດ​ទាំងអស់",
+        "all_violation_terms": "លក្ខខណ្ឌរំលោភបំពាន​ទាំងអស់",
+        "all_sub_violation_types": "ប្រភេទ​រង​ការរំលោភបំពាន​ទាំងអស់",
         "filter_status_placeholder": "ត្រងតាមស្ថានភាព",
         "all_statuses": "គ្រប់ស្ថានភាព",
         "filter_priority_placeholder": "ត្រងតាមអាទិភាព",
@@ -173,7 +173,7 @@
         "view_link": "មើលតំណ",
         "table_header": {
             "id": "លេខសម្គាល់",
-            "sub_violation_type": "ប្រភេទ​រង​ការ​ລະເມີດ",
+            "sub_violation_type": "ប្រភេទ​រង​ការរំលោភបំពាន",
             "description": "ការពិពណ៌នា",
             "tags": "ស្លាក",
             "province": "ខេត្ត",
@@ -231,12 +231,12 @@
         "categories": {
             "title": "ការគ្រប់គ្រងប្រភេទ",
             "description": "បន្ថែម កែសម្រួល ឬលុបប្រភេទដែលប្រើប្រាស់ក្នុងកម្មវិធី។",
-            "violation_terms_title": "លក្ខខណ្ឌ​ລະເມີດ",
+            "violation_terms_title": "លក្ខខណ្ឌរំលោភបំពាន",
             "violation_terms_desc": "គ្រប់គ្រងក្រុមដែលរបាយការណ៍អាចត្រូវបានចាត់ចូល។",
-            "add_violation_term_placeholder": "លក្ខខណ្ឌ​ລະເມີດ​ថ្មី",
-            "sub_violation_types_title": "ប្រភេទ​រង​ការ​ລະເມີດ",
+            "add_violation_term_placeholder": "លក្ខខណ្ឌរំលោភបំពាន​ថ្មី",
+            "sub_violation_types_title": "ប្រភេទ​រង​ការរំលោភបំពាន",
             "sub_violation_types_desc": "គ្រប់គ្រងប្រភេទបញ្ហាដែលអ្នកប្រើប្រាស់អាចជ្រើសរើសនៅពេលបង្កើតរបាយការណ៍។",
-            "add_sub_violation_type_placeholder": "ស្លាក​ប្រភេទ​រង​ការ​ລະເມີດ​ថ្មី",
+            "add_sub_violation_type_placeholder": "ស្លាក​ប្រភេទ​រង​ការរំលោភបំពាន​ថ្មី",
             "place_types_title": "ប្រភេទទីកន្លែង",
             "place_types_desc": "គ្រប់គ្រងប្រភេទទីកន្លែង (ឧ. ភោជនីយដ្ឋាន, សាលារៀន) ដែលរបាយការណ៍អាចត្រូវបានភ្ជាប់ជាមួយ។",
             "add_new": "បន្ថែម​ថ្មី",
@@ -278,7 +278,7 @@
         "edit_description": "ធ្វើបច្ចុប្បន្នភាពព័ត៌មានលម្អិតនៃកំហុសផែនទីនេះ។",
         "create_description": "កំណត់បញ្ហាដើម្បីជួយកែលម្អភាពត្រឹមត្រូវនៃផែនទីសម្រាប់មនុស្សគ្រប់គ្នា។",
         "validation_failed_title": "ការផ្ទៀងផ្ទាត់បានបរាជ័យ",
-        "issue_type_label": "ប្រភេទ​រង​ការ​ລະເມີດ",
+        "issue_type_label": "ប្រភេទ​រង​ការរំលោភបំពាន",
         "issue_type_description": "ជ្រើសរើសប្រភេទនៃកំហុស។",
         "please_specify_label": "សូមបញ្ជាក់",
         "please_specify_placeholder": "បញ្ចូលប្រភេទបញ្ហា",
@@ -296,7 +296,7 @@
         "place_type_placeholder": "ជ្រើសរើស ឬបន្ថែមប្រភេទទីកន្លែង",
         "priority_label": "អាទិភាព",
         "priority_placeholder": "ជ្រើសរើសអាទិភាព",
-        "group_label": "លក្ខខណ្ឌ​ລະເມີດ",
+        "group_label": "លក្ខខណ្ឌរំលោភបំពាន",
         "group_placeholder": "ចាត់ចូលក្នុងក្រុម (ស្រេចចិត្ត)",
         "group_none": "គ្មាន",
         "target_date_label": "កាលបរិច្ឆេទគោលដៅ",
@@ -523,7 +523,7 @@
         "high": "ខ្ពស់"
     },
     "violation_terms": {
-        "title": "លក្ខខណ្ឌ​ລະເມີດ",
+        "title": "លក្ខខណ្ឌរំលោភបំពាន",
         "hate_speech": "ការនិយាយស្អប់",
         "border": "ព្រំដែន",
         "general": "ទូទៅ",
@@ -558,10 +558,10 @@
     },
     "user_guide": {
         "title": "របៀបដាក់ស្នើរបាយការណ៍ទៅ MapKH",
-        "description": "មគ្គុទ្దេសក៍ពេញលេញសម្រាប់រាយការណ៍បញ្ហាផែនទី និងចូលរួមចំណែកដល់ផែនទីប្រសើរសម្រាប់កម្ពុជា",
-        "close": "បិទមគ្គុទ្ទេសក៍",
+        "description": "របៀបប្រើប្រាស់ពេញលេញសម្រាប់រាយការណ៍បញ្ហាផែនទី និងចូលរួមចំណែកដល់ផែនទីប្រសើរសម្រាប់កម្ពុជា",
+        "close": "បិទការណែនាំ",
         "button": {
-            "text": "មគ្គុទ្ទេសក៍អ្នកប្រើប្រាស់",
+            "text": "ការណែនាំអ្នកប្រើប្រាស់",
             "tooltip": "របៀបដាក់ស្នើរបាយការណ៍"
         },
         "tabs": {

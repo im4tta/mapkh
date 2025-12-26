@@ -1,4 +1,3 @@
-
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
@@ -6,6 +5,7 @@ import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import { updateUserLastLogin } from '@/app/actions';
+import { initializeNotifications } from '@/lib/notification-system';
 
 interface AuthContextType {
   user: User | null;
@@ -35,23 +35,52 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (user) {
           try {
             await updateUserLastLogin(user.uid);
+            
+            // Initialize the new notification system immediately
+            try {
+              await initializeNotifications(user.uid);
+              console.log('Notification system initialized for user:', user.uid);
+            } catch (error) {
+              console.error('Failed to initialize notification system:', error);
+            }
           } catch (error) {
             console.error('Failed to update user last login:', error);
           }
         }
-      }, (error) => {
-        console.error('Auth state change error:', error);
-        setError(error.message);
-        setLoading(false);
       });
 
       return () => unsubscribe();
     } catch (error) {
-      console.error('Firebase auth initialization error:', error);
-      setError(error instanceof Error ? error.message : 'Authentication initialization failed');
+      console.error('Auth provider error:', error);
+      setError('Authentication error occurred');
       setLoading(false);
     }
   }, []);
+
+  if (loading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <div className="space-y-4">
+          <Skeleton className="h-12 w-12 rounded-full" />
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-[250px]" />
+            <Skeleton className="h-4 w-[200px]" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-500 mb-2">Authentication Error</p>
+          <p className="text-sm text-muted-foreground">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <AuthContext.Provider value={{ user, loading, error }}>
@@ -68,20 +97,20 @@ export const useAuth = () => {
   return context;
 };
 
-export const AuthLoader = ({children}: {children: ReactNode}) => {
-    const { loading } = useAuth();
-    if (loading) {
-        return (
-            <div className="container mx-auto py-10">
-                <div className="space-y-6">
-                    <Skeleton className="h-8 w-1/4" />
-                    <Skeleton className="h-6 w-1/2" />
-                    <div className="flex flex-col space-y-8">
-                        <Skeleton className="h-48 w-full" />
-                    </div>
-                </div>
-            </div>
-        )
-    }
-    return <>{children}</>
-}
+export const AuthLoader = ({ children }: { children: ReactNode }) => {
+  const { loading } = useAuth();
+  if (loading) {
+    return (
+      <div className="container mx-auto py-10">
+        <div className="space-y-6">
+          <Skeleton className="h-8 w-1/4" />
+          <Skeleton className="h-6 w-1/2" />
+          <div className="flex flex-col space-y-8">
+            <Skeleton className="h-48 w-full" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+  return <>{children}</>;
+};

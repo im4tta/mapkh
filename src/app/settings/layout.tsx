@@ -47,8 +47,8 @@ export default function SettingsLayout({
     }
   }, [user, loading, router, isAdmin]);
 
-  if (loading || !isMounted || !user || (user && !isAdmin)) {
-    // Show a loading spinner while checking auth or redirect is happening
+  if (loading || !isMounted) {
+    // Show a loading spinner while checking auth
     return (
       <div className="flex h-[calc(100vh_-_theme(spacing.14))] w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -56,6 +56,23 @@ export default function SettingsLayout({
     );
   }
 
+  if (!user) {
+    // This should not happen as useEffect will redirect, but just in case
+    return (
+      <div className="flex h-[calc(100vh_-_theme(spacing.14))] w-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    // This should not happen as useEffect will redirect, but just in case
+    return (
+      <div className="flex h-[calc(100vh_-_theme(spacing.14))] w-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-10 px-4">

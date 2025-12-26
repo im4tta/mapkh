@@ -12,10 +12,10 @@ import { Loader2, DatabaseBackup, History, Upload, FileCheck2, FileX2, Check, Ch
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/context/auth-provider";
-import { importReports, exportAllData, importAllData, findReportByPlaceId, uploadReportFile, bulkCreateDriveFolders, deleteEmptyReportFolders } from "../actions";
+import { importReports, exportAllData, importAllData, findReportByPlaceId, uploadReportFile, bulkCreateDriveFolders, deleteEmptyReportFolders, clearPendingEditStatus, getReportById, debugReportEditStatus } from "../actions";
 import { SupporterService, type Supporter } from "@/lib/supporters";
 import { AdminNotificationManager } from "@/components/admin-notification-manager";
-import { NotificationSettings } from "@/components/notification-settings";
+import { NotificationSettingsNew } from "@/components/notification-settings-new";
 import { PlaceIdCSVUploader } from "@/components/placeid-csv-uploader";
 import {
   AlertDialog,
@@ -562,6 +562,203 @@ const SystemBackup = () => {
   )
 }
 
+const AdminTools = () => {
+    const { toast } = useToast();
+    const { user } = useAuth();
+    const [reportId, setReportId] = useState('');
+    const [reportNumber, setReportNumber] = useState('1116');
+    const [isClearing, setIsClearing] = useState(false);
+    const [isInspecting, setIsInspecting] = useState(false);
+    const [isDebugging, setIsDebugging] = useState(false);
+    const [inspectedReport, setInspectedReport] = useState<any>(null);
+    const [debugInfo, setDebugInfo] = useState<any>(null);
+
+    const handleClearEditStatus = async () => {
+        if (!reportId.trim()) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Please enter a report ID.' });
+            return;
+        }
+
+        setIsClearing(true);
+        try {
+            const result = await clearPendingEditStatus(reportId.trim(), user?.uid, user?.displayName || undefined, user?.email || undefined);
+            if (result.success) {
+                toast({ title: 'Success', description: result.message });
+                setReportId('');
+                setInspectedReport(null); // Clear inspection if showing
+            } else {
+                toast({ variant: 'destructive', title: 'Error', description: result.error });
+            }
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to clear edit status.' });
+        } finally {
+            setIsClearing(false);
+        }
+    };
+
+    const handleInspectReport = async () => {
+        if (!reportId.trim()) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Please enter a report ID.' });
+            return;
+        }
+
+        setIsInspecting(true);
+        try {
+            const result = await getReportById(reportId.trim(), user?.uid);
+            if (result.success) {
+                setInspectedReport(result.data);
+                toast({ title: 'Report Found', description: `Report #${result.data?.reportNumber} loaded.` });
+            } else {
+                toast({ variant: 'destructive', title: 'Error', description: result.error });
+                setInspectedReport(null);
+            }
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to inspect report.' });
+            setInspectedReport(null);
+        } finally {
+            setIsInspecting(false);
+        }
+    };
+
+    const handleDebugReport1116 = async () => {
+        setIsDebugging(true);
+        try {
+            const result = await debugReportEditStatus(1116, user?.uid);
+            if (result.success) {
+                setDebugInfo(result.data);
+                toast({ title: 'Debug Complete', description: 'Report #1116 debug information loaded.' });
+            } else {
+                toast({ variant: 'destructive', title: 'Error', description: result.error });
+                setDebugInfo(null);
+            }
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to debug report.' });
+            setDebugInfo(null);
+        } finally {
+            setIsDebugging(false);
+        }
+    };
+
+    const handleQuickClear1116 = async () => {
+        if (!debugInfo?.id) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Please debug report #1116 first to get the ID.' });
+            return;
+        }
+
+        setIsClearing(true);
+        try {
+            const result = await clearPendingEditStatus(debugInfo.id, user?.uid, user?.displayName || undefined, user?.email || undefined);
+            if (result.success) {
+                toast({ title: 'Success', description: 'Report #1116 edit status cleared!' });
+                setDebugInfo(null);
+            } else {
+                toast({ variant: 'destructive', title: 'Error', description: result.error });
+            }
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to clear edit status.' });
+        } finally {
+            setIsClearing(false);
+        }
+    };
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Admin Tools</CardTitle>
+                <CardDescription>
+                    Administrative tools for managing reports and fixing data issues.
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                {/* Quick Fix for Report #1116 */}
+                <div className="border-2 border-amber-200 bg-amber-50 dark:bg-amber-900/20 rounded-lg p-4">
+                    <h4 className="font-semibold text-base mb-2 text-amber-800 dark:text-amber-200">🚨 Quick Fix for Report #1116</h4>
+                    <p className="text-sm text-amber-700 dark:text-amber-300 mb-4">
+                        Debug and fix the specific issue with report #1116 that you mentioned.
+                    </p>
+                    <div className="flex gap-2 mb-4">
+                        <Button onClick={handleDebugReport1116} disabled={isDebugging} variant="outline">
+                            {isDebugging ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                            Debug Report #1116
+                        </Button>
+                        {debugInfo && (
+                            <Button onClick={handleQuickClear1116} disabled={isClearing}>
+                                {isClearing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                Clear #1116 Status
+                            </Button>
+                        )}
+                    </div>
+                    
+                    {debugInfo && (
+                        <div className="border rounded-lg p-4 bg-white dark:bg-gray-800">
+                            <h5 className="font-semibold mb-2">Report #1116 Debug Information</h5>
+                            <div className="grid grid-cols-2 gap-2 text-sm">
+                                <div><strong>ID:</strong> {debugInfo.id}</div>
+                                <div><strong>Status:</strong> {debugInfo.status}</div>
+                                <div><strong>Edit Status:</strong> <span className={debugInfo.editStatus === 'pending-review' ? 'text-red-600 font-bold' : ''}>{debugInfo.editStatus || 'none'}</span></div>
+                                <div><strong>Protected:</strong> {debugInfo.isProtected ? 'Yes' : 'No'}</div>
+                            </div>
+                            {debugInfo.pendingChanges && (
+                                <div className="mt-2 p-2 bg-red-100 dark:bg-red-900/20 rounded">
+                                    <strong>🔴 Pending Changes Found:</strong> Requested by {debugInfo.pendingChanges.requestedByName} ({debugInfo.pendingChanges.changesCount} changes)
+                                </div>
+                            )}
+                            {debugInfo.editHistory?.length > 0 && (
+                                <div className="mt-2 p-2 bg-blue-100 dark:bg-blue-900/20 rounded">
+                                    <strong>Edit History:</strong> {debugInfo.editHistory.length} entries
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                {/* General Tools */}
+                <div>
+                    <h4 className="font-semibold text-base mb-2">General Report Tools</h4>
+                    <p className="text-sm text-muted-foreground mb-4">
+                        Inspect report details and clear pending edit status for any report.
+                    </p>
+                    <div className="flex gap-2 mb-4">
+                        <Input
+                            placeholder="Enter Report ID (e.g., abc123def456)"
+                            value={reportId}
+                            onChange={(e) => setReportId(e.target.value)}
+                            disabled={isClearing || isInspecting}
+                        />
+                        <Button onClick={handleInspectReport} disabled={isInspecting || !reportId.trim()} variant="outline">
+                            {isInspecting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                            Inspect
+                        </Button>
+                        <Button onClick={handleClearEditStatus} disabled={isClearing || !reportId.trim()}>
+                            {isClearing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                            Clear Status
+                        </Button>
+                    </div>
+                    
+                    {inspectedReport && (
+                        <div className="border rounded-lg p-4 bg-muted/50">
+                            <h5 className="font-semibold mb-2">Report #{inspectedReport.reportNumber} Details</h5>
+                            <div className="grid grid-cols-2 gap-2 text-sm">
+                                <div><strong>ID:</strong> {inspectedReport.id}</div>
+                                <div><strong>Status:</strong> {inspectedReport.status}</div>
+                                <div><strong>Edit Status:</strong> {inspectedReport.editStatus || 'none'}</div>
+                                <div><strong>Protected:</strong> {inspectedReport.isProtected ? 'Yes' : 'No'}</div>
+                                <div><strong>Description:</strong> {inspectedReport.description?.substring(0, 50)}...</div>
+                                <div><strong>Province:</strong> {inspectedReport.province}</div>
+                            </div>
+                            {inspectedReport.pendingChanges && (
+                                <div className="mt-2 p-2 bg-amber-100 dark:bg-amber-900/20 rounded">
+                                    <strong>Pending Changes:</strong> Requested by {inspectedReport.pendingChanges.requestedByName}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </CardContent>
+        </Card>
+    );
+};
+
 const BulkActions = () => {
     const { toast } = useToast();
     const { user } = useAuth();
@@ -864,8 +1061,9 @@ export default function SettingsPage() {
   
   return (
     <div className="space-y-6">
-      <NotificationSettings />
+      <NotificationSettingsNew />
       <AdminNotificationManager />
+      <AdminTools />
       <PlaceIdCSVUploader />
       <DataImporter />
       <BulkEvidenceUploader />

@@ -22,7 +22,16 @@ const TranslateTextOutputSchema = z.object({
 export type TranslateTextOutput = z.infer<typeof TranslateTextOutputSchema>;
 
 export async function translateText(input: TranslateTextInput): Promise<TranslateTextOutput> {
-  return translateTextFlow(input);
+  console.log('translateText called with:', input);
+  try {
+    const result = await translateTextFlow(input);
+    console.log('translateText result:', result);
+    return result;
+  } catch (error) {
+    console.error('translateText error:', error);
+    console.error('Error details:', error instanceof Error ? error.message : 'Unknown error');
+    return { translatedText: null };
+  }
 }
 
 const prompt = ai.definePrompt({

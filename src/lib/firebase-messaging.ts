@@ -1,453 +1,135 @@
+import { getClientMessaging } from '@/lib/firebase';
+import { getToken, onMessage } from 'firebase/messaging';
 
-import { getMessaging, getToken, onMessage, Unsubscribe } from 'firebase/messaging';
-import { getClientMessaging } from './firebase';
-import { 
-  detectMobileEnvironment, 
-  getNotificationCapabilities, 
-  requestNotificationPermissionMobile,
-  updateBadgeMobile,
-  clearBadgeMobile,
-  getNotificationSupportMessage
-} from './mobile-detection';
-import { safeGetItem, safeSetItem, safeRemoveItem } from './storage-utils';
-
-const VAPID_KEY = process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_VAPID_KEY;
-
-// Send Firebase config to service worker (sw.js already has config, but we keep this for compatibility)
-const sendConfigToServiceWorker = () => {
-  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-    const firebaseConfig = {
-      apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-      authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-      storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-      messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-      appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-    };
-    
-    navigator.serviceWorker.controller.postMessage({
-      type: 'FIREBASE_CONFIG',
-      config: firebaseConfig
-    });
-  }
-};
-
-// Initialize service worker config when messaging is first accessed
-if (typeof window !== 'undefined') {
-  sendConfigToServiceWorker();
-}
-
-export const fetchToken = async () => {
-    const messaging = getClientMessaging();
-    if (!messaging) {
-        console.log('Firebase Messaging is not available.');
-        return null;
-    }
-    
-    if (!VAPID_KEY) {
-        console.error('VAPID key is not configured. Please set NEXT_PUBLIC_FIREBASE_MESSAGING_VAPID_KEY environment variable.');
-        return null;
-    }
-    
-    try {
-        // Ensure service worker is ready before getting token
-        if ('serviceWorker' in navigator) {
-            await navigator.serviceWorker.ready;
-        }
-        
-        const token = await getToken(messaging, { vapidKey: VAPID_KEY });
-        if (token) {
-            console.log('FCM token:', token);
-            return token;
-        } else {
-            console.log('No registration token available. Request permission to generate one.');
-            return null;
-        }
-    } catch (err) {
-        console.error('An error occurred while retrieving token.', err);
-        return null;
-    }
-};
-
-export const onMessageListener = (callback: (payload: any) => void): Unsubscribe | null => {
-  const messaging = getClientMessaging();
-  if (!messaging) {
-    return null;
-  }
-  return onMessage(messaging, (payload) => {
-    console.log('New foreground message: ', payload);
-    callback(payload);
-  });
-};
-
-// Request notification permission with mobile-specific handling
-export const requestNotificationPermission = async (): Promise<boolean> => {
-  if (typeof window === 'undefined') {
-    return false;
-  }
-
-  const detection = detectMobileEnvironment();
-  const capabilities = getNotificationCapabilities();
-  
-  // Show user-friendly message for mobile limitations
-  if (!capabilities.canRequestPermission) {
-    const message = getNotificationSupportMessage();
-    console.log(message);
-    return false;
-  }
-
-  const result = await requestNotificationPermissionMobile();
-  
-  if (!result.granted && result.suggestion) {
-    console.error(result.suggestion);
-  }
-  
-  return result.granted;
-};
-
-// Register service worker for push notifications
-export const registerServiceWorker = async (): Promise<boolean> => {
-  if (!('serviceWorker' in navigator)) {
-    console.log('Service Worker not supported.');
-    return false;
-  }
-
+// Request notification permission and get FCM token
+export async function requestNotificationPermission(): Promise<string | null> {
   try {
-    // Register the main service worker that handles Firebase messaging
-    const registration = await navigator.serviceWorker.register('/sw.js', {
-      scope: '/'
-    });
-    
-    console.log('Service Worker registered:', registration);
-    
-    // Wait for service worker to be ready
-    await navigator.serviceWorker.ready;
-    
-    // Send config to service worker (though sw.js already has it)
-    sendConfigToServiceWorker();
-    
-    return true;
-  } catch (error) {
-    console.error('Service Worker registration failed:', error);
-    return false;
-  }
-};
-
-// Initialize push notifications with better error handling
-export const initializePushNotifications = async (): Promise<string | null> => {
-  try {
-    // Check if we're in a supported environment
-    if (typeof window === 'undefined') {
-      console.log('Push notifications not available in server environment');
+    // Check if notifications are supported
+    if (!('Notification' in window)) {
+      console.log('This browser does not support notifications');
       return null;
     }
 
-    // Register service worker
-    const swRegistered = await registerServiceWorker();
-    if (!swRegistered) {
-      throw new Error('Service Worker registration failed');
+    // Request permission
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      console.log('Notification permission denied');
+      return null;
     }
 
-    // Request notification permission
-    const permissionGranted = await requestNotificationPermission();
-    if (!permissionGranted) {
-      console.log('Notification permission not granted - this is normal in development');
-      return null; // Don't throw error, just return null
+    // Get messaging instance
+    const messaging = getClientMessaging();
+    if (!messaging) {
+      console.log('Firebase messaging not available');
+      return null;
     }
 
     // Get FCM token
-    const token = await fetchToken();
-    if (!token) {
-      console.log('Failed to get FCM token - this may be normal in development environment');
-      return null; // Don't throw error, just return null
-    }
+    const token = await getToken(messaging, {
+      vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY
+    });
 
-    console.log('Push notifications initialized successfully');
-    return token;
+    if (token) {
+      console.log('FCM token obtained:', token);
+      return token;
+    } else {
+      console.log('No registration token available');
+      return null;
+    }
   } catch (error) {
-    console.error('Failed to initialize push notifications:', error);
+    console.error('Error getting FCM token:', error);
     return null;
   }
-};
+}
 
-// Show local notification (for testing) with mobile-specific handling
-export const showLocalNotification = (title: string, body: string, data?: any) => {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
-  const detection = detectMobileEnvironment();
-  const capabilities = getNotificationCapabilities();
-  
-  if (!capabilities.canShowNotifications) {
-    console.log('Local notifications not supported in this environment');
-    return;
-  }
-
-  if (!('Notification' in window) || Notification.permission !== 'granted') {
-    console.log('Notifications not available or not permitted');
-    return;
-  }
-
-  const notification = new Notification(title, {
-    body,
-    icon: '/icons/icon-192x192.svg',
-    badge: '/badge-72x72.svg',
-    tag: 'mapkh-local',
-    data,
-    requireInteraction: true
-  });
-
-  notification.onclick = () => {
-    window.focus();
-    notification.close();
-  };
-
-  // Auto close after 10 seconds
-  setTimeout(() => {
-    notification.close();
-  }, 10000);
-};
-
-// Save FCM token to localStorage with error handling
-export const saveFCMToken = async (token: string): Promise<void> => {
-  const success = safeSetItem('fcm_token', token);
-  if (success) {
-    console.log('FCM token saved to localStorage');
-  } else {
-    console.warn('Failed to save FCM token to localStorage');
-  }
-};
-
-// Get stored FCM token from localStorage
-export const getStoredFCMToken = (): string | null => {
-  return safeGetItem<string>('fcm_token') || null;
-};
-
-// Badge count management functions with mobile-specific handling
-export const updateBadgeCount = async (count: number): Promise<void> => {
+// Register FCM token with the server
+export async function registerFCMToken(userId: string, token: string): Promise<boolean> {
   try {
-    if (typeof window === 'undefined' || typeof navigator === 'undefined') {
-      return;
-    }
-
-    const detection = detectMobileEnvironment();
-    const capabilities = getNotificationCapabilities();
-    
-    // Skip badge updates if not supported
-    if (!capabilities.canUseBadging) {
-      console.log('Badge updates not supported in this environment');
-      return;
-    }
-
-    // Update service worker badge count
-    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-      navigator.serviceWorker.controller.postMessage({
-        type: 'UPDATE_BADGE_COUNT',
-        data: { count }
-      });
-    }
-    
-    // Store locally for persistence with safe storage
-    const success = safeSetItem('mapkh_badge_count', count.toString());
-    if (!success) {
-      console.warn('Failed to store badge count in localStorage');
-    }
-    
-    // Update app badge with mobile-specific handling
-    await updateBadgeMobile(count);
-  } catch (error) {
-    console.error('Failed to update badge count:', error);
-  }
-};
-
-export const clearBadge = async (): Promise<void> => {
-  try {
-    if (typeof window === 'undefined' || typeof navigator === 'undefined') {
-      return;
-    }
-
-    const detection = detectMobileEnvironment();
-    const capabilities = getNotificationCapabilities();
-    
-    // Skip badge clearing if not supported
-    if (!capabilities.canUseBadging) {
-      console.log('Badge clearing not supported in this environment');
-      return;
-    }
-
-    // Clear service worker badge
-    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-      navigator.serviceWorker.controller.postMessage({
-        type: 'CLEAR_BADGE'
-      });
-    }
-    
-    // Clear from safe storage
-    const success = safeRemoveItem('mapkh_badge_count');
-    if (!success) {
-      console.warn('Failed to clear badge count from localStorage');
-    }
-    
-    // Clear app badge with mobile-specific handling
-    await clearBadgeMobile();
-  } catch (error) {
-    console.error('Failed to clear badge:', error);
-  }
-};
-
-export const getBadgeCount = (): number => {
-  const stored = safeGetItem<string>('mapkh_badge_count');
-  return stored ? parseInt(stored, 10) || 0 : 0;
-};
-
-// Mark notifications as read
-export const markNotificationsAsRead = async (notificationIds: string[]): Promise<void> => {
-  try {
-    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-      navigator.serviceWorker.controller.postMessage({
-        type: 'MARK_NOTIFICATIONS_READ',
-        data: { notificationIds }
-      });
-    }
-  } catch (error) {
-    console.error('Failed to mark notifications as read:', error);
-  }
-};
-
-// Send silent notification for background updates
-export const sendSilentUpdate = async (data: any): Promise<void> => {
-  try {
-    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-      navigator.serviceWorker.controller.postMessage({
-        type: 'SYNC_DATA',
-        data
-      });
-    }
-  } catch (error) {
-    console.error('Failed to send silent update:', error);
-  }
-};
-
-// Listen for service worker messages
-export const setupServiceWorkerMessageListener = (): void => {
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.addEventListener('message', (event) => {
-      const { type, data } = event.data || {};
-      
-      switch (type) {
-        case 'SILENT_NOTIFICATION_PROCESSED':
-          console.log('Silent notification processed:', data);
-          // Trigger UI updates if needed
-          window.dispatchEvent(new CustomEvent('silentNotificationProcessed', { detail: data }));
-          break;
-          
-        case 'NAVIGATE_TO':
-          // Handle navigation from service worker
-          if (data?.url && window.location.pathname !== data.url) {
-            window.location.href = data.url;
-          }
-          break;
-          
-        default:
-          console.log('Unknown service worker message:', type, data);
-      }
-    });
-  }
-};
-
-// Initialize badge count synchronization
-export const initializeBadgeSync = async (): Promise<void> => {
-  try {
-    // Set up service worker message listener
-    setupServiceWorkerMessageListener();
-    
-    // Sync initial badge count
-    const currentCount = getBadgeCount();
-    await updateBadgeCount(currentCount);
-    
-    console.log('Badge synchronization initialized');
-  } catch (error) {
-    console.error('Failed to initialize badge sync:', error);
-  }
-};
-
-export const initializeRealTimePushNotifications = async (): Promise<boolean> => {
-  try {
-    // Register service worker first
-    const swRegistered = await registerServiceWorker();
-    if (!swRegistered) {
-      console.error('Service worker registration failed');
-      return false;
-    }
-
-    // Request notification permission
-    const hasPermission = await requestNotificationPermission();
-    if (!hasPermission) {
-      console.log('Notification permission denied');
-      return false;
-    }
-
-    // Get FCM token
-    const token = await fetchToken();
-    if (!token) {
-      console.error('Failed to get FCM token');
-      return false;
-    }
-
-    // Save token for server communication
-    await saveFCMToken(token);
-
-    // Initialize badge sync
-    await initializeBadgeSync();
-
-    // Setup message listener for foreground notifications
-    setupServiceWorkerMessageListener();
-
-    console.log('Real-time push notifications initialized successfully');
-    return true;
-  } catch (error) {
-    console.error('Failed to initialize real-time push notifications:', error);
-    return false;
-  }
-};
-
-export const sendTestNotification = async (): Promise<void> => {
-  try {
-    const token = getStoredFCMToken();
-    if (!token) {
-      throw new Error('No FCM token available');
-    }
-
-    // Send a test notification via your backend API
-    const response = await fetch('/api/notifications/test', {
+    const response = await fetch('/api/notifications/register-token', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        token,
-        title: 'MapKH Test Notification',
-        body: 'This is a test notification to verify push notifications are working.',
-        data: {
-          type: 'test',
-          timestamp: Date.now()
-        }
-      }),
+      body: JSON.stringify({ userId, token }),
     });
 
-    if (!response.ok) {
-      throw new Error('Failed to send test notification');
+    if (response.ok) {
+      console.log('FCM token registered successfully');
+      return true;
+    } else {
+      console.error('Failed to register FCM token');
+      return false;
+    }
+  } catch (error) {
+    console.error('Error registering FCM token:', error);
+    return false;
+  }
+}
+
+// Set up foreground message listener
+export function setupForegroundMessageListener() {
+  const messaging = getClientMessaging();
+  if (!messaging) return;
+
+  onMessage(messaging, (payload) => {
+    console.log('Message received in foreground:', payload);
+    
+    // Show notification if app is in foreground
+    if (payload.notification) {
+      const { title, body } = payload.notification;
+      
+      // Create a custom notification
+      if ('Notification' in window && Notification.permission === 'granted') {
+        const notification = new Notification(title || 'MapKH Notification', {
+          body: body || 'You have a new notification',
+          icon: '/icons/icon-192x192.png',
+          badge: '/icons/icon-192x192.png',
+          tag: 'mapkh-foreground',
+          data: payload.data,
+        });
+
+        // Handle notification click
+        notification.onclick = () => {
+          window.focus();
+          notification.close();
+          
+          // Navigate to specific URL if provided
+          if (payload.data?.url) {
+            window.location.href = payload.data.url;
+          }
+        };
+
+        // Auto-close after 5 seconds
+        setTimeout(() => {
+          notification.close();
+        }, 5000);
+      }
+    }
+  });
+}
+
+// Initialize push notifications for a user
+export async function initializePushNotifications(userId: string): Promise<boolean> {
+  try {
+    // Request permission and get token
+    const token = await requestNotificationPermission();
+    if (!token) {
+      return false;
     }
 
-    console.log('Test notification sent successfully');
+    // Register token with server
+    const registered = await registerFCMToken(userId, token);
+    if (!registered) {
+      return false;
+    }
+
+    // Set up foreground message listener
+    setupForegroundMessageListener();
+
+    console.log('Push notifications initialized successfully');
+    return true;
   } catch (error) {
-    console.error('Failed to send test notification:', error);
-    // Fallback to local notification
-    showLocalNotification(
-      'MapKH Test Notification',
-      'This is a local test notification. Push notifications may not be fully configured.',
-      { type: 'test', timestamp: Date.now() }
-    );
+    console.error('Error initializing push notifications:', error);
+    return false;
   }
-};
+}

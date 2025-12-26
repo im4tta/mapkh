@@ -100,12 +100,11 @@ const DescriptionCell = ({ text }: { text: string }) => {
 };
 
 
-const ActionsCell = ({ report, onEdit, onActivity, onTogglePin, onVerify, onUpload, onCreateFolder, onCreatePlaceId, onSetKeywords, onCopyDescriptionToKeywords, refetch }: { report: Report; onEdit: () => void; onActivity: (tab: 'comments' | 'history') => void; onTogglePin: () => void; onVerify: () => void; onUpload: () => void; onCreateFolder: () => void; onCreatePlaceId: () => void; onSetKeywords: () => void; onCopyDescriptionToKeywords: () => void; refetch: () => void; }) => {
+const ActionsCell = ({ report, onEdit, onActivity, onTogglePin, onVerify, onUpload, onCreateFolder, onCreatePlaceId, onSetKeywords, onCopyDescriptionToKeywords, refetch, user }: { report: Report; onEdit: () => void; onActivity: (tab: 'comments' | 'history') => void; onTogglePin: () => void; onVerify: () => void; onUpload: () => void; onCreateFolder: () => void; onCreatePlaceId: () => void; onSetKeywords: () => void; onCopyDescriptionToKeywords: () => void; refetch: () => void; user: any; }) => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
   const { t } = useTranslation();
-  const { user } = useAuth();
   const isPinned = report.priority === 'high';
   const hasVerified = user && report.verifications?.includes(user.uid);
 
@@ -171,7 +170,9 @@ const ActionsCell = ({ report, onEdit, onActivity, onTogglePin, onVerify, onUplo
              {isPinned ? <PinOff className="mr-2 h-4 w-4" /> : <Pin className="mr-2 h-4 w-4" />}
              {isPinned ? t('records.unpin') : t('records.pin')}
            </DropdownMenuItem>
-          <DropdownMenuItem onClick={onEdit}>
+          <DropdownMenuItem 
+            onClick={onEdit}
+          >
             <Pencil className="mr-2 h-4 w-4" />
             {t('records.edit_report')}
           </DropdownMenuItem>
@@ -186,10 +187,12 @@ const ActionsCell = ({ report, onEdit, onActivity, onTogglePin, onVerify, onUplo
                 </a>
             </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => setShowDeleteDialog(true)} className="text-red-500">
-            <Trash2 className="mr-2 h-4 w-4" />
-            {t('records.delete')}
-          </DropdownMenuItem>
+          {user?.uid === 'ADMIN_UID_REDACTED' && (
+            <DropdownMenuItem onClick={() => setShowDeleteDialog(true)} className="text-red-500">
+              <Trash2 className="mr-2 h-4 w-4" />
+              {t('records.delete')}
+            </DropdownMenuItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
@@ -542,7 +545,10 @@ export function RecordsTable({
     }
   }, [data]);
   
-  const handleEdit = (report: Report) => setEditingReport(report);
+  const handleEdit = (report: Report) => {
+    // Allow all users to edit any report
+    setEditingReport(report);
+  };
   
   const handleTogglePin = async (report: Report) => {
      if (!user) {
@@ -1205,7 +1211,7 @@ export function RecordsTable({
     },
     {
       id: 'actions',
-      cell: ({ row }) => <ActionsCell report={row.original} onEdit={() => handleEdit(row.original)} onActivity={(tab) => handleActivity(row.original, tab)} onTogglePin={() => handleTogglePin(row.original)} onVerify={() => handleVerify(row.original)} onUpload={() => handleUpload(row.original)} onCreateFolder={() => handleCreateFolder(row.original)} onCreatePlaceId={() => handleCreatePlaceId(row.original)} onSetKeywords={() => handleSetKeywords(row.original)} onCopyDescriptionToKeywords={() => handleCopyDescriptionToKeywords(row.original)} refetch={refetchData} />,
+      cell: ({ row }) => <ActionsCell report={row.original} onEdit={() => handleEdit(row.original)} onActivity={(tab) => handleActivity(row.original, tab)} onTogglePin={() => handleTogglePin(row.original)} onVerify={() => handleVerify(row.original)} onUpload={() => handleUpload(row.original)} onCreateFolder={() => handleCreateFolder(row.original)} onCreatePlaceId={() => handleCreatePlaceId(row.original)} onSetKeywords={() => handleSetKeywords(row.original)} onCopyDescriptionToKeywords={() => handleCopyDescriptionToKeywords(row.original)} refetch={refetchData} user={user} />,
     },
   ], [t, refetchData, user, subViolationTypes, selectedVerifiers, editingPlaceId, editingEnglish, editingKhmer, editingThai]);
   
@@ -1339,7 +1345,7 @@ export function RecordsTable({
                                         <MapPin className="h-4 w-4" />
                                     </a>
                                     </Button>
-                                    <ActionsCell report={report} onEdit={() => handleEdit(report)} onActivity={(tab) => handleActivity(report, tab)} onTogglePin={() => handleTogglePin(report)} onVerify={() => handleVerify(report)} onUpload={() => handleUpload(report)} onCreateFolder={() => handleCreateFolder(report)} onCreatePlaceId={() => handleCreatePlaceId(report)} onSetKeywords={() => handleSetKeywords(report)} onCopyDescriptionToKeywords={() => handleCopyDescriptionToKeywords(report)} refetch={refetchData} />
+                                    <ActionsCell report={report} onEdit={() => handleEdit(report)} onActivity={(tab) => handleActivity(report, tab)} onTogglePin={() => handleTogglePin(report)} onVerify={() => handleVerify(report)} onUpload={() => handleUpload(report)} onCreateFolder={() => handleCreateFolder(report)} onCreatePlaceId={() => handleCreatePlaceId(report)} onSetKeywords={() => handleSetKeywords(report)} onCopyDescriptionToKeywords={() => handleCopyDescriptionToKeywords(report)} refetch={refetchData} user={user} />
                                 </div>
                             </div>
                         </CardHeader>
@@ -1567,24 +1573,27 @@ const StatusBadge = ({ report, refetch }: { report: Report, refetch: () => void 
   }
 
   return (
-    <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="p-0 h-auto">
-                <Badge className={`capitalize cursor-pointer ${statusStyles[displayStatus]}`}>
-                    {t(`statuses.${displayStatus}`, { defaultValue: displayStatus })}
-                </Badge>
-            </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-            <DropdownMenuSeparator />
-            {statuses.map(status => (
-                <DropdownMenuItem key={status} onClick={() => handleStatusChange(status)}>
-                     <span className="w-4 mr-2">{report.status === status && <Check className="h-4 w-4" />}</span>
-                    {t(`statuses.${status}`)}
-                </DropdownMenuItem>
-            ))}
-        </DropdownMenuContent>
-    </DropdownMenu>
+    <div className="flex items-center gap-1">
+      <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="p-0 h-auto">
+                  <Badge className={`capitalize cursor-pointer ${statusStyles[displayStatus]}`}>
+                      {t(`statuses.${displayStatus}`, { defaultValue: displayStatus })}
+                  </Badge>
+              </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+              <DropdownMenuSeparator />
+              {statuses.map(status => (
+                  <DropdownMenuItem key={status} onClick={() => handleStatusChange(status)}>
+                       <span className="w-4 mr-2">{report.status === status && <Check className="h-4 w-4" />}</span>
+                      {t(`statuses.${status}`)}
+                  </DropdownMenuItem>
+              ))}
+          </DropdownMenuContent>
+      </DropdownMenu>
+      {/* No edit status indicators needed anymore */}
+    </div>
   );
 };
 

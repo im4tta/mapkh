@@ -151,5 +151,14 @@ const getProvinceFlow = ai.defineFlow(
 );
 
 export async function reverseGeocode(input: ReverseGeocodeInput): Promise<ReverseGeocodeOutput> {
-  return getProvinceFlow(input);
+  console.log('reverseGeocode called with:', input);
+  try {
+    const result = await getProvinceFlow(input);
+    console.log('reverseGeocode result:', result);
+    return result;
+  } catch (error) {
+    console.error('reverseGeocode error:', error);
+    console.error('Error details:', error instanceof Error ? error.message : 'Unknown error');
+    return { province: null, displayName: null, placeId: null };
+  }
 }

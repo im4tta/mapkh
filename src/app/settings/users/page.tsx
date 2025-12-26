@@ -3,7 +3,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from 'react';
-import { getUsers, deleteUser, addUserByAdmin, updateUserByAdmin, resetUserPassword } from '@/app/actions';
+import { getUsers, deleteUser, addUserByAdmin, updateUserByAdmin, resetUserPassword, cleanupInvalidUsers } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/auth-provider';
@@ -12,7 +12,7 @@ import { DataTable } from '@/components/data-table';
 import { ColumnDef, useReactTable, getCoreRowModel, getPaginationRowModel, getSortedRowModel, SortingState } from '@tanstack/react-table';
 import { format } from 'date-fns';
 import { Timestamp } from 'firebase/firestore';
-import { MoreHorizontal, Trash2, Edit, UserPlus, KeyRound, Loader2, ArrowUpDown } from 'lucide-react';
+import { MoreHorizontal, Trash2, Edit, UserPlus, KeyRound, Loader2, ArrowUpDown, UserX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -265,17 +265,53 @@ export default function UserManagementPage() {
 
     const fetchUsers = async () => {
         setIsLoading(true);
-        const result = await getUsers();
-        if (result.success && result.data) {
-            setUsers(result.data as UserForAdmin[]);
-        } else {
+        try {
+            const result = await getUsers();
+            if (result.success && result.data) {
+                setUsers(result.data as UserForAdmin[]);
+            } else {
+                toast({
+                    variant: 'destructive',
+                    title: t('settings.users.load_error'),
+                    description: result.error || 'Failed to load users: Internal server error',
+                });
+            }
+        } catch (error) {
+            console.error('Error fetching users:', error);
             toast({
                 variant: 'destructive',
                 title: t('settings.users.load_error'),
-                description: result.error,
+                description: 'Failed to load users: Internal server error',
             });
         }
         setIsLoading(false);
+    };
+
+    const handleCleanupUsers = async () => {
+        setIsSubmitting(true);
+        try {
+            const result = await cleanupInvalidUsers(user?.uid);
+            if (result.success) {
+                toast({ 
+                    title: "Cleanup Complete", 
+                    description: `Removed ${result.removed} invalid users.` 
+                });
+                fetchUsers(); // Refresh the user list
+            } else {
+                toast({ 
+                    variant: 'destructive', 
+                    title: "Cleanup Failed", 
+                    description: result.error 
+                });
+            }
+        } catch (error) {
+            toast({ 
+                variant: 'destructive', 
+                title: "Cleanup Failed", 
+                description: 'An unexpected error occurred during cleanup.' 
+            });
+        }
+        setIsSubmitting(false);
     };
 
     useEffect(() => {
@@ -301,7 +337,7 @@ export default function UserManagementPage() {
     const handleDelete = async () => {
         if (!deletingUser) return;
         setIsSubmitting(true);
-        const result = await deleteUser(deletingUser.uid);
+        const result = await deleteUser(deletingUser.uid, user?.uid);
         if (result.success) {
             toast({ title: "User deleted" });
             fetchUsers();
@@ -432,10 +468,17 @@ export default function UserManagementPage() {
                         {t('settings.users.description')}
                     </p>
                 </div>
-                <Button onClick={handleAdd}>
-                    <UserPlus className="mr-2 h-4 w-4" />
-                    {t('settings.users.add_user')}
-                </Button>
+                <div className="flex gap-2">
+                    <Button onClick={handleCleanupUsers} variant="outline" disabled={isSubmitting}>
+                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        <UserX className="mr-2 h-4 w-4" />
+                        Clean Invalid Users
+                    </Button>
+                    <Button onClick={handleAdd}>
+                        <UserPlus className="mr-2 h-4 w-4" />
+                        {t('settings.users.add_user')}
+                    </Button>
+                </div>
             </div>
             {users.length === 0 ? (
                 <p>{t('settings.users.no_users')}</p>

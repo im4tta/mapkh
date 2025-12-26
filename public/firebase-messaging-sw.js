@@ -1,78 +1,211 @@
-// Import the Firebase app and messaging libraries.
-// These are imported using importScripts because service workers have a different context than the main app.
-importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js');
+// Firebase Cloud Messaging Service Worker for MapKH
+// Enhanced for proper mobile lockscreen notification display
 
-// Firebase configuration will be injected dynamically
-// This prevents exposing sensitive keys in the repository
-let firebaseConfig = null;
+importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
 
-// Listen for config message from main thread
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'FIREBASE_CONFIG') {
-    firebaseConfig = event.data.config;
-    if (!firebase.apps.length) {
-      firebase.initializeApp(firebaseConfig);
-    }
-  }
-});
+// Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyCc4HV-Qb4hcI0-xbmnT6nBzA2QG7qmoVE",
+  authDomain: "mapcorrect-z5n3v.firebaseapp.com",
+  projectId: "mapcorrect-z5n3v",
+  storageBucket: "mapcorrect-z5n3v.firebasestorage.app",
+  messagingSenderId: "951132208154",
+  appId: "1:951132208154:web:caf0c1abc657aa496b25a3"
+};
 
-// Fallback config for development (use environment-specific values)
-if (!firebaseConfig) {
-  firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT.firebasestorage.app",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID",
-  };
+// Initialize Firebase
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
 }
 
-// Initialize the Firebase app in the service worker.
-firebase.initializeApp(firebaseConfig);
-
-// Retrieve an instance of Firebase Messaging so that it can handle background messages.
+// Get messaging instance
 const messaging = firebase.messaging();
 
-// Add an event listener to handle background push messages.
-// This is the core logic for showing notifications when the app is not in the foreground.
+// Handle background messages - CRITICAL for lockscreen notifications
 messaging.onBackgroundMessage((payload) => {
-  console.log('[firebase-messaging-sw.js] Received background message: ', payload);
+  console.log('[firebase-messaging-sw.js] Received background message:', payload);
 
-  // Extract the notification data from the payload.
-  // We prioritize the `data` payload fields to ensure consistency.
-  const notificationTitle = payload.data?.title || "New Notification";
+  // Extract notification data with fallbacks
+  const title = payload.notification?.title || payload.data?.title || 'MapKH Notification';
+  const body = payload.notification?.body || payload.data?.body || 'You have a new notification';
+  
+  // Enhanced notification options for better mobile display
   const notificationOptions = {
-    body: payload.data?.body || "You have a new message.",
-    icon: payload.data?.icon || '/icons/favicon.png', // Default icon
-    badge: payload.data?.badge || '/badge-72x72.svg', // Badge for the notification bar
+    body: body,
+    icon: '/icons/icon-192x192.png', // Use PNG for better compatibility
+    badge: '/icons/icon-192x192.png',
+    tag: payload.data?.tag || 'mapkh-notification',
+    data: {
+      url: payload.data?.url || '/',
+      reportId: payload.data?.reportId,
+      type: payload.data?.type || 'general',
+      notificationId: payload.data?.notificationId,
+      timestamp: Date.now(),
+      ...payload.data
+    },
+    actions: [
+      {
+        action: 'open',
+        title: 'Open MapKH'
+      },
+      {
+        action: 'dismiss',
+        title: 'Dismiss'
+      }
+    ],
+    requireInteraction: true, // Keep notification visible
+    silent: false, // Ensure sound/vibration
+    vibrate: [200, 100, 200, 100, 200], // Longer vibration pattern
+    timestamp: Date.now(),
+    renotify: true, // Allow re-notification
+    sticky: false, // Don't make it sticky
+    // Additional options for better mobile support
+    dir: 'auto',
+    lang: 'en',
+    // Force notification to show even if app is in foreground
+    showTrigger: true
   };
 
-  // Use the service worker's registration to show the notification.
-  // This is the command that makes the notification appear on the user's device.
-  self.registration.showNotification(notificationTitle, notificationOptions);
+  console.log('[firebase-messaging-sw.js] Showing notification with options:', notificationOptions);
+
+  // Show the notification - this is critical for lockscreen display
+  return self.registration.showNotification(title, notificationOptions)
+    .then(() => {
+      console.log('[firebase-messaging-sw.js] Notification displayed successfully');
+      
+      // Update badge count
+      if ('setAppBadge' in navigator) {
+        navigator.setAppBadge(1).catch(err => console.log('Badge update failed:', err));
+      }
+    })
+    .catch(error => {
+      console.error('[firebase-messaging-sw.js] Failed to show notification:', error);
+    });
 });
 
-// Optional: Add a listener for when the user clicks on the notification.
-self.addEventListener('notificationclick', function(event) {
-  // Close the notification pop-up.
+// Enhanced notification click handler
+self.addEventListener('notificationclick', (event) => {
+  console.log('[firebase-messaging-sw.js] Notification click received:', event);
+  
   event.notification.close();
 
-  // Open the app's main page. You can customize this to open a specific URL.
+  if (event.action === 'dismiss') {
+    return;
+  }
+
+  // Get the URL to open
+  const targetUrl = event.notification.data?.url || '/';
+  
   event.waitUntil(
-    clients.openWindow('/')
+    clients.matchAll({ 
+      type: 'window', 
+      includeUncontrolled: true 
+    }).then((clientList) => {
+      console.log('[firebase-messaging-sw.js] Found clients:', clientList.length);
+      
+      // Check if there's already a window open
+      for (const client of clientList) {
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+          console.log('[firebase-messaging-sw.js] Focusing existing client');
+          // Navigate to specific URL if provided
+          if (targetUrl !== '/') {
+            client.navigate(targetUrl);
+          }
+          return client.focus();
+        }
+      }
+      
+      // Open new window if none exists
+      console.log('[firebase-messaging-sw.js] Opening new window:', targetUrl);
+      if (clients.openWindow) {
+        return clients.openWindow(targetUrl);
+      }
+    }).then(() => {
+      // Clear badge when notification is clicked
+      if ('clearAppBadge' in navigator) {
+        navigator.clearAppBadge().catch(err => console.log('Badge clear failed:', err));
+      }
+    })
   );
 });
 
-// This is a standard service worker lifecycle event.
-// 'skipWaiting' forces the waiting service worker to become the active service worker.
+// Handle notification close
+self.addEventListener('notificationclose', (event) => {
+  console.log('[firebase-messaging-sw.js] Notification closed:', event);
+  
+  // Track dismissal analytics if needed
+  if (event.notification.data?.trackDismissal) {
+    // Could send analytics data here
+  }
+});
+
+// Enhanced push event handler for direct push messages
+self.addEventListener('push', (event) => {
+  console.log('[firebase-messaging-sw.js] Push event received:', event);
+  
+  if (!event.data) {
+    console.log('[firebase-messaging-sw.js] Push event has no data');
+    return;
+  }
+
+  try {
+    const data = event.data.json();
+    console.log('[firebase-messaging-sw.js] Push data:', data);
+    
+    const title = data.notification?.title || data.title || 'MapKH Notification';
+    const options = {
+      body: data.notification?.body || data.body || 'You have a new notification',
+      icon: '/icons/icon-192x192.png',
+      badge: '/icons/icon-192x192.png',
+      tag: data.tag || 'mapkh-push',
+      data: {
+        url: data.url || data.data?.url || '/',
+        ...data.data
+      },
+      requireInteraction: true,
+      silent: false,
+      vibrate: [200, 100, 200, 100, 200],
+      timestamp: Date.now(),
+      renotify: true,
+      actions: [
+        { action: 'open', title: 'Open MapKH' },
+        { action: 'dismiss', title: 'Dismiss' }
+      ]
+    };
+
+    event.waitUntil(
+      self.registration.showNotification(title, options)
+        .then(() => {
+          console.log('[firebase-messaging-sw.js] Push notification displayed');
+          if ('setAppBadge' in navigator) {
+            navigator.setAppBadge(1).catch(console.error);
+          }
+        })
+    );
+  } catch (error) {
+    console.error('[firebase-messaging-sw.js] Error processing push event:', error);
+  }
+});
+
+// Service worker lifecycle events
 self.addEventListener('install', (event) => {
+  console.log('[firebase-messaging-sw.js] Service worker installing...');
   self.skipWaiting();
 });
 
-// This is another standard lifecycle event.
-// 'clients.claim()' allows an active service worker to take control of the page immediately.
 self.addEventListener('activate', (event) => {
+  console.log('[firebase-messaging-sw.js] Service worker activating...');
   event.waitUntil(self.clients.claim());
 });
+
+// Handle messages from main thread
+self.addEventListener('message', (event) => {
+  console.log('[firebase-messaging-sw.js] Received message:', event.data);
+  
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
+console.log('[firebase-messaging-sw.js] Firebase messaging service worker loaded and ready');

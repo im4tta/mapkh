@@ -16,6 +16,9 @@ const nextConfig: NextConfig = {
     },
   },
   
+  // Turbopack configuration for Next.js 16
+  turbopack: {},
+  
   // PWA and mobile browser support
   headers: async () => {
     return [
@@ -92,7 +95,7 @@ const nextConfig: NextConfig = {
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
   
-  // Webpack optimizations for Vercel
+  // Webpack optimizations for Vercel (fallback for non-Turbopack builds)
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {
@@ -100,8 +103,14 @@ const nextConfig: NextConfig = {
         fs: false,
         net: false,
         tls: false,
+        canvas: false,
       };
     }
+    
+    // Handle canvas module for server-side rendering
+    config.externals = config.externals || [];
+    config.externals.push('canvas');
+    
     return config;
   },
   

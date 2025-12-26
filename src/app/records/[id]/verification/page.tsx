@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
-import { getReportByNumericId, uploadReportFile, verifyPlaceId, getViolationTerms, getSubViolationTypes } from '@/app/actions';
+import { getReportByNumericId, uploadReportFile, verifyPlaceId, verifyPlaceByName, getViolationTerms, getSubViolationTypes } from '@/app/actions';
 import { Report, ViolationTerm, SubViolationType } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Loader2, MapPin, CheckCircle, Clock, XCircle, AlertCircle, ShieldCheck, Link2, Download, UploadCloud, Globe, User, Satellite, Key, Info, FileText } from 'lucide-react';
@@ -11,7 +11,6 @@ import { useTranslation } from 'react-i18next';
 import { format, formatDistanceToNow, isValid } from 'date-fns';
 import { Timestamp } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
-import { APIProvider, Map, AdvancedMarker, Pin } from '@vis.gl/react-google-maps';
 import { Skeleton } from '@/components/ui/skeleton';
 import html2canvas from 'html2canvas';
 import { Button } from '@/components/ui/button';
@@ -21,6 +20,8 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
+import { FallbackMap } from '@/components/fallback-map';
+import { GoogleMapsTiles } from '@/components/google-maps-tiles';
 import { Textarea } from '@/components/ui/textarea';
 
 const StatusInfo = ({ status, found, isVerifying }: { status: Report['status'], found?: boolean, isVerifying: boolean }) => {
@@ -126,6 +127,7 @@ export default function VerificationReportPage() {
     const [useCustomApiKey, setUseCustomApiKey] = useState(false);
     const [apiKeyError, setApiKeyError] = useState<string | null>(null);
     const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
+    const [mapError, setMapError] = useState<string | null>(null);
     
     // Load saved API key from localStorage on component mount
     useEffect(() => {
@@ -136,6 +138,30 @@ export default function VerificationReportPage() {
             setCustomApiKey(savedApiKey);
             setUseCustomApiKey(true);
         }
+        
+        // Check if default API key is available
+        if (!defaultApiKey && !savedApiKey) {
+            console.warn('No Google Maps API key found. Maps will not display properly.');
+        }
+    }, []);
+
+    // Add error boundary for Google Maps API errors
+    useEffect(() => {
+        const handleGoogleMapsError = (event: any) => {
+            console.error('Google Maps API Error:', event);
+            if (event.error) {
+                setMapError(`Google Maps Error: ${event.error.message || 'Unknown error'}`);
+            }
+        };
+
+        // Listen for global Google Maps errors
+        window.addEventListener('gm_authFailure', () => {
+            setMapError('Google Maps API authentication failed. Please check your API key.');
+        });
+
+        return () => {
+            window.removeEventListener('gm_authFailure', handleGoogleMapsError);
+        };
     }, []);
     
     const apiKey = useCustomApiKey && customApiKey ? customApiKey : defaultApiKey;
@@ -174,6 +200,9 @@ export default function VerificationReportPage() {
     // Verification state
     const [isVerifying, setIsVerifying] = useState(false);
     const [isPlaceFound, setIsPlaceFound] = useState<boolean | undefined>(undefined);
+    const [verificationMethod, setVerificationMethod] = useState<'placeId' | 'placeName'>('placeId');
+    const [placeName, setPlaceName] = useState('');
+    const [verificationDetails, setVerificationDetails] = useState<any>(null);
 
     // Map control state
     const [mapZoom, setMapZoom] = useState(17);
@@ -183,6 +212,9 @@ export default function VerificationReportPage() {
 
     const id = Array.isArray(params.id) ? params.id[0] : params.id;
     
+    // Computed report number with fallbacks
+    const displayReportNumber = report?.reportNumber || (id ? parseInt(id, 10) : null) || 'N/A';
+    
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
         return () => clearInterval(timer);
@@ -190,6 +222,13 @@ export default function VerificationReportPage() {
 
     const captureCanvas = async (): Promise<HTMLCanvasElement | null> => {
         if (!printRef.current) return null;
+        
+        // Ensure report data is loaded before capturing
+        if (!report || (!report.reportNumber && !id)) {
+            toast({ variant: "destructive", title: "Capture Failed", description: "Report data not fully loaded. Please wait and try again."});
+            return null;
+        }
+        
         try {
             const canvas = await html2canvas(printRef.current, {
                 scale: 2,
@@ -210,7 +249,7 @@ export default function VerificationReportPage() {
         const canvas = await captureCanvas();
         if (canvas) {
             const link = document.createElement('a');
-            link.download = `${report!.reportNumber}_${report!.placeId || 'report'}_verification.jpeg`;
+            link.download = `${displayReportNumber}_${report?.placeId || 'report'}_verification.jpeg`;
             link.href = canvas.toDataURL('image/jpeg', 0.95);
             link.click();
         }
@@ -228,7 +267,7 @@ export default function VerificationReportPage() {
             const imageDataUri = canvas.toDataURL('image/jpeg', 0.95);
             const result = await uploadReportFile({
                 reportId: report.id,
-                fileName: `${report.reportNumber}_${report.placeId || 'report'}_verification.jpeg`,
+                fileName: `${displayReportNumber}_${report.placeId || 'report'}_verification.jpeg`,
                 fileDataUri: imageDataUri
             }, user?.uid, user?.displayName);
             
@@ -267,6 +306,7 @@ export default function VerificationReportPage() {
         setIsVerifying(true);
         setError(null);
         setApiKeyError(null);
+        setVerificationDetails(null);
         
         try {
             const verificationApiKey = useCustomApiKey && customApiKey ? customApiKey : undefined;
@@ -293,8 +333,86 @@ export default function VerificationReportPage() {
         }
     }
 
+    const handlePlaceNameVerification = async () => {
+        if (!placeName.trim()) {
+            toast({ variant: 'destructive', title: 'No Place Name', description: 'Please enter a place name to verify.' });
+            return;
+        }
+
+        if (!report?.position) {
+            toast({ variant: 'destructive', title: 'No Coordinates', description: 'This report does not have coordinates for place name verification.' });
+            return;
+        }
+        
+        // Check if we need an API key for verification
+        if (useCustomApiKey && !customApiKey.trim()) {
+            setShowApiKeyDialog(true);
+            return;
+        }
+
+        if (useCustomApiKey && !validateApiKey(customApiKey)) {
+            setShowApiKeyDialog(true);
+            return;
+        }
+
+        // If no default API key and no custom API key, show dialog
+        if (!defaultApiKey && !customApiKey.trim()) {
+            setShowApiKeyDialog(true);
+            return;
+        }
+
+        setIsVerifying(true);
+        setError(null);
+        setApiKeyError(null);
+        setVerificationDetails(null);
+        
+        try {
+            const verificationApiKey = useCustomApiKey && customApiKey ? customApiKey : undefined;
+            const verificationResult = await verifyPlaceByName(
+                placeName.trim(), 
+                report.position.lat, 
+                report.position.lng, 
+                verificationApiKey
+            );
+            
+            if (verificationResult.success) {
+                setIsPlaceFound(verificationResult.found);
+                setVerificationDetails(verificationResult.details);
+                
+                if (verificationResult.found) {
+                    toast({ 
+                        title: 'Place Name Verified!', 
+                        description: `Found "${verificationResult.details?.name}" at this location.` 
+                    });
+                } else {
+                    const message = verificationResult.details?.message || 'Place name not found at this location.';
+                    toast({ 
+                        variant: 'destructive',
+                        title: 'Place Not Found', 
+                        description: message
+                    });
+                }
+            } else {
+                setError(verificationResult.error || "Place name verification failed.");
+                setIsPlaceFound(false);
+                toast({ variant: 'destructive', title: 'Verification Failed', description: verificationResult.error });
+            }
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred.';
+            setError(errorMessage);
+            setIsPlaceFound(false);
+            toast({ variant: 'destructive', title: 'Verification Error', description: errorMessage });
+        } finally {
+            setIsVerifying(false);
+        }
+    }
+
     const handleReVerification = async () => {
-        await handleVerification();
+        if (verificationMethod === 'placeId') {
+            await handleVerification();
+        } else {
+            await handlePlaceNameVerification();
+        }
     }
     
     useEffect(() => {
@@ -325,6 +443,12 @@ export default function VerificationReportPage() {
 
                 if (reportResult.success && reportResult.data) {
                     setReport(reportResult.data);
+                    console.log('Report loaded:', reportResult.data.reportNumber); // Debug log
+                    console.log('Report data:', { 
+                        id: reportResult.data.id, 
+                        reportNumber: reportResult.data.reportNumber,
+                        hasReportNumber: !!reportResult.data.reportNumber 
+                    }); // Additional debug info
                     // Don't auto-verify on page load - user must click verification button
                 } else {
                     setError(reportResult.error || "Failed to load report details.");
@@ -375,7 +499,7 @@ export default function VerificationReportPage() {
                             API Key Required
                         </CardTitle>
                         <CardDescription>
-                            A Google Maps API key is required to verify location data. Please provide your API key to continue.
+                            A Google Maps API key is required to verify location data and display interactive maps. Please provide your API key to continue.
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -384,7 +508,7 @@ export default function VerificationReportPage() {
                             <Input
                                 id="api-key-input"
                                 type="password"
-                                placeholder="Enter your Google Maps API key..."
+                                placeholder="Enter your Google Maps API key (starts with AIza...)..."
                                 value={customApiKey}
                                 onChange={(e) => handleApiKeyChange(e.target.value)}
                                 className={`font-mono ${apiKeyError ? 'border-red-500 focus:border-red-500' : ''}`}
@@ -395,10 +519,26 @@ export default function VerificationReportPage() {
                                 </p>
                             )}
                         </div>
+                            <div className="bg-blue-50 dark:bg-blue-950/30 p-3 rounded-md border border-blue-200 dark:border-blue-800">
+                            <div className="text-sm text-blue-800 dark:text-blue-200 space-y-2">
+                                <p className="font-medium">API Key Requirements:</p>
+                                <ul className="text-xs space-y-1 ml-4 list-disc">
+                                    <li>Must start with "AIza" and be 35-45 characters long</li>
+                                    <li>Needs "Maps JavaScript API" enabled</li>
+                                    <li>Should allow your domain in API restrictions (or use "None" for testing)</li>
+                                    <li>Get your key from <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" className="underline hover:no-underline">Google Cloud Console</a></li>
+                                </ul>
+                                <div className="mt-2 p-2 bg-blue-100 dark:bg-blue-900/50 rounded text-xs">
+                                    <p className="font-medium">Common Issues:</p>
+                                    <p>• "This page can't load Google Maps correctly" = Domain restrictions</p>
+                                    <p>• "For development purposes only" = Billing not enabled</p>
+                                    <p>• Map not loading = Wrong API or key restrictions</p>
+                                </div>
+                            </div>
+                        </div>
                         <div className="text-sm text-muted-foreground">
                             <p>• Your API key will be saved locally for future sessions</p>
-                            <p>• API key should start with "AIza" and be 35-45 characters long</p>
-                            <p>• Get your API key from <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Google Cloud Console</a></p>
+                            <p>• This is separate from the main Maps page configuration</p>
                         </div>
                     </CardContent>
                     <CardFooter className="flex gap-2">
@@ -451,13 +591,12 @@ export default function VerificationReportPage() {
 
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-muted/40 p-4 font-sans">
-        <APIProvider apiKey={apiKey || ''}>
-            <div className="w-full max-w-4xl space-y-4">
-                 <Card>
-                    <CardHeader>
-                        <CardTitle>Map Display Settings</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
+        <div className="w-full max-w-4xl space-y-4">
+             <Card>
+                <CardHeader>
+                    <CardTitle>Map Display Settings</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
                         <div className="space-y-4">
                             <div className="flex flex-col sm:flex-row items-center gap-4">
                                 <div className="flex items-center gap-2">
@@ -471,6 +610,25 @@ export default function VerificationReportPage() {
                                     </Label>
                                 </div>
                             </div>
+                            
+                            {/* API Status Information */}
+                            <div className="bg-blue-50 dark:bg-blue-950/30 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                                <div className="flex items-start gap-3">
+                                    <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                                    <div className="space-y-2">
+                                        <p className="text-sm text-blue-800 dark:text-blue-200 font-medium">
+                                            Maps & Verification Status
+                                        </p>
+                                        <div className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
+                                            <p>• Maps use Google Maps tiles with automatic fallback to OpenStreetMap</p>
+                                            <p>• If you see "Fallback Maps", Google's servers may be temporarily unavailable</p>
+                                            <p>• Verification features require a valid Google Maps API key</p>
+                                            <p>• 403 errors usually indicate API key issues or billing problems</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
                             <div className="space-y-3">
                                 <div className="flex items-center gap-2">
                                     <Switch
@@ -535,18 +693,99 @@ export default function VerificationReportPage() {
                         
                         {/* Initial Verification Button - Show when no verification has been done */}
                         {isPlaceFound === undefined && !isVerifying && (
-                            <div className="mt-6 text-center">
-                                <Button 
-                                    onClick={handleVerification} 
-                                    size="lg"
-                                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                                >
-                                    <ShieldCheck className="mr-2 h-5 w-5" />
-                                    Start Verification
-                                </Button>
-                                <p className="text-sm text-muted-foreground mt-2">
-                                    Click to verify this location using Google Maps API
-                                </p>
+                            <div className="mt-6 space-y-4">
+                                <div className="text-center">
+                                    <h3 className="text-lg font-semibold mb-4">Choose Verification Method</h3>
+                                    <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="radio"
+                                                id="place-id-method"
+                                                name="verification-method"
+                                                value="placeId"
+                                                checked={verificationMethod === 'placeId'}
+                                                onChange={(e) => setVerificationMethod(e.target.value as 'placeId' | 'placeName')}
+                                                className="w-4 h-4 text-blue-600"
+                                            />
+                                            <Label htmlFor="place-id-method" className="cursor-pointer">
+                                                Verify by Place ID (Higher API cost)
+                                            </Label>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="radio"
+                                                id="place-name-method"
+                                                name="verification-method"
+                                                value="placeName"
+                                                checked={verificationMethod === 'placeName'}
+                                                onChange={(e) => setVerificationMethod(e.target.value as 'placeId' | 'placeName')}
+                                                className="w-4 h-4 text-green-600"
+                                            />
+                                            <Label htmlFor="place-name-method" className="cursor-pointer">
+                                                Verify by Place Name (Lower API cost)
+                                            </Label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {verificationMethod === 'placeId' && report?.placeId && (
+                                    <div className="text-center">
+                                        <Button 
+                                            onClick={handleVerification} 
+                                            size="lg"
+                                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                                        >
+                                            <ShieldCheck className="mr-2 h-5 w-5" />
+                                            Verify by Place ID
+                                        </Button>
+                                        <p className="text-sm text-muted-foreground mt-2">
+                                            Verify using Google Maps Place ID: {report.placeId}
+                                        </p>
+                                    </div>
+                                )}
+
+                                {verificationMethod === 'placeName' && (
+                                    <div className="text-center space-y-3">
+                                        <div className="max-w-md mx-auto">
+                                            <Label htmlFor="place-name-input" className="text-sm font-medium">
+                                                Enter Place Name to Verify
+                                            </Label>
+                                            <Input
+                                                id="place-name-input"
+                                                type="text"
+                                                placeholder="e.g., McDonald's, Central Market, etc."
+                                                value={placeName}
+                                                onChange={(e) => setPlaceName(e.target.value)}
+                                                className="mt-1"
+                                                onKeyPress={(e) => {
+                                                    if (e.key === 'Enter' && placeName.trim()) {
+                                                        handlePlaceNameVerification();
+                                                    }
+                                                }}
+                                            />
+                                        </div>
+                                        <Button 
+                                            onClick={handlePlaceNameVerification} 
+                                            size="lg"
+                                            disabled={!placeName.trim()}
+                                            className="bg-green-600 hover:bg-green-700 text-white"
+                                        >
+                                            <ShieldCheck className="mr-2 h-5 w-5" />
+                                            Verify by Place Name
+                                        </Button>
+                                        <p className="text-sm text-muted-foreground">
+                                            Search for "{placeName || 'place name'}" near coordinates: {report?.position.lat}, {report?.position.lng}
+                                        </p>
+                                    </div>
+                                )}
+
+                                {verificationMethod === 'placeId' && !report?.placeId && (
+                                    <div className="text-center p-4 bg-yellow-50 dark:bg-yellow-950/30 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                                        <p className="text-yellow-800 dark:text-yellow-200">
+                                            This report doesn't have a Place ID. Please use Place Name verification instead.
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                         )}
                         
@@ -592,7 +831,7 @@ export default function VerificationReportPage() {
                             <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-100 dark:bg-blue-900/30 rounded-full border border-blue-200 dark:border-blue-700">
                                 <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                                 <p className="text-xl font-bold text-blue-800 dark:text-blue-200">
-                                    Report #{report?.reportNumber || 'N/A'}
+                                    Report #{displayReportNumber}
                                 </p>
                             </div>
                             <div className="mt-3 space-y-2">
@@ -636,6 +875,75 @@ export default function VerificationReportPage() {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Verification Details Section */}
+                            {verificationDetails && (
+                                <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/50 dark:to-emerald-950/50 p-4 rounded-lg border border-green-200 dark:border-green-800">
+                                    <h3 className="font-semibold text-lg mb-3 flex items-center gap-2 text-green-800 dark:text-green-200">
+                                        <ShieldCheck className="h-5 w-5" />
+                                        Verification Results
+                                    </h3>
+                                    <div className="space-y-3 text-sm text-foreground">
+                                        {verificationDetails.name && (
+                                            <div className="flex items-start gap-3 p-2 bg-white/60 dark:bg-slate-800/60 rounded-md">
+                                                <MapPin className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                                                <p><strong className="font-medium">Found Place:</strong> {verificationDetails.name}</p>
+                                            </div>
+                                        )}
+                                        {verificationDetails.address && (
+                                            <div className="flex items-start gap-3 p-2 bg-white/60 dark:bg-slate-800/60 rounded-md">
+                                                <MapPin className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                                                <p><strong className="font-medium">Address:</strong> {verificationDetails.address}</p>
+                                            </div>
+                                        )}
+                                        {verificationDetails.placeId && (
+                                            <div className="flex items-start gap-3 p-2 bg-white/60 dark:bg-slate-800/60 rounded-md">
+                                                <Link2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                                                <p><strong className="font-medium">Google Place ID:</strong> <span className="font-mono text-xs">{verificationDetails.placeId}</span></p>
+                                            </div>
+                                        )}
+                                        {verificationDetails.types && verificationDetails.types.length > 0 && (
+                                            <div className="flex items-start gap-3 p-2 bg-white/60 dark:bg-slate-800/60 rounded-md">
+                                                <Globe className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                                                <div>
+                                                    <p><strong className="font-medium">Place Types:</strong></p>
+                                                    <div className="flex flex-wrap gap-1 mt-1">
+                                                        {verificationDetails.types.slice(0, 5).map((type: string, index: number) => (
+                                                            <Badge key={index} variant="secondary" className="text-xs">
+                                                                {type.replace(/_/g, ' ')}
+                                                            </Badge>
+                                                        ))}
+                                                        {verificationDetails.types.length > 5 && (
+                                                            <Badge variant="outline" className="text-xs">
+                                                                +{verificationDetails.types.length - 5} more
+                                                            </Badge>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                        {verificationDetails.message && (
+                                            <div className="flex items-start gap-3 p-2 bg-yellow-50 dark:bg-yellow-950/30 rounded-md border border-yellow-200 dark:border-yellow-700">
+                                                <Info className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+                                                <p><strong className="font-medium">Note:</strong> {verificationDetails.message}</p>
+                                            </div>
+                                        )}
+                                        {verificationDetails.suggestions && verificationDetails.suggestions.length > 0 && (
+                                            <div className="flex items-start gap-3 p-2 bg-blue-50 dark:bg-blue-950/30 rounded-md border border-blue-200 dark:border-blue-700">
+                                                <Info className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                                                <div>
+                                                    <p><strong className="font-medium">Nearby Places Found:</strong></p>
+                                                    <ul className="list-disc list-inside mt-1 text-xs">
+                                                        {verificationDetails.suggestions.map((suggestion: string, index: number) => (
+                                                            <li key={index}>{suggestion}</li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/50 dark:to-pink-950/50 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
                                 <h3 className="font-semibold text-lg mb-3 flex items-center gap-2 text-purple-800 dark:text-purple-200">
@@ -684,31 +992,17 @@ export default function VerificationReportPage() {
                                 </div>
                             </div>
 
-                            <div style={{ width: `${mapWidth}px`, height: `${mapHeight}px`}} className="mx-auto rounded-md overflow-hidden border">
-                                {apiKey ? (
-                                    <Map
-                                        center={report.position}
-                                        zoom={mapZoom}
-                                        mapId="verification_map"
-                                        gestureHandling={'none'}
-                                        disableDefaultUI={true}
-                                        mapTypeId={mapType}
-                                    >
-                                        <AdvancedMarker position={report.position}>
-                                            <Pin />
-                                        </AdvancedMarker>
-                                    </Map>
-                                ) : (
-                                    <div className="flex items-center justify-center h-full bg-gray-100 dark:bg-gray-800">
-                                        <div className="text-center p-4">
-                                            <Key className="h-12 w-12 mx-auto mb-2 text-gray-400" />
-                                            <p className="text-gray-600 dark:text-gray-400">No API key available</p>
-                                            <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
-                                                Please configure a Google Maps API key to display the map
-                                            </p>
-                                        </div>
-                                    </div>
-                                )}
+                            <div style={{ width: `${mapWidth}px`, height: `${mapHeight}px`}} className="mx-auto rounded-md overflow-hidden border relative">
+                                <GoogleMapsTiles
+                                    lat={report.position.lat}
+                                    lng={report.position.lng}
+                                    zoom={mapZoom}
+                                    width={mapWidth}
+                                    height={mapHeight}
+                                    mapType={mapType}
+                                    apiKey={apiKey}
+                                    className="rounded-lg"
+                                />
                             </div>
                              
                             <div className="text-center pt-4">
@@ -730,17 +1024,22 @@ export default function VerificationReportPage() {
                     </CardFooter>
                 </Card>
                 <div className="mt-4 flex justify-center gap-4">
-                    <Button onClick={handleDownloadImage} disabled={isCapturing}>
+                    <Button 
+                        onClick={handleDownloadImage} 
+                        disabled={isCapturing || loading || !report}
+                    >
                         {isCapturing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
                         Download as Image
                     </Button>
-                    <Button onClick={handlePushToDrive} disabled={isUploading || !report.folderId}>
+                    <Button 
+                        onClick={handlePushToDrive} 
+                        disabled={isUploading || loading || !report?.folderId}
+                    >
                         {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-2 h-4 w-4" />}
                         Push to Drive
                     </Button>
                 </div>
-            </div>
-        </APIProvider>
+        </div>
       </div>
     );
 }

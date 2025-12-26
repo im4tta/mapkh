@@ -3,7 +3,6 @@
 
 import { AuthProvider, useAuth } from '@/context/auth-provider';
 import { ThemeProvider } from '@/components/theme-provider';
-import { PushNotificationProvider } from '@/context/push-notification-provider';
 import { AppShell } from '@/components/app-shell';
 import { ActivityDialogProvider } from '@/context/activity-dialog-provider';
 import React, { Suspense, useEffect, Component, ErrorInfo } from 'react';
@@ -12,7 +11,7 @@ import { Loader2 } from 'lucide-react';
 import { I18nProvider } from '@/context/i18n-provider';
 import { useToast } from '@/hooks/use-toast';
 import { PWAInstallPrompt } from '@/components/pwa-install-prompt';
-import { IOSPWAInitializer } from '@/components/ios-pwa-initializer';
+import { NotificationPermissionPrompt } from '@/components/notification-permission-prompt';
 
 
 function AppBootstrapper({ children }: { children: React.ReactNode }) {
@@ -87,6 +86,7 @@ function AppBootstrapper({ children }: { children: React.ReactNode }) {
     <>
       <AppShell>{children}</AppShell>
       <PWAInstallPrompt />
+      <NotificationPermissionPrompt />
     </>
   );
 }
@@ -131,17 +131,13 @@ export function ClientProviders({ children }: { children: React.ReactNode }) {
         >
           <AuthProvider>
               <ProviderErrorBoundary fallback={children}>
-                <PushNotificationProvider>
-                  <IOSPWAInitializer>
-                    <Suspense fallback={null}>
-                      <ActivityDialogProvider>
-                        <AppBootstrapper>
-                            {children}
-                        </AppBootstrapper>
-                      </ActivityDialogProvider>
-                    </Suspense>
-                  </IOSPWAInitializer>
-                </PushNotificationProvider>
+                <Suspense fallback={null}>
+                  <ActivityDialogProvider>
+                    <AppBootstrapper>
+                        {children}
+                    </AppBootstrapper>
+                  </ActivityDialogProvider>
+                </Suspense>
               </ProviderErrorBoundary>
           </AuthProvider>
         </ThemeProvider>

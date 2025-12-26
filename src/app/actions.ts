@@ -159,7 +159,8 @@ export async function createNotification(userId: string | null, type: Notificati
     if (!NOTIFICATION_TYPES[type]) return;
 
     try {
-        await addDoc(collection(db, 'notifications'), {
+        // Create notification in Firestore
+        const notificationRef = await addDoc(collection(db, 'notifications'), {
             userId: userId, 
             type,
             title,
@@ -169,8 +170,9 @@ export async function createNotification(userId: string | null, type: Notificati
             data: {
               title: title,
               body: message,
-              icon: '/icons/icon-192x192.svg',
-        badge: '/icons/icon-192x192.svg',
+              icon: '/icons/icon-192x192.png',
+              badge: '/icons/icon-192x192.png',
+              url: reportId ? `/records/${reportDetails?.reportNumber || reportId}` : '/',
             },
             reportDetails: (() => {
                 try {
@@ -195,6 +197,48 @@ export async function createNotification(userId: string | null, type: Notificati
             createdAt: serverTimestamp(),
             dismissedBy: [], // New field to track dismissals
         });
+
+        // Send enhanced push notification
+        try {
+            const pushData = {
+                title,
+                body: message,
+                icon: '/icons/icon-192x192.png',
+                badge: '/icons/icon-192x192.png',
+                url: reportId ? `/records/${reportDetails?.reportNumber || reportId}` : '/',
+                data: {
+                    notificationId: notificationRef.id,
+                    reportId,
+                    type,
+                    timestamp: Date.now().toString(),
+                },
+            };
+
+            if (userId) {
+                // Send to specific user
+                await fetch('/api/notifications/send-push', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ...pushData,
+                        targetUsers: [userId],
+                    }),
+                });
+            } else {
+                // Send to all users (community notification)
+                await fetch('/api/notifications/send-push', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ...pushData,
+                        targetAll: true,
+                    }),
+                });
+            }
+        } catch (pushError) {
+            console.error('Error sending push notification:', pushError);
+            // Continue even if push notification fails
+        }
     } catch (error) {
         console.error("Error creating notification:", error);
     }
@@ -364,6 +408,8 @@ export async function updateReport(id: string, data: z.infer<typeof updateSchema
     const currentUser = await getCurrentUser(userId, userName, userEmail);
     const { lat, lng, ...reportData } = parsed.data;
     const reportRef = doc(db, 'reports', id);
+    const ADMIN_UID = 'ADMIN_UID_REDACTED';
+    const isAdmin = userId === ADMIN_UID;
 
     try {
         const docSnap = await getDoc(reportRef);
@@ -372,6 +418,7 @@ export async function updateReport(id: string, data: z.infer<typeof updateSchema
         }
         const oldReportData = docSnap.data() as Report;
 
+        // Allow all users to edit directly - no more pending review system
         const updatePayload: { [key: string]: any } = { ...reportData };
 
         if (lat !== undefined && lng !== undefined) {
@@ -387,7 +434,6 @@ export async function updateReport(id: string, data: z.infer<typeof updateSchema
         if (data.impactCategory) {
             await addPlaceType(data.impactCategory);
         }
-
 
         if (reportData.progress !== undefined && reportData.progress !== null) {
             updatePayload.progress = reportData.progress;
@@ -407,6 +453,15 @@ export async function updateReport(id: string, data: z.infer<typeof updateSchema
         updatePayload.reportedByName = oldReportData.reportedByName;
         updatePayload.reportNumber = oldReportData.reportNumber;
         
+        // Clear any old edit status fields
+        updatePayload.editStatus = 'none';
+        updatePayload.pendingChanges = null;
+        
+        // Track who last edited
+        updatePayload.lastEditedBy = userId;
+        updatePayload.lastEditedByName = currentUser.name;
+        updatePayload.lastEditedAt = serverTimestamp();
+        
         Object.keys(updatePayload).forEach(keyStr => {
             const key = keyStr as keyof typeof updatePayload;
             if (updatePayload[key] === undefined) {
@@ -423,7 +478,6 @@ export async function updateReport(id: string, data: z.infer<typeof updateSchema
                 const oldValue = oldReportData[key as keyof Report];
                 const newValue = reportData[key as keyof typeof reportData];
                 
-                // Firestore doesn't allow undefined values. Convert to null.
                 const safeNewValue = newValue === undefined ? null : newValue;
 
                 if (key === 'position' && lat && lng && oldReportData.position && oldReportData.position.lat === lat && oldReportData.position.lng === lng) return null;
@@ -482,30 +536,70 @@ export async function updateReport(id: string, data: z.infer<typeof updateSchema
     }
 }
 
-
+// New function to create edit requests for non-admin users - REMOVED
+// Edit requests are no longer used - all users can edit freely
 
 export async function deleteReport(id: string, userId: string | undefined, userName: string | null | undefined, userEmail: string | null | undefined) {
     if (!userId) {
         return { success: false, error: "You must be logged in to delete a report." };
     }
     
+    // DATA PROTECTION: Prevent users from deleting reports
+    // Only admins can delete reports in exceptional circumstances
+    const ADMIN_UID = 'ADMIN_UID_REDACTED';
+    
+    if (userId !== ADMIN_UID) {
+        return { 
+            success: false, 
+            error: "Report deletion is not allowed to protect data integrity. Please contact an administrator if you need to remove a report." 
+        };
+    }
+    
     const currentUser = await getCurrentUser(userId, userName, userEmail);
-    const batch = writeBatch(db);
-
+    const reportRef = doc(db, 'reports', id);
+    
     try {
-        const reportRef = doc(db, 'reports', id);
-        batch.delete(reportRef);
+        // Check if report exists and get its data
+        const reportDoc = await getDoc(reportRef);
+        if (!reportDoc.exists()) {
+            return { success: false, error: 'Report not found' };
+        }
+        
+        const reportData = reportDoc.data() as Report;
+        
+        // Check if report is protected
+        if (reportData.isProtected) {
+            return { 
+                success: false, 
+                error: `This report is protected and cannot be deleted. Reason: ${reportData.protectedReason || 'Data protection policy'}` 
+            };
+        }
+        
+        const batch = writeBatch(db);
+        
+        // Instead of deleting, archive the report
+        batch.update(reportRef, {
+            status: 'archived',
+            archivedBy: userId,
+            archivedByName: currentUser.name,
+            archivedAt: serverTimestamp(),
+            archivedReason: 'Admin deletion request'
+        });
 
+        // Keep notifications for audit trail but mark them as archived
         const notificationsQuery = query(collection(db, 'notifications'), where('reportId', '==', id));
         const notificationsSnapshot = await getDocs(notificationsQuery);
         notificationsSnapshot.forEach(doc => {
-            batch.delete(doc.ref);
+            batch.update(doc.ref, {
+                archived: true,
+                archivedAt: serverTimestamp()
+            });
         });
 
         const historyDocRef = doc(collection(db, 'history'));
         batch.set(historyDocRef, {
-            action: 'report_deleted',
-            details: `Report with ID ${id} was deleted.`,
+            action: 'report_archived',
+            details: `Report #${reportData.reportNumber} was archived by admin instead of deletion for data protection.`,
             user: currentUser,
             createdAt: serverTimestamp(),
             reportId: id,
@@ -515,9 +609,12 @@ export async function deleteReport(id: string, userId: string | undefined, userN
         
         await batch.commit();
 
-        return { success: true };
+        return { 
+            success: true, 
+            message: 'Report has been archived instead of deleted to maintain data integrity.' 
+        };
     } catch (error) {
-        console.error('Error deleting report:', error);
+        console.error('Error archiving report:', error);
         if (error instanceof Error) {
             return { success: false, error: error.message };
         }
@@ -533,39 +630,83 @@ export async function deleteReports(ids: string[], userId: string | undefined, u
         return { success: false, error: "You must be logged in to delete reports." };
     }
     
+    // DATA PROTECTION: Prevent users from bulk deleting reports
+    const ADMIN_UID = 'ADMIN_UID_REDACTED';
+    
+    if (userId !== ADMIN_UID) {
+        return { 
+            success: false, 
+            error: "Bulk report deletion is not allowed to protect data integrity. Please contact an administrator if you need to remove reports." 
+        };
+    }
+    
     const currentUser = await getCurrentUser(userId, userName, userEmail);
     const batch = writeBatch(db);
     const historyCollectionRef = collection(db, 'history');
     const notificationsCollectionRef = collection(db, 'notifications');
 
     try {
+        let protectedReports: string[] = [];
+        
         for (const id of ids) {
             const reportRef = doc(db, 'reports', id);
-            batch.delete(reportRef);
+            const reportDoc = await getDoc(reportRef);
+            
+            if (reportDoc.exists()) {
+                const reportData = reportDoc.data() as Report;
+                
+                // Check if report is protected
+                if (reportData.isProtected) {
+                    protectedReports.push(`#${reportData.reportNumber}`);
+                    continue;
+                }
+                
+                // Archive instead of delete
+                batch.update(reportRef, {
+                    status: 'archived',
+                    archivedBy: userId,
+                    archivedByName: currentUser.name,
+                    archivedAt: serverTimestamp(),
+                    archivedReason: 'Admin bulk archive request'
+                });
 
-            const historyDocRef = doc(historyCollectionRef);
-            batch.set(historyDocRef, {
-                action: 'report_deleted',
-                details: `Report with ID ${id} was deleted during a bulk operation.`,
-                user: currentUser,
-                createdAt: serverTimestamp(),
-                reportId: id,
-                entityId: id,
-                entityType: 'report',
-            });
+                const historyDocRef = doc(historyCollectionRef);
+                batch.set(historyDocRef, {
+                    action: 'report_archived',
+                    details: `Report #${reportData.reportNumber} was archived during bulk operation for data protection.`,
+                    user: currentUser,
+                    createdAt: serverTimestamp(),
+                    reportId: id,
+                    entityId: id,
+                    entityType: 'report',
+                });
 
-            const notificationsQuery = query(notificationsCollectionRef, where('reportId', '==', id));
-            const notificationsSnapshot = await getDocs(notificationsQuery);
-            notificationsSnapshot.forEach(doc => {
-                batch.delete(doc.ref);
-            });
+                // Archive related notifications
+                const notificationsQuery = query(notificationsCollectionRef, where('reportId', '==', id));
+                const notificationsSnapshot = await getDocs(notificationsQuery);
+                notificationsSnapshot.forEach(doc => {
+                    batch.update(doc.ref, {
+                        archived: true,
+                        archivedAt: serverTimestamp()
+                    });
+                });
+            }
         }
 
         await batch.commit();
 
-        return { success: true };
+        let message = `${ids.length - protectedReports.length} reports have been archived for data protection.`;
+        if (protectedReports.length > 0) {
+            message += ` ${protectedReports.length} protected reports were skipped: ${protectedReports.join(', ')}.`;
+        }
+
+        return { 
+            success: true, 
+            message,
+            protectedReports: protectedReports.length 
+        };
     } catch (error) {
-        console.error('Error deleting reports:', error);
+        console.error('Error archiving reports:', error);
         if (error instanceof Error) {
             return { success: false, error: error.message };
         }
@@ -1639,174 +1780,98 @@ export async function getUsers(uids?: string[]): Promise<{ success: boolean, dat
     if (!isFirebaseConfigured) {
         return { success: true, data: [] };
     }
+    
     try {
-        const usersMap = new Map<string, UserRecord>();
-        const activityCounts = new Map<string, number>();
-        const reportCounts = new Map<string, number>();
-        const nameFromHistory = new Map<string, string>();
-
-        // Enhanced scoring maps for comments and verify actions
-        const commentCounts = new Map<string, number>();
-        const verifyActionCounts = new Map<string, number>();
-
-        // Count actions from history for all users with enhanced scoring
-        const historySnapshot = await getDocs(collection(db, 'history'));
-        historySnapshot.forEach(historyDoc => {
-            const log = historyDoc.data() as HistoryLog;
-            const userId = log.user.uid;
-            if (userId) {
-                activityCounts.set(userId, (activityCounts.get(userId) || 0) + 1);
-                
-                // Count specific actions for enhanced scoring
-                if (log.action === 'comment_added') {
-                    commentCounts.set(userId, (commentCounts.get(userId) || 0) + 1);
-                }
-                if (log.action === 'verified_report' || log.action === 'unverified_report') {
-                    verifyActionCounts.set(userId, (verifyActionCounts.get(userId) || 0) + 1);
-                }
-                
-                // Capture the most recent name from history
-                if (log.user.name && !nameFromHistory.has(userId)) {
-                    nameFromHistory.set(userId, log.user.name);
-                }
-            }
-        });
+        console.log('Starting getUsers function...');
+        const users: UserRecord[] = [];
         
-        // Enhanced scoring maps to match leaderboard system
-        const approvedReports = new Map<string, number>();
-        const verifications = new Map<string, number>();
-        const recentActivity = new Map<string, number>();
-        
-        // Calculate current date for recent activity
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-        // Count reports and enhanced scoring metrics for all users
-        const reportsSnapshot = await getDocs(collection(db, 'reports'));
-        reportsSnapshot.forEach(reportDoc => {
-            const report = reportDoc.data() as Report;
-            const userId = report.reportedBy;
-            if (userId) {
-                reportCounts.set(userId, (reportCounts.get(userId) || 0) + 1);
+        // Get users from the users collection with basic error handling
+        try {
+            const usersQuery = uids ? 
+                query(collection(db, 'users'), where('__name__', 'in', uids)) : 
+                collection(db, 'users');
+            
+            const usersSnapshot = await getDocs(usersQuery);
+            console.log(`Found ${usersSnapshot.size} users in collection`);
+            
+            usersSnapshot.forEach(docSnap => {
+                const data = docSnap.data();
+                const uid = docSnap.id;
                 
-                // Count approved reports
-                if (report.status === 'approved') {
-                    approvedReports.set(userId, (approvedReports.get(userId) || 0) + 1);
+                // Basic validation - skip obviously invalid users
+                if (!uid || uid.length < 5 || uid === 'undefined' || uid === 'null') {
+                    console.warn(`Skipping invalid user: ${uid}`);
+                    return;
                 }
                 
-                // Count verifications (if user has verified reports)
-                if (report.verifications && Array.isArray(report.verifications) && report.verifications.includes(userId)) {
-                    verifications.set(userId, (verifications.get(userId) || 0) + 1);
-                }
-                
-                // Count recent activity (reports in last 30 days)
-                const reportDate = report.createdAt instanceof Date ? report.createdAt : 
-                                  typeof report.createdAt === 'string' ? new Date(report.createdAt) :
-                                  report.createdAt?.toDate ? report.createdAt.toDate() : new Date();
-                
-                if (reportDate >= thirtyDaysAgo) {
-                    recentActivity.set(userId, (recentActivity.get(userId) || 0) + 1);
-                }
-                
-                // Also capture names from reports
-                if (report.reportedByName && !nameFromHistory.has(userId)) {
-                    nameFromHistory.set(userId, report.reportedByName);
-                }
-            }
-        });
-
-        const addUser = (user: UserRecord) => {
-            const key = user.uid || user.email || user.name;
-            if (!key || (uids && !uids.includes(key))) return;
-
-            const existingUser = usersMap.get(key);
-            if (existingUser) {
-                const mergedUser = { ...existingUser, ...user };
-                if (!existingUser.uid && user.uid) mergedUser.uid = user.uid;
-                if (!existingUser.email && user.email) mergedUser.email = user.email;
-                if (!existingUser.name && user.name) mergedUser.name = user.name;
-                if (!existingUser.avatar && user.avatar) mergedUser.avatar = user.avatar;
-                if (!existingUser.createdAt && user.createdAt) mergedUser.createdAt = user.createdAt;
-                usersMap.set(key, mergedUser);
-            } else {
-                usersMap.set(key, user);
-            }
-        };
-
-        const usersQuery = uids ? query(collection(db, 'users'), where('__name__', 'in', uids)) : collection(db, 'users');
-        const usersSnapshot = await getDocs(usersQuery);
-        usersSnapshot.forEach(docSnap => {
-            const data = docSnap.data();
-            const uid = docSnap.id;
-            const historyName = nameFromHistory.get(uid);
-
-            addUser({
-                uid: uid,
-                name: data.displayName || historyName || data.email || `User ${uid.substring(0, 5)}`,
-                avatar: data.photoURL || null,
-                email: data.email,
-                createdAt: data.createdAt ? (data.createdAt as Timestamp).toDate().toISOString() : undefined,
-                lastLogin: data.lastLogin ? toDateSafe(data.lastLogin)?.toISOString() : null,
-                activityScore: 0, // Will be calculated below with comprehensive scoring
-                reports: reportCounts.get(uid) || 0,
-            });
-        });
-
-        if (!uids) {
-            // Add users from history who might not be in the 'users' collection (e.g., imported users)
-            historySnapshot.forEach(historyDoc => {
-                const log = historyDoc.data() as HistoryLog;
-                const user = log.user;
-                if (user.uid && !usersMap.has(user.uid)) {
-                     addUser({
-                        uid: user.uid,
-                        name: user.name,
-                        avatar: user.avatar,
-                        email: user.email,
-                        activityScore: 0, // Will be calculated below with comprehensive scoring
-                        reports: reportCounts.get(user.uid) || 0,
-                    });
+                try {
+                    const user: UserRecord = {
+                        uid: uid,
+                        name: data.displayName || data.email?.split('@')[0] || `User ${uid.substring(0, 8)}`,
+                        avatar: data.photoURL || null,
+                        email: data.email || null,
+                        createdAt: data.createdAt ? 
+                            (data.createdAt instanceof Timestamp ? data.createdAt.toDate().toISOString() : 
+                             typeof data.createdAt === 'string' ? data.createdAt : 
+                             new Date().toISOString()) : 
+                            undefined,
+                        lastLogin: data.lastLogin ? 
+                            (data.lastLogin instanceof Timestamp ? data.lastLogin.toDate().toISOString() :
+                             typeof data.lastLogin === 'string' ? data.lastLogin :
+                             null) : 
+                            null,
+                        activityScore: 0,
+                        reports: 0,
+                    };
+                    
+                    users.push(user);
+                } catch (userError) {
+                    console.warn(`Error processing user ${uid}:`, userError);
                 }
             });
+        } catch (usersError) {
+            console.error('Error fetching users collection:', usersError);
+            return { success: false, error: 'Failed to fetch users from database' };
         }
         
-        const users = Array.from(usersMap.values());
-        users.forEach(user => {
-            if (user.uid) {
-                // Calculate comprehensive score matching leaderboard system with comments and verify actions
-                const baseReports = reportCounts.get(user.uid) || 0;
-                const approved = approvedReports.get(user.uid) || 0;
-                const verifs = verifications.get(user.uid) || 0;
-                const recent = recentActivity.get(user.uid) || 0;
-                const comments = commentCounts.get(user.uid) || 0;
-                const verifyActions = verifyActionCounts.get(user.uid) || 0;
-                
-                // Enhanced scoring system:
-                // - Base reports: 1 point each
-                // - Approved reports: 2 additional points each
-                // - Verifications: 3 points each
-                // - Recent activity bonus: 0.5 points per recent report
-                // - Comments: 0.5 points each
-                // - Verify actions: 1 point each
-                const comprehensiveScore = baseReports + 
-                                         (approved * 2) + 
-                                         (verifs * 3) + 
-                                         (recent * 0.5) +
-                                         (comments * 0.5) +
-                                         (verifyActions * 1);
-                
-                user.activityScore = Math.round(comprehensiveScore * 10) / 10; // Use comprehensive score
-                user.reports = baseReports;
-            }
-        });
-
+        console.log(`Processed ${users.length} valid users`);
+        
+        // Simple activity scoring - just count reports per user
+        try {
+            const reportsSnapshot = await getDocs(collection(db, 'reports'));
+            const reportCounts = new Map<string, number>();
+            
+            reportsSnapshot.forEach(reportDoc => {
+                const report = reportDoc.data();
+                const userId = report.reportedBy;
+                if (userId && typeof userId === 'string') {
+                    reportCounts.set(userId, (reportCounts.get(userId) || 0) + 1);
+                }
+            });
+            
+            // Update users with report counts
+            users.forEach(user => {
+                const reportCount = reportCounts.get(user.uid) || 0;
+                user.reports = reportCount;
+                user.activityScore = reportCount; // Simple scoring
+            });
+        } catch (reportsError) {
+            console.warn('Error counting reports, using default scores:', reportsError);
+            // Continue with default scores of 0
+        }
+        
+        // Sort by activity score descending
+        users.sort((a, b) => (b.activityScore || 0) - (a.activityScore || 0));
+        
+        console.log(`Returning ${users.length} users successfully`);
         return { success: true, data: users };
+        
     } catch (error) {
-        console.error('Error fetching users:', error);
-        if (error instanceof Error) {
-            return { success: false, error: error.message };
-        }
-        return { success: false, error: 'An unknown error occurred.' };
+        console.error('Critical error in getUsers:', error);
+        return { 
+            success: false, 
+            error: error instanceof Error ? error.message : 'Unknown error occurred while fetching users' 
+        };
     }
 }
 
@@ -2240,28 +2305,65 @@ export async function deletePlaceType(id: string): Promise<{ success: boolean; e
 
 
 export async function seedDefaultViolationTerms() {
-    const defaultGroups = ['Hate Speech', 'Border', 'General'];
+    // Remove the default seeding of unwanted terms
+    // The system will work without default violation terms
+    // Users can create their own terms as needed
+    
+    try {
+        // Just return success without creating any default terms
+        return { success: true, message: 'No default violation terms to seed.' };
+    } catch (error: any) {
+        return { success: false, error: error.message };
+    }
+}
+
+export async function removeUnwantedViolationTerms(currentUserId?: string) {
+    // Security check: Only allow authenticated admin users
+    if (!currentUserId) {
+        return { success: false, error: 'Authentication required' };
+    }
+    
+    const unwantedTerms = ['Hate Speech', 'Border', 'General'];
     const violationTermsRef = collection(db, 'violationTerms');
     
     try {
-        const existingGroupsSnapshot = await getDocs(violationTermsRef);
-        const existingGroupNames = new Set(existingGroupsSnapshot.docs.map(doc => doc.data().name));
-
-        const groupsToSeed = defaultGroups.filter(name => !existingGroupNames.has(name));
-
-        if (groupsToSeed.length > 0) {
-            const batch = writeBatch(db);
-            groupsToSeed.forEach(name => {
-                const newDocRef = doc(violationTermsRef);
-                batch.set(newDocRef, { name: name, createdAt: serverTimestamp() });
+        const batch = writeBatch(db);
+        let removedCount = 0;
+        
+        // Find and delete unwanted terms
+        for (const termName of unwantedTerms) {
+            const q = query(violationTermsRef, where('name', '==', termName));
+            const snapshot = await getDocs(q);
+            
+            snapshot.forEach(doc => {
+                batch.delete(doc.ref);
+                removedCount++;
             });
-            await batch.commit();
-            return { success: true, message: 'Default violation terms seeded.' };
         }
         
-        return { success: true, message: 'Violation terms already exist.' };
-    } catch (error: any) {
-        return { success: false, error: error.message };
+        if (removedCount > 0) {
+            await batch.commit();
+            console.log(`Removed ${removedCount} unwanted violation terms`);
+            
+            // Log the cleanup action
+            const currentUser = await getCurrentUser(currentUserId, null, null);
+            await addDoc(collection(db, 'history'), {
+                action: 'violation_terms_cleanup',
+                details: `Removed unwanted violation terms: ${unwantedTerms.join(', ')}`,
+                user: currentUser,
+                createdAt: serverTimestamp(),
+                entityId: 'system',
+                entityType: 'report',
+            });
+        }
+        
+        return { success: true, removed: removedCount };
+    } catch (error) {
+        console.error('Error removing unwanted violation terms:', error);
+        return { 
+            success: false, 
+            error: error instanceof Error ? error.message : 'Unknown error occurred' 
+        };
     }
 }
 
@@ -2281,51 +2383,83 @@ export async function seedDefaultSubViolationTypes(currentUserId?: string) {
             return { success: true, message: "Sub-violation types already exist." };
         }
         
-        // Find the 'General' violation term to associate with.
-        const termsQuery = query(collection(db, 'violationTerms'), where('name', '==', 'General'), limit(1));
-        const termsSnapshot = await getDocs(termsQuery);
+        // Don't create default sub-violation types that depend on unwanted violation terms
+        // Users can create their own sub-violation types as needed
+        return { success: true, message: "No default sub-violation types to seed." };
         
-        if (termsSnapshot.empty) {
-            // If 'General' doesn't exist, create it.
-            const generalTermRef = await addDoc(collection(db, 'violationTerms'), { name: 'General', createdAt: serverTimestamp() });
-            var generalTermId = generalTermRef.id;
-        } else {
-            var generalTermId = termsSnapshot.docs[0].id;
-        }
-        
-        const defaultTypes = [
-            { label: "Place doesn't exist", icon: 'MapPinOff', description: "The location marked on the map does not exist in real life." },
-            { label: 'Wrong Location', icon: 'Milestone', description: "The pin for a real place is in the wrong location." },
-            { label: 'Wrong Name', icon: 'TextCursorInput', description: "The name of the place is incorrect or misspelled." },
-            { label: 'Missing Road', icon: 'Waypoints', description: "A road exists in real life but is not shown on the map." },
-            { label: 'Incorrect Speed Limit', icon: 'Gauge', description: "The speed limit shown for a road is incorrect." },
-            { label: 'Missing Place', icon: 'Building2', description: "A real place (e.g., a shop, park) is missing from the map." },
-            { label: 'Public Transit Issue', icon: 'Bus', description: "Incorrect public transit routes, stops, or schedules." },
-            { label: 'Wrong Address', icon: 'Map', description: "The address details for a location are incorrect." },
-            { label: 'General', icon: 'PenSquare', description: "For any other issue that doesn't fit the categories above." },
-        ];
-
-        const batch = writeBatch(db);
-        defaultTypes.forEach(type => {
-            const id = type.label.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-            const newDocRef = doc(subViolationTypesRef, id);
-            batch.set(newDocRef, { 
-                ...type,
-                id,
-                violationTermId: generalTermId,
-                createdAt: serverTimestamp() 
-            });
-        });
-        
-        await batch.commit();
-        
-        return { success: true, message: 'Default sub-violation types seeded.' };
     } catch (error: any) {
-        console.error("Error seeding default sub-violation types:", error);
         return { success: false, error: error.message };
     }
 }
 
+export async function cleanupInvalidUsers(currentUserId?: string): Promise<{ success: boolean; removed: number; error?: string }> {
+    // Security check: Only allow authenticated admin users
+    if (!currentUserId) {
+        return { success: false, removed: 0, error: 'Authentication required' };
+    }
+    
+    try {
+        const usersSnapshot = await getDocs(collection(db, 'users'));
+        const batch = writeBatch(db);
+        let removedCount = 0;
+        
+        usersSnapshot.forEach(docSnap => {
+            const uid = docSnap.id;
+            const data = docSnap.data();
+            
+            // Check for invalid users with more comprehensive criteria
+            const isInvalid = (
+                !uid || 
+                uid.length < 5 || 
+                uid === 'undefined' ||
+                uid === 'null' ||
+                uid === 'anonymous' ||
+                uid.includes('undefined') ||
+                uid.includes('null') ||
+                (!data.email && !data.displayName) ||
+                (data.email && !data.email.includes('@')) ||
+                (data.displayName && data.displayName.trim().length === 0)
+            );
+            
+            if (isInvalid) {
+                console.log(`Marking invalid user for removal: ${uid}`, {
+                    email: data.email,
+                    displayName: data.displayName,
+                    reason: 'Invalid user data'
+                });
+                batch.delete(docSnap.ref);
+                removedCount++;
+            }
+        });
+        
+        if (removedCount > 0) {
+            await batch.commit();
+            console.log(`Successfully removed ${removedCount} invalid users`);
+            
+            // Log the cleanup action
+            const currentUser = await getCurrentUser(currentUserId, null, null);
+            await addDoc(collection(db, 'history'), {
+                action: 'users_cleanup',
+                details: `Cleaned up ${removedCount} invalid user records`,
+                user: currentUser,
+                createdAt: serverTimestamp(),
+                entityId: 'system',
+                entityType: 'user',
+            });
+        } else {
+            console.log('No invalid users found to remove');
+        }
+        
+        return { success: true, removed: removedCount };
+    } catch (error) {
+        console.error('Error cleaning up invalid users:', error);
+        return { 
+            success: false, 
+            removed: 0, 
+            error: error instanceof Error ? error.message : 'Unknown error occurred during cleanup' 
+        };
+    }
+}
 
 // User management actions that require Admin SDK would go here.
 // Since we can't use Admin SDK directly from the client-side code,
@@ -2338,6 +2472,12 @@ export async function deleteUser(uid: string, currentUserId?: string) {
     return { success: false, error: 'Authentication required' };
   }
   
+  // Admin check: Only admin can delete users
+  const ADMIN_UID = 'ADMIN_UID_REDACTED';
+  if (currentUserId !== ADMIN_UID) {
+    return { success: false, error: 'Admin privileges required to delete users' };
+  }
+  
   // THIS IS A PLACEHOLDER
   // In a real app, this would call a Cloud Function that uses the Firebase Admin SDK.
   // Example:
@@ -2347,6 +2487,18 @@ export async function deleteUser(uid: string, currentUserId?: string) {
   try {
     // Also delete user from Firestore
     await deleteDoc(doc(db, 'users', uid));
+    
+    // Log the deletion for audit trail
+    const currentUser = await getCurrentUser(currentUserId, null, null);
+    await addDoc(collection(db, 'history'), {
+      action: 'user_deleted',
+      details: `Admin deleted user: ${uid}`,
+      user: currentUser,
+      createdAt: serverTimestamp(),
+      entityId: uid,
+      entityType: 'user',
+    });
+    
     return { success: true };
   } catch (error: any) {
     return { success: false, error: `Failed to delete user from Firestore: ${error.message}` };
@@ -2876,28 +3028,53 @@ export async function getHistory(filters: { entityType?: string } = {}): Promise
     if (!isFirebaseConfigured) {
         return { success: true, data: [] };
     }
+    
     try {
+        console.log('Fetching history with filters:', filters);
         const historyCollectionRef = collection(db, 'history');
-        const queryConstraints = [];
         
+        // Always get all history first, then filter client-side to avoid index issues
+        const q = query(historyCollectionRef, orderBy('createdAt', 'desc'));
+        const snapshot = await getDocs(q);
+        
+        console.log(`Found ${snapshot.size} history records`);
+        
+        let data = snapshot.docs.map(doc => {
+            const docData = doc.data();
+            try {
+                const serializedData = serializeHistoryTimestamps(docData);
+                return { id: doc.id, ...serializedData } as HistoryLog;
+            } catch (serializationError) {
+                console.warn(`Error serializing history doc ${doc.id}:`, serializationError);
+                // Return basic structure if serialization fails
+                return {
+                    id: doc.id,
+                    entityId: docData.entityId || 'unknown',
+                    entityType: docData.entityType || 'unknown',
+                    user: docData.user || { uid: 'unknown', name: 'Unknown User', avatar: null },
+                    action: docData.action || 'unknown',
+                    details: docData.details || 'No details available',
+                    createdAt: docData.createdAt || serverTimestamp(), // Use Timestamp instead of Date
+                } as HistoryLog;
+            }
+        });
+        
+        // Client-side filtering
         if (filters.entityType && filters.entityType !== 'all') {
-            queryConstraints.push(where('entityType', '==', filters.entityType));
+            const originalCount = data.length;
+            data = data.filter(item => item.entityType === filters.entityType);
+            console.log(`Filtered from ${originalCount} to ${data.length} records for entityType: ${filters.entityType}`);
         }
         
-        queryConstraints.push(orderBy('createdAt', 'desc'));
-
-        const q = query(historyCollectionRef, ...queryConstraints);
-        
-        const snapshot = await getDocs(q);
-        const data = snapshot.docs.map(doc => {
-            const docData = doc.data();
-            const serializedData = serializeHistoryTimestamps(docData);
-            return { id: doc.id, ...serializedData } as HistoryLog;
-        });
+        console.log(`Returning ${data.length} history records`);
         return { success: true, data };
+        
     } catch (error: any) {
         console.error("Error fetching history:", error);
-        return { success: false, error: error.message };
+        return { 
+            success: false, 
+            error: error.message || 'Failed to fetch history records' 
+        };
     }
 }
 
@@ -3042,9 +3219,111 @@ export async function verifyPlaceId(placeId: string, customApiKey?: string): Pro
 
     } catch (e: any) {
         const errorMessage = e.response?.data?.error?.message || e.message || 'An unknown error occurred during verification.';
-        if (e.response?.status === 404) {
+        const statusCode = e.response?.status;
+        
+        console.error('Place ID verification error:', { statusCode, errorMessage, placeId });
+        
+        if (statusCode === 403) {
+            return { success: false, found: false, error: 'API access denied. Please check your API key permissions and billing status.' };
+        }
+        if (statusCode === 404) {
              return { success: true, found: false };
         }
+        if (statusCode === 429) {
+            return { success: false, found: false, error: 'API rate limit exceeded. Please try again later.' };
+        }
+        
+        return { success: false, found: false, error: errorMessage };
+    }
+}
+
+export async function verifyPlaceByName(
+    placeName: string, 
+    lat: number, 
+    lng: number, 
+    customApiKey?: string
+): Promise<{ success: boolean; found: boolean; error?: string; details?: any }> {
+    const apiKey = customApiKey || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    
+    if (!apiKey) {
+        const errorMsg = "Google Maps API key is missing. Please provide a valid API key.";
+        console.error(errorMsg);
+        return { success: false, found: false, error: errorMsg };
+    }
+
+    if (!placeName.trim()) {
+        return { success: false, found: false, error: "Place name cannot be empty." };
+    }
+
+    try {
+        // Use Places API Text Search to find places by name near the coordinates
+        const response = await mapsClient.textSearch({
+            params: {
+                query: placeName.trim(),
+                location: { lat, lng },
+                radius: 1000, // Search within 1km radius
+                key: apiKey,
+            },
+        });
+
+        if (response.data.status === 'OK' && response.data.results && response.data.results.length > 0) {
+            // Check if any result is a close match
+            const results = response.data.results;
+            const closeMatch = results.find(result => {
+                const resultName = result.name?.toLowerCase() || '';
+                const searchName = placeName.toLowerCase();
+                
+                // Check for exact match or partial match
+                return resultName.includes(searchName) || searchName.includes(resultName);
+            });
+
+            if (closeMatch) {
+                return { 
+                    success: true, 
+                    found: true, 
+                    details: {
+                        name: closeMatch.name,
+                        address: closeMatch.formatted_address,
+                        placeId: closeMatch.place_id,
+                        location: closeMatch.geometry?.location,
+                        types: closeMatch.types
+                    }
+                };
+            } else {
+                // Found results but no close match
+                return { 
+                    success: true, 
+                    found: false, 
+                    details: {
+                        message: `Found ${results.length} places nearby, but none match "${placeName}" closely.`,
+                        suggestions: results.slice(0, 3).map(r => r.name).filter(Boolean)
+                    }
+                };
+            }
+        } else if (response.data.status === 'ZERO_RESULTS') {
+            return { 
+                success: true, 
+                found: false, 
+                details: { message: `No places found matching "${placeName}" near the specified location.` }
+            };
+        } else {
+            const errorMsg = response.data.error_message || `API returned with status: ${response.data.status}`;
+            return { success: false, found: false, error: errorMsg };
+        }
+
+    } catch (e: any) {
+        const errorMessage = e.response?.data?.error?.message || e.message || 'An unknown error occurred during place name verification.';
+        const statusCode = e.response?.status;
+        
+        console.error('Place name verification error:', { statusCode, errorMessage, placeName });
+        
+        if (statusCode === 403) {
+            return { success: false, found: false, error: 'API access denied. Please check your API key permissions and billing status.' };
+        }
+        if (statusCode === 429) {
+            return { success: false, found: false, error: 'API rate limit exceeded. Please try again later.' };
+        }
+        
         return { success: false, found: false, error: errorMessage };
     }
 }
@@ -3669,3 +3948,139 @@ export async function getUserLastLogin(userId: string): Promise<{ success: boole
     
 
 
+
+// Edit request management functions - REMOVED
+// These functions are no longer needed since we removed the edit pending flow
+
+export async function debugReportEditStatus(reportNumber: number, userId?: string) {
+    if (!userId) {
+        return { success: false, error: "You must be logged in to debug reports." };
+    }
+
+    const ADMIN_UID = 'ADMIN_UID_REDACTED';
+    if (userId !== ADMIN_UID) {
+        return { success: false, error: "Only administrators can debug reports." };
+    }
+
+    try {
+        // Find report by number
+        const q = query(collection(db, 'reports'), where('reportNumber', '==', reportNumber), limit(1));
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+            return { success: false, error: 'Report not found' };
+        }
+
+        const docSnap = querySnapshot.docs[0];
+        const reportData = docSnap.data() as Report;
+        
+        const debugInfo = {
+            id: docSnap.id,
+            reportNumber: reportData.reportNumber,
+            status: reportData.status,
+            editStatus: reportData.editStatus,
+            isProtected: reportData.isProtected,
+            protectedReason: reportData.protectedReason,
+            pendingChanges: reportData.pendingChanges ? {
+                requestedBy: reportData.pendingChanges.requestedBy,
+                requestedByName: reportData.pendingChanges.requestedByName,
+                requestedAt: reportData.pendingChanges.requestedAt,
+                changesCount: Object.keys(reportData.pendingChanges.changes || {}).length
+            } : null,
+            editHistory: reportData.editHistory?.map(entry => ({
+                id: entry.id,
+                status: entry.status,
+                requestedBy: entry.requestedBy,
+                requestedByName: entry.requestedByName,
+                changesCount: Object.keys(entry.changes || {}).length
+            })) || []
+        };
+
+        return { success: true, data: debugInfo };
+    } catch (error) {
+        console.error('Error debugging report:', error);
+        return { success: false, error: 'Failed to debug report.' };
+    }
+}
+
+export async function getReportById(reportId: string, userId?: string) {
+    if (!userId) {
+        return { success: false, error: "You must be logged in to view reports." };
+    }
+
+    const ADMIN_UID = 'ADMIN_UID_REDACTED';
+    if (userId !== ADMIN_UID) {
+        return { success: false, error: "Only administrators can access this function." };
+    }
+
+    try {
+        const reportRef = doc(db, 'reports', reportId);
+        const docSnap = await getDoc(reportRef);
+        
+        if (!docSnap.exists()) {
+            return { success: false, error: 'Report not found' };
+        }
+
+        const reportData = docSnap.data() as Report;
+        const serializedData = serializeTimestamps(reportData);
+        
+        return {
+            success: true,
+            data: {
+                id: docSnap.id,
+                ...serializedData,
+            } as Report
+        };
+    } catch (error) {
+        console.error('Error fetching report:', error);
+        return { success: false, error: 'Failed to fetch report.' };
+    }
+}
+
+export async function clearPendingEditStatus(reportId: string, userId?: string, userName?: string, userEmail?: string) {
+    if (!userId) {
+        return { success: false, error: "You must be logged in to clear edit status." };
+    }
+
+    const ADMIN_UID = 'ADMIN_UID_REDACTED';
+    if (userId !== ADMIN_UID) {
+        return { success: false, error: "Only administrators can clear edit status." };
+    }
+
+    const currentUser = await getCurrentUser(userId, userName, userEmail);
+    const reportRef = doc(db, 'reports', reportId);
+
+    try {
+        const docSnap = await getDoc(reportRef);
+        if (!docSnap.exists()) {
+            return { success: false, error: 'Report not found' };
+        }
+
+        const reportData = docSnap.data() as Report;
+
+        // Clear the pending edit status
+        await updateDoc(reportRef, {
+            editStatus: 'none',
+            pendingChanges: null
+        });
+
+        // Log the action
+        await addDoc(collection(db, 'history'), {
+            action: 'edit_status_cleared',
+            details: `Edit status cleared for Report #${reportData.reportNumber} by admin ${currentUser.name}`,
+            user: currentUser,
+            createdAt: serverTimestamp(),
+            reportId: reportId,
+            entityId: reportId,
+            entityType: 'report',
+        });
+
+        return { success: true, message: 'Edit status has been cleared successfully.' };
+    } catch (error) {
+        console.error('Error clearing edit status:', error);
+        return { success: false, error: 'Failed to clear edit status. Please try again.' };
+    }
+}
+
+// Report protection functions - REMOVED
+// These functions are no longer needed since we removed report protection

@@ -1,103 +1,256 @@
-// Enhanced Service Worker for Real-time Push Notifications and PWA Updates
-// Supports background updates, badge synchronization, silent notifications, and automatic updates
-// Version: 2.0.0 - Cache-first strategy with versioned assets
+// Enhanced Service Worker for MapKH - Notification System v2.1
+// Focuses on proper notification display and lockscreen visibility with Android notification channels
 
-importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
-
-// Service Worker version for cache busting - increment this to force updates
-const SW_VERSION = '4.0.1';
-const APP_VERSION = '0.1.0'; // Should match package.json version
-const CACHE_PREFIX = 'mapkh';
-const CACHE_NAME = `${CACHE_PREFIX}-cache-v${SW_VERSION}`;
-const STATIC_CACHE = `${CACHE_PREFIX}-static-v${SW_VERSION}`;
-const DYNAMIC_CACHE = `${CACHE_PREFIX}-dynamic-v${SW_VERSION}`;
-const API_CACHE = `${CACHE_PREFIX}-api-v${SW_VERSION}`;
-
-// Version tracking for forced updates
-const VERSION_STORAGE_KEY = 'mapkh_app_version';
-const FORCE_UPDATE_KEY = 'mapkh_force_update';
-
-// Cache versioning for automatic cleanup
-const CURRENT_CACHES = {
-  static: STATIC_CACHE,
-  dynamic: DYNAMIC_CACHE,
-  api: API_CACHE,
-  main: CACHE_NAME
-};
-
-// Assets to cache immediately - Updated with PNG Apple touch icons
+const CACHE_NAME = 'mapkh-v2.1';
 const STATIC_ASSETS = [
+  '/',
   '/manifest.json',
-  '/favicon-32x32.svg',
-  '/icons/icon-192x192.svg',
-  '/icons/icon-512x512.svg',
-  '/apple-touch-icon.png',
-  '/apple-touch-icon-120x120.png',
-  '/apple-touch-icon-152x152.png',
-  '/apple-touch-icon-167x167.png',
-  '/apple-touch-icon-180x180.png',
+  '/icons/icon-192x192.png',
+  '/icons/icon-512x512.png',
   '/offline.html'
 ];
 
-// API endpoints to cache
-const API_ENDPOINTS = [
-  '/api/reports',
-  '/api/user',
-  '/api/notifications'
-];
+// Install event - cache static assets and setup notification channel
+self.addEventListener('install', (event) => {
+  console.log('Service Worker installing...');
+  event.waitUntil(
+    Promise.all([
+      caches.open(CACHE_NAME)
+        .then(cache => cache.addAll(STATIC_ASSETS)),
+      setupNotificationChannel()
+    ]).then(() => self.skipWaiting())
+  );
+});
 
-// Cache strategies
-const CACHE_STRATEGIES = {
-  CACHE_FIRST: 'cache-first',
-  NETWORK_FIRST: 'network-first',
-  STALE_WHILE_REVALIDATE: 'stale-while-revalidate'
-};
+// Setup Android notification channel for better notification display
+async function setupNotificationChannel() {
+  if ('serviceWorker' in navigator && 'Notification' in window) {
+    try {
+      // This will be handled by the browser automatically for most cases
+      // But we can set up some defaults
+      console.log('Setting up notification channel...');
+      
+      // For Android, the channel will be created automatically by FCM
+      // But we can ensure proper notification handling
+      if ('setAppBadge' in navigator) {
+        await navigator.setAppBadge(0); // Clear any existing badge
+      }
+    } catch (error) {
+      console.log('Notification channel setup not needed or failed:', error);
+    }
+  }
+}
 
-// Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyCc4HV-Qb4hcI0-xbmnT6nBzA2QG7qmoVE",
-  authDomain: "mapcorrect-z5n3v.firebaseapp.com",
-  projectId: "mapcorrect-z5n3v",
-  storageBucket: "mapcorrect-z5n3v.firebasestorage.app",
-  messagingSenderId: "951132208154",
-  appId: "1:951132208154:web:caf0c1abc657aa496b25a3"
-};
-
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-
-// Initialize Firebase Cloud Messaging and get a reference to the service
-const messaging = firebase.messaging();
-
-// Badge count management
-let badgeCount = 0;
-const BADGE_STORAGE_KEY = 'mapkh_badge_count';
-const NOTIFICATION_STORAGE_KEY = 'mapkh_notifications';
-const UPDATE_NOTIFICATION_KEY = 'mapkh_update_available';
-
-// Update management
-let updateAvailable = false;
-let newServiceWorker = null;
-
-// Load badge count from IndexedDB and localStorage for iOS compatibility
-const loadBadgeCount = async () => {
-  try {
-    // Try IndexedDB first
-    let stored = await getFromIndexedDB(BADGE_STORAGE_KEY);
-    
-    // If not found, try localStorage (iOS fallback)
-    if (!stored) {
-      try {
-        stored = parseInt(
-          self.localStorage?.getItem('mapkh_badge_count') ||
-          self.localStorage?.getItem('pwa_badge_count') ||
-          self.localStorage?.getItem('ios_badge_count') ||
-          '0'
+// Activate event - clean up old caches
+self.addEventListener('activate', (event) => {
+  console.log('Service Worker activating...');
+  event.waitUntil(
+    Promise.all([
+      caches.keys().then(cacheNames => {
+        return Promise.all(
+          cacheNames.map(cacheName => {
+            if (cacheName !== CACHE_NAME) {
+              return caches.delete(cacheName);
+            }
+          })
         );
-      } catch (e) {
-        // localStorage not available in service worker context
-        stored = 0;
+      }),
+      self.clients.claim()
+    ])
+  );
+});
+
+// Fetch event - serve from cache, fallback to network
+self.addEventListener('fetch', (event) => {
+  event.respondWith(
+    caches.match(event.request)
+      .then(response => {
+        return response || fetch(event.request);
+      })
+      .catch(() => {
+        // Return offline page for navigation requests
+        if (event.request.mode === 'navigate') {
+          return caches.match('/offline.html');
+        }
+      })
+  );
+});
+
+// Enhanced push event handler with better mobile support
+self.addEventListener('push', (event) => {
+  console.log('Push event received:', event);
+  
+  if (!event.data) {
+    console.log('Push event has no data');
+    return;
+  }
+
+  try {
+    const data = event.data.json();
+    console.log('Push data:', data);
+    
+    // Handle both data-only and notification payloads
+    const title = data.title || data.notification?.title || 'MapKH Notification';
+    const body = data.body || data.notification?.body || 'You have a new notification';
+    
+    const options = {
+      body: body,
+      icon: data.icon || '/icons/icon-192x192.png',
+      badge: data.badge || '/icons/icon-192x192.png',
+      tag: data.tag || 'mapkh-notification',
+      data: {
+        url: data.url || data.data?.url || '/',
+        timestamp: Date.now(),
+        type: data.type || 'general',
+        ...data.data
+      },
+      actions: [
+        {
+          action: 'open',
+          title: 'Open MapKH',
+          icon: '/icons/icon-192x192.png'
+        },
+        {
+          action: 'dismiss',
+          title: 'Dismiss'
+        }
+      ],
+      requireInteraction: data.requireInteraction !== 'false',
+      silent: data.silent === 'true' ? true : false,
+      vibrate: data.vibrate ? data.vibrate.split(',').map(Number) : [200, 100, 200, 100, 200],
+      timestamp: data.timestamp ? parseInt(data.timestamp) : Date.now(),
+      renotify: data.renotify !== 'false',
+      sticky: false,
+      // Additional properties for better mobile display
+      dir: 'auto',
+      lang: 'en'
+    };
+
+    console.log('Showing notification with options:', options);
+
+    event.waitUntil(
+      self.registration.showNotification(title, options)
+        .then(() => {
+          console.log('Notification displayed successfully');
+          // Update badge count
+          if ('setAppBadge' in navigator) {
+            navigator.setAppBadge(1).catch(console.error);
+          }
+        })
+        .catch(error => {
+          console.error('Error displaying notification:', error);
+        })
+    );
+  } catch (error) {
+    console.error('Error processing push event:', error);
+    
+    // Fallback notification
+    event.waitUntil(
+      self.registration.showNotification('MapKH Notification', {
+        body: 'You have a new notification',
+        icon: '/icons/icon-192x192.png',
+        badge: '/icons/icon-192x192.png',
+        tag: 'mapkh-fallback',
+        requireInteraction: true,
+        actions: [
+          { action: 'open', title: 'Open MapKH' },
+          { action: 'dismiss', title: 'Dismiss' }
+        ],
+        data: { url: '/' }
+      })
+    );
+  }
+});
+
+// Enhanced notification click event
+self.addEventListener('notificationclick', (event) => {
+  console.log('Notification clicked:', event);
+  
+  event.notification.close();
+
+  if (event.action === 'dismiss') {
+    return;
+  }
+
+  const targetUrl = event.notification.data?.url || '/';
+  
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then(clientList => {
+        console.log('Found clients:', clientList.length);
+        
+        // Check if there's already a window open
+        for (const client of clientList) {
+          if (client.url.includes(self.location.origin) && 'focus' in client) {
+            console.log('Focusing existing client');
+            // Navigate to the target URL if different
+            if (targetUrl !== '/') {
+              client.navigate(targetUrl);
+            }
+            return client.focus();
+          }
+        }
+        
+        // Open new window if none exists
+        console.log('Opening new window:', targetUrl);
+        if (clients.openWindow) {
+          return clients.openWindow(targetUrl);
+        }
+      })
+      .then(() => {
+        // Clear badge when notification is clicked
+        if ('clearAppBadge' in navigator) {
+          navigator.clearAppBadge().catch(console.error);
+        }
+      })
+  );
+});
+
+// Notification close event
+self.addEventListener('notificationclose', (event) => {
+  console.log('Notification closed:', event);
+  
+  // Track notification dismissal if needed
+  if (event.notification.data?.trackDismissal) {
+    // Could send analytics or update server
+  }
+});
+
+// Message event - handle messages from main thread
+self.addEventListener('message', (event) => {
+  console.log('Service Worker received message:', event.data);
+  
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+  
+  if (event.data && event.data.type === 'GET_VERSION') {
+    event.ports[0].postMessage({ version: '2.1' });
+  }
+  
+  if (event.data && event.data.type === 'CLEAR_BADGE') {
+    if ('clearAppBadge' in navigator) {
+      navigator.clearAppBadge().catch(console.error);
+    }
+  }
+  
+  if (event.data && event.data.type === 'TEST_NOTIFICATION') {
+    // Handle test notification from main thread
+    self.registration.showNotification('Test from Service Worker', {
+      body: 'This is a test notification triggered from the main thread',
+      icon: '/icons/icon-192x192.png',
+      badge: '/icons/icon-192x192.png',
+      tag: 'sw-test',
+      requireInteraction: true,
+      actions: [
+        { action: 'open', title: 'Open' },
+        { action: 'dismiss', title: 'Dismiss' }
+      ]
+    });
+  }
+});
+
+console.log('MapKH Service Worker v2.1 loaded and ready for enhanced notifications');
       }
     }
     

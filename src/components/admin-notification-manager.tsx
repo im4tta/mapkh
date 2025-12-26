@@ -41,7 +41,6 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 import { notificationCategories, type NotificationCategory } from '@/lib/notification-config';
-import { usePushNotification } from '@/context/push-notification-provider';
 
 // Types for notification management
 interface User {
@@ -125,7 +124,7 @@ export function AdminNotificationManager() {
   const [previewMode, setPreviewMode] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
   
-  const { isSupported } = usePushNotification();
+  const isSupported = true; // Simplified for now
   const { user } = useAuth();
 
   // Filter deliveries based on status

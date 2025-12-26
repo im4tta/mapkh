@@ -47,46 +47,82 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const message = {
+    const testTitle = title || 'MapKH Test Notification 🔔';
+    const testBody = body || 'This is a test notification from MapKH. If you can see this on your lockscreen, notifications are working correctly! 📱✅';
+
+    // Enhanced message structure for better mobile display
+    const message: any = {
       token,
-      notification: {
-        title: title || 'MapKH Test Notification',
-        body: body || 'This is a test notification from MapKH',
-        icon: '/icons/icon-192x192.svg',
-      },
+      // Use data-only payload for better control
       data: {
+        title: testTitle,
+        body: testBody,
+        icon: '/icons/icon-192x192.png',
+        badge: '/icons/icon-192x192.png',
+        url: '/',
         type: 'test',
         timestamp: Date.now().toString(),
-        url: '/',
+        tag: 'mapkh-test',
+        requireInteraction: 'true',
+        silent: 'false',
+        vibrate: '200,100,200,100,200',
+        renotify: 'true',
         ...data
+      },
+      // Also include notification payload for iOS
+      notification: {
+        title: testTitle,
+        body: testBody,
+        icon: '/icons/icon-192x192.png',
       },
       webpush: {
         headers: {
           Urgency: 'high',
+          TTL: '86400',
         },
         notification: {
-          title: title || 'MapKH Test Notification',
-          body: body || 'This is a test notification from MapKH',
-          icon: '/icons/icon-192x192.svg',
-        badge: '/icons/icon-96x96.svg',
+          title: testTitle,
+          body: testBody,
+          icon: '/icons/icon-192x192.png',
+          badge: '/icons/icon-192x192.png',
           tag: 'mapkh-test',
           requireInteraction: true,
+          silent: false,
+          vibrate: [200, 100, 200, 100, 200],
+          timestamp: Date.now(),
+          renotify: true,
+          sticky: false,
           actions: [
             {
               action: 'open',
               title: 'Open MapKH'
+            },
+            {
+              action: 'dismiss',
+              title: 'Got it!'
             }
-          ]
+          ],
+          data: {
+            url: '/',
+            type: 'test',
+            ...data
+          }
         }
       }
     };
 
+    console.log('Sending enhanced test notification...');
     const response = await admin.messaging().send(message);
 
     return NextResponse.json({
       success: true,
-      message: 'Test notification sent successfully',
-      messageId: response
+      message: 'Test notification sent successfully! Check your lockscreen and notification center.',
+      messageId: response,
+      details: {
+        title: testTitle,
+        body: testBody,
+        timestamp: new Date().toISOString()
+      }
     });
 
   } catch (error) {
@@ -95,7 +131,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { 
         error: 'Failed to send test notification',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        details: error instanceof Error ? error.message : 'Unknown error',
+        suggestion: 'Make sure your FCM token is valid and Firebase Admin is properly configured.'
       },
       { status: 500 }
     );

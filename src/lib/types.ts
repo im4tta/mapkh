@@ -84,6 +84,34 @@ export type Report = {
   folderId?: string; 
   verifications?: string[];
   commentCount?: number;
+  
+  // Data protection and review system fields
+  editStatus?: 'none' | 'pending-review' | 'approved' | 'rejected';
+  pendingChanges?: {
+    changes: Record<string, any>;
+    requestedBy: string;
+    requestedByName: string;
+    requestedAt: Timestamp | string;
+    reason?: string;
+  };
+  lastApprovedBy?: string;
+  lastApprovedByName?: string;
+  lastApprovedAt?: Timestamp | string;
+  editHistory?: {
+    id: string;
+    changes: Record<string, any>;
+    requestedBy: string;
+    requestedByName: string;
+    requestedAt: Timestamp | string;
+    reviewedBy?: string;
+    reviewedByName?: string;
+    reviewedAt?: Timestamp | string;
+    status: 'pending' | 'approved' | 'rejected';
+    reason?: string;
+    adminNotes?: string;
+  }[];
+  isProtected?: boolean; // Prevents deletion
+  protectedReason?: string;
 }
 
 export type SubViolationType = {
@@ -136,6 +164,9 @@ export const NOTIFICATION_TYPES = {
   archived: { icon: Archive, color: 'text-gray-500'},
   mention: { icon: AtSign, color: 'text-blue-600' },
   reply: { icon: Reply, color: 'text-indigo-500' },
+  edit_request: { icon: ShieldCheck, color: 'text-amber-500' },
+  edit_approved: { icon: CheckCircle2, color: 'text-green-600' },
+  edit_rejected: { icon: AlertCircle, color: 'text-red-500' },
 } as const;
 
 export type Notification = {

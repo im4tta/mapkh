@@ -105,15 +105,24 @@ const HistoryPage = () => {
 
     const fetchHistory = useCallback(async (entityType: string) => {
         setIsLoading(true);
-        const result = await getHistory({ entityType: entityType === 'all' ? undefined : entityType });
-        if (result.success && result.data) {
-            setHistory(result.data);
-        } else {
-            console.error('Failed to fetch history:', result.error);
+        try {
+            const result = await getHistory({ entityType: entityType === 'all' ? undefined : entityType });
+            if (result.success && result.data) {
+                setHistory(result.data);
+            } else {
+                console.error('Failed to fetch history:', result.error);
+                toast({ 
+                    variant: 'destructive', 
+                    title: 'Error Loading History', 
+                    description: result.error || 'Failed to load history: Internal server error' 
+                });
+            }
+        } catch (error) {
+            console.error('Error fetching history:', error);
             toast({ 
                 variant: 'destructive', 
                 title: 'Error Loading History', 
-                description: result.error || 'Failed to load delivery history: Internal server error' 
+                description: 'An unexpected error occurred while loading history.' 
             });
         }
         setIsLoading(false);

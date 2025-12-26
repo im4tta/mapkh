@@ -29,7 +29,6 @@ import {
   type UserNotificationPreferences,
   type NotificationCategory
 } from '@/lib/notification-config';
-import { usePushNotification } from '@/context/push-notification-provider';
 import { toast } from '@/hooks/use-toast';
 import { 
   detectMobileEnvironment, 
@@ -44,11 +43,17 @@ export function NotificationSettings() {
   const [hasChanges, setHasChanges] = useState(false);
   const [mobileDetection, setMobileDetection] = useState<any>(null);
   
-  const {
-    permission,
-    requestPermission,
-    isSupported
-  } = usePushNotification();
+  // Simplified notification settings - push notifications handled by auth provider
+  const requestPermission = async () => {
+    if ('Notification' in window) {
+      const permission = await Notification.requestPermission();
+      return permission === 'granted';
+    }
+    return false;
+  };
+  
+  const isSupported = 'Notification' in window;
+  const permission = 'Notification' in window ? Notification.permission : 'denied';
 
   useEffect(() => {
     const currentPrefs = notificationConfig.getUserPreferences();
