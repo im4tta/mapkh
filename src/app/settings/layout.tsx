@@ -9,7 +9,7 @@ import { useTranslation } from "react-i18next";
 import Link from 'next/link';
 import { cn } from "@/lib/utils";
 
-const ADMIN_UID = 'ADMIN_UID_REDACTED';
+import { isAdmin as checkIsAdmin } from '@/lib/admin';
 
 export default function SettingsLayout({
   children,
@@ -22,7 +22,7 @@ export default function SettingsLayout({
   const { t } = useTranslation();
   const [isMounted, setIsMounted] = useState(false);
   
-  const isAdmin = user?.uid === ADMIN_UID;
+  const isAdmin = checkIsAdmin(user?.uid);
   
   const allNavItems = [
     { href: '/settings', label: t('settings.nav.general'), icon: SettingsIcon, adminOnly: false },

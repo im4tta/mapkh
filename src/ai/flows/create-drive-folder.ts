@@ -83,12 +83,11 @@ const createDriveFolderTool = ai ? ai.defineTool(
         throw new Error('Failed to get folder ID after creation.');
       }
 
-      // Make the folder public so anyone with the link can view.
-      // The 'writer' role allows users to add files, which is necessary for evidence uploads.
+      // Make the folder public so anyone with the link can view evidence.
       await drive.permissions.create({
         fileId: folderId,
         requestBody: {
-          role: 'writer',
+          role: 'reader',
           type: 'anyone',
         },
         supportsAllDrives: true,

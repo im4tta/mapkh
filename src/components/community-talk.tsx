@@ -259,7 +259,7 @@ export function CommunityTalk() {
       return;
     }
     if (!isFirebaseConfigured) {
-      toast({ variant: 'destructive', title: t('contributions.talk.fetch_error'), description: 'Realtime chat is disabled. Configure Firebase to send messages.' });
+      toast({ variant: 'destructive', title: t('contributions.talk.fetch_error'), description: 'Firebase is not configured. Please configure Firebase to send messages.' });
       return;
     }
     

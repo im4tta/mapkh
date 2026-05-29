@@ -4,13 +4,13 @@ const webpush = require('web-push');
 
 // Configure VAPID details
 const vapidDetails = {
-  subject: 'mailto:support@mapkh.com',
-  publicKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'VAPID_PUBLIC_KEY_REDACTED',
-  privateKey: process.env.VAPID_PRIVATE_KEY || 'VAPID_PRIVATE_KEY_REDACTED'
+  subject: process.env.VAPID_SUBJECT || 'mailto:support@mapkh.com',
+  publicKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '',
+  privateKey: process.env.VAPID_PRIVATE_KEY || ''
 };
 
 // Only set VAPID details if we have a valid private key
-if (vapidDetails.privateKey && vapidDetails.privateKey !== '${webpush_private_id}') {
+if (vapidDetails.privateKey) {
   webpush.setVapidDetails(
     vapidDetails.subject,
     vapidDetails.publicKey,

@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, isFirebaseConfigured } from '@/lib/firebase';
 import { createUser } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
@@ -16,6 +16,9 @@ import { Input } from '@/components/ui/input';
 import { Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import Link from 'next/link';
+
+// Force dynamic rendering for this page
+export const dynamic = 'force-dynamic';
 
 const registerSchema = z.object({
   displayName: z.string().min(3, "Display name must be at least 3 characters."),
@@ -33,6 +36,29 @@ export default function RegisterPage() {
   const { t } = useTranslation();
   const { toast } = useToast();
   const router = useRouter();
+
+  // Show Firebase configuration warning if not configured
+  if (!isFirebaseConfigured) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-muted/40 px-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl">Service Unavailable</CardTitle>
+            <CardDescription>
+              Firebase is not configured. Registration is not available.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center">
+              <Link href="/" className="font-medium text-primary hover:underline">
+                Back to Home
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),

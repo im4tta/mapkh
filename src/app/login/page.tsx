@@ -3,7 +3,7 @@
 
 import { useRouter } from 'next/navigation';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, isFirebaseConfigured } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/context/auth-provider';
@@ -20,6 +20,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useTranslation } from 'react-i18next';
 import Link from 'next/link';
 
+// Force dynamic rendering for this page
+export const dynamic = 'force-dynamic';
+
 const loginSchema = z.object({
     email: z.string().email({ message: "Invalid email address."}),
     password: z.string().min(1, { message: "Password is required."}),
@@ -31,6 +34,29 @@ export default function LoginPage() {
   const { toast } = useToast();
   const { t } = useTranslation();
   const [showPassword, setShowPassword] = useState(false);
+
+  // Show Firebase configuration warning if not configured
+  if (!isFirebaseConfigured) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-muted/40 px-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl">Service Unavailable</CardTitle>
+            <CardDescription>
+              Firebase is not configured. Authentication is not available.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center">
+              <Link href="/" className="font-medium text-primary hover:underline">
+                Back to Home
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),

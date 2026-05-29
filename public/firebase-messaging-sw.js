@@ -5,6 +5,8 @@ importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js'
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
 
 // Firebase configuration
+// TODO: Inject these at build time via environment variables or a build script
+// to avoid hardcoding production values in version control.
 const firebaseConfig = {
   apiKey: "AIzaSyCc4HV-Qb4hcI0-xbmnT6nBzA2QG7qmoVE",
   authDomain: "mapcorrect-z5n3v.firebaseapp.com",

@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
-import { auth, db, messaging, verifyAdminAccess } from '@/lib/firebase-admin';
+import { auth, db, messaging, verifyAdminAccess, isFirebaseAdminConfigured } from '@/lib/firebase-admin';
 
 export async function POST(request: NextRequest) {
   try {
+    if (!isFirebaseAdminConfigured || !db || !messaging) {
+      return NextResponse.json({ error: 'Firebase Admin not configured' }, { status: 503 });
+    }
+
     // Check authentication and admin privileges
     const headersList = await headers();
     const authorization = headersList.get('authorization');
@@ -86,7 +90,7 @@ export async function POST(request: NextRequest) {
           tokens: batch
         };
 
-        const response = await messaging.sendEachForMulticast(message);
+        const response = await messaging!.sendEachForMulticast(message);
         
         successCount += response.successCount;
         failureCount += response.failureCount;
@@ -113,7 +117,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Log the force update event
-    await db.collection('admin_actions').add({
+    await db!.collection('admin_actions').add({
       type: 'force_update',
       adminEmail: decodedToken.email || decodedToken.uid,
       timestamp: new Date(),
@@ -130,7 +134,7 @@ export async function POST(request: NextRequest) {
       const cleanupPromises = failedTokens.map(async (token) => {
         try {
           // Find and remove invalid tokens from user documents
-          const userQuery = await db
+          const userQuery = await db!
             .collection('users')
             .where('fcmToken', '==', token)
             .get();
@@ -176,7 +180,7 @@ export async function GET(request: NextRequest) {
     const { decodedToken, userData } = await verifyAdminAccess(authorization);
 
     // Get recent force update actions
-    const actionsSnapshot = await db
+    const actionsSnapshot = await db!
       .collection('admin_actions')
       .where('type', '==', 'force_update')
       .orderBy('timestamp', 'desc')

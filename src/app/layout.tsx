@@ -87,6 +87,21 @@ export default function RootLayout({
         <meta name="theme-color" content="#D6001C" media="(prefers-color-scheme: light)" />
         <meta name="theme-color" content="#00209F" media="(prefers-color-scheme: dark)" />
         <meta name="msapplication-TileColor" content="#D6001C" />
+        
+        {/* DataBuddy Analytics */}
+        <script 
+          src="https://cdn.databuddy.cc/databuddy.js" 
+          data-client-id="DATABUDDY_CLIENT_ID_REDACTED" 
+          data-track-hash-changes="true" 
+          data-track-attributes="true" 
+          data-track-outgoing-links="true" 
+          data-track-interactions="true" 
+          data-track-scroll-depth="true" 
+          data-track-web-vitals="true" 
+          data-track-errors="true" 
+          crossOrigin="anonymous" 
+          async 
+        />
       </head>
       <body className={cn("font-body antialiased h-full min-h-full bg-background flex flex-col")}>
         <ErrorBoundary>
@@ -98,7 +113,7 @@ export default function RootLayout({
         <Toaster />
         <Analytics />
         <Databuddy 
-          clientId="DATABUDDY_CLIENT_ID_REDACTED" 
+          clientId={process.env.NEXT_PUBLIC_DATABUDDY_CLIENT_ID || ''} 
           trackHashChanges={true} 
           trackAttributes={true} 
           trackOutgoingLinks={true} 

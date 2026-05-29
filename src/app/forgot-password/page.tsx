@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { sendPasswordResetEmail } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, isFirebaseConfigured } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Input } from '@/components/ui/input';
+
+// Force dynamic rendering for this page
+export const dynamic = 'force-dynamic';
 
 const forgotPasswordSchema = z.object({
   email: z.string().email("Invalid email address."),
@@ -24,6 +27,29 @@ type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
 export default function ForgotPasswordPage() {
   const { toast } = useToast();
   const router = useRouter();
+
+  // Show Firebase configuration warning if not configured
+  if (!isFirebaseConfigured) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-muted/40 px-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl">Service Unavailable</CardTitle>
+            <CardDescription>
+              Firebase is not configured. Password reset functionality is not available.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center">
+              <Link href="/login" className="font-medium text-primary hover:underline">
+                Back to Login
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const form = useForm<ForgotPasswordFormValues>({
     resolver: zodResolver(forgotPasswordSchema),

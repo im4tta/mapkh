@@ -24,11 +24,11 @@ interface WebPushConfig {
   subject: string;
 }
 
-// VAPID configuration - replace with your actual keys
+// VAPID configuration - configure via environment variables
 const VAPID_CONFIG: WebPushConfig = {
-  vapidPublicKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'VAPID_PUBLIC_KEY_REDACTED',
-  vapidPrivateKey: process.env.VAPID_PRIVATE_KEY || '${webpush_private_id}',
-  subject: 'mailto:support@mapkh.com'
+  vapidPublicKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '',
+  vapidPrivateKey: process.env.VAPID_PRIVATE_KEY || '',
+  subject: process.env.VAPID_SUBJECT || 'mailto:support@mapkh.com'
 };
 
 // Convert base64 URL-safe string to Uint8Array

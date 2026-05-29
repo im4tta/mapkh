@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth, db, messaging, verifyAdminAccess } from '../../../../../lib/firebase-admin';
-
-const ADMIN_UID = 'ADMIN_UID_REDACTED';
+import { auth, db, messaging, verifyAdminAccess, isFirebaseAdminConfigured } from '../../../../../lib/firebase-admin';
 
 interface NotificationTarget {
   type: 'all' | 'individual' | 'group' | 'location';
@@ -31,6 +29,10 @@ interface NotificationComposition {
 
 export async function POST(request: NextRequest) {
   try {
+    if (!isFirebaseAdminConfigured || !db || !messaging) {
+      return NextResponse.json({ error: 'Firebase Admin not configured' }, { status: 503 });
+    }
+
     // Verify admin authentication
     const authHeader = request.headers.get('authorization');
     let decodedToken;

@@ -7,21 +7,35 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from './firebase';
 
-// Initialize Firebase Admin if not already initialized
+// Initialize Firebase Admin if not already initialized and credentials are available
 if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: process.env.FIREBASE_ADMIN_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
+  const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL;
+  const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY;
+
+  if (projectId && clientEmail && privateKey) {
+    try {
+      initializeApp({
+        credential: cert({
+          projectId,
+          clientEmail,
+          privateKey: privateKey.replace(/\\n/g, '\n'),
+        }),
+      });
+      console.log('Firebase Admin initialized for NextAuth');
+    } catch (error) {
+      console.error('Firebase Admin initialization failed for NextAuth:', error);
+    }
+  } else {
+    console.warn('Firebase Admin credentials not found for NextAuth. Some features may not work.');
+  }
 }
 
-const adminDb = getFirestore();
+const adminDb = getApps().length > 0 ? getFirestore() : null;
 
 export const authOptions: NextAuthOptions = {
-  adapter: FirestoreAdapter(adminDb),
+  // Only use FirestoreAdapter if adminDb is available
+  ...(adminDb ? { adapter: FirestoreAdapter(adminDb) } : {}),
   providers: [
     CredentialsProvider({
       name: 'credentials',

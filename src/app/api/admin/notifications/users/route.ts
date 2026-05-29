@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth, db, verifyAdminAccess } from '../../../../../lib/firebase-admin';
-
-const ADMIN_UID = 'ADMIN_UID_REDACTED';
+import { auth, db, verifyAdminAccess, isFirebaseAdminConfigured } from '../../../../../lib/firebase-admin';
 
 export async function GET(request: NextRequest) {
   try {
+    if (!isFirebaseAdminConfigured || !db) {
+      return NextResponse.json({ error: 'Firebase Admin not configured' }, { status: 503 });
+    }
+
     // Verify admin authentication
     const authHeader = request.headers.get('authorization');
     const { decodedToken } = await verifyAdminAccess(authHeader);
@@ -80,6 +82,10 @@ export async function GET(request: NextRequest) {
 // POST endpoint to create or update user groups
 export async function POST(request: NextRequest) {
   try {
+    if (!isFirebaseAdminConfigured || !db) {
+      return NextResponse.json({ error: 'Firebase Admin not configured' }, { status: 503 });
+    }
+
     // Verify admin authentication
     const authHeader = request.headers.get('authorization');
     const { decodedToken } = await verifyAdminAccess(authHeader);

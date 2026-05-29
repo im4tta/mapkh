@@ -76,7 +76,6 @@ MapKH/
 │   │   ├── teams/               # Team collaboration
 │   │   ├── contributions/       # User contributions
 │   │   ├── analytics/           # Analytics dashboard
-│   │   └── chat/                # Community chat
 │   │
 │   ├── components/              # Reusable UI components
 │   │   ├── ui/                  # shadcn/ui base components

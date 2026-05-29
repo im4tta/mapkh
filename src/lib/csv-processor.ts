@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { downloadCSV } from './csv-utils';
 
 // CSV row schema for PlaceID management
 // Status aliases for flexible CSV import
@@ -300,16 +301,5 @@ export function generateSampleCSV(): string {
  */
 export function downloadSampleCSV(): void {
   const csvContent = generateSampleCSV();
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
-  
-  if (link.download !== undefined) {
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'sample_placeid_upload.csv');
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }
+  downloadCSV(csvContent, 'sample_placeid_upload.csv');
 }

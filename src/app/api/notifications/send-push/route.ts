@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { messaging } from '@/lib/firebase-admin';
+import { messaging, isFirebaseAdminConfigured } from '@/lib/firebase-admin';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 
 export async function POST(request: NextRequest) {
   try {
+    if (!isFirebaseAdminConfigured || !messaging) {
+      return NextResponse.json({ error: 'Firebase Admin not configured' }, { status: 503 });
+    }
+
     const { title, body, data, targetUsers, targetAll, icon, badge, url } = await request.json();
 
     if (!title || !body) {

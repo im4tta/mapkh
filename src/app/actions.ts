@@ -14,6 +14,7 @@ import { geocodeAddress } from '@/ai/flows/geocode-address';
 import { moveDriveFiles } from '@/ai/flows/move-drive-files';
 import { Client as MapsClient, PlaceData, AddressType, Language, GeocodeResult, GeocodingAddressComponentType } from '@googlemaps/google-maps-services-js';
 import { google } from 'googleapis';
+import { isAdmin } from '@/lib/admin';
 
 export async function getDriveFolderInfo(driveLink: string): Promise<{ fileCount: number; fileTypes: string[]; error?: string }> {
     try {
@@ -408,8 +409,6 @@ export async function updateReport(id: string, data: z.infer<typeof updateSchema
     const currentUser = await getCurrentUser(userId, userName, userEmail);
     const { lat, lng, ...reportData } = parsed.data;
     const reportRef = doc(db, 'reports', id);
-    const ADMIN_UID = 'ADMIN_UID_REDACTED';
-    const isAdmin = userId === ADMIN_UID;
 
     try {
         const docSnap = await getDoc(reportRef);
@@ -546,9 +545,7 @@ export async function deleteReport(id: string, userId: string | undefined, userN
     
     // DATA PROTECTION: Prevent users from deleting reports
     // Only admins can delete reports in exceptional circumstances
-    const ADMIN_UID = 'ADMIN_UID_REDACTED';
-    
-    if (userId !== ADMIN_UID) {
+    if (!isAdmin(userId)) {
         return { 
             success: false, 
             error: "Report deletion is not allowed to protect data integrity. Please contact an administrator if you need to remove a report." 
@@ -631,9 +628,7 @@ export async function deleteReports(ids: string[], userId: string | undefined, u
     }
     
     // DATA PROTECTION: Prevent users from bulk deleting reports
-    const ADMIN_UID = 'ADMIN_UID_REDACTED';
-    
-    if (userId !== ADMIN_UID) {
+    if (!isAdmin(userId)) {
         return { 
             success: false, 
             error: "Bulk report deletion is not allowed to protect data integrity. Please contact an administrator if you need to remove reports." 
@@ -2059,7 +2054,6 @@ export async function createUser(data: z.infer<typeof createUserSchema>, uid: st
             displayName: parsed.data.displayName,
             email: parsed.data.email,
             createdAt: serverTimestamp(),
-            lastChatReadTimestamp: serverTimestamp(), // Initialize for new users
         });
 
         await addDoc(collection(db, 'history'), {
@@ -2473,8 +2467,7 @@ export async function deleteUser(uid: string, currentUserId?: string) {
   }
   
   // Admin check: Only admin can delete users
-  const ADMIN_UID = 'ADMIN_UID_REDACTED';
-  if (currentUserId !== ADMIN_UID) {
+  if (!isAdmin(currentUserId)) {
     return { success: false, error: 'Admin privileges required to delete users' };
   }
   
@@ -2652,8 +2645,7 @@ export async function exportAllData(currentUserId?: string): Promise<{ success: 
     }
     
     // Admin role check: Only admin can export system data
-    const ADMIN_UID = 'ADMIN_UID_REDACTED';
-    if (currentUserId !== ADMIN_UID) {
+    if (!isAdmin(currentUserId)) {
         return { success: false, error: 'Admin privileges required for system backup export' };
     }
     
@@ -3957,8 +3949,7 @@ export async function debugReportEditStatus(reportNumber: number, userId?: strin
         return { success: false, error: "You must be logged in to debug reports." };
     }
 
-    const ADMIN_UID = 'ADMIN_UID_REDACTED';
-    if (userId !== ADMIN_UID) {
+    if (!isAdmin(userId)) {
         return { success: false, error: "Only administrators can debug reports." };
     }
 
@@ -4008,8 +3999,7 @@ export async function getReportById(reportId: string, userId?: string) {
         return { success: false, error: "You must be logged in to view reports." };
     }
 
-    const ADMIN_UID = 'ADMIN_UID_REDACTED';
-    if (userId !== ADMIN_UID) {
+    if (!isAdmin(userId)) {
         return { success: false, error: "Only administrators can access this function." };
     }
 
@@ -4042,8 +4032,7 @@ export async function clearPendingEditStatus(reportId: string, userId?: string, 
         return { success: false, error: "You must be logged in to clear edit status." };
     }
 
-    const ADMIN_UID = 'ADMIN_UID_REDACTED';
-    if (userId !== ADMIN_UID) {
+    if (!isAdmin(userId)) {
         return { success: false, error: "Only administrators can clear edit status." };
     }
 

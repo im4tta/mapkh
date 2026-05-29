@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth, db, verifyAdminAccess } from '@/lib/firebase-admin';
+import { auth, db, verifyAdminAccess, isFirebaseAdminConfigured } from '@/lib/firebase-admin';
 
 // GET /api/admin/notifications/[id] - Get notification details
 export async function GET(
@@ -7,6 +7,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    if (!isFirebaseAdminConfigured || !db) {
+      return NextResponse.json({ error: 'Firebase Admin not configured' }, { status: 503 });
+    }
+
     // Verify admin authentication
     const authHeader = request.headers.get('authorization');
     const { decodedToken } = await verifyAdminAccess(authHeader);
@@ -62,6 +66,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    if (!isFirebaseAdminConfigured || !db) {
+      return NextResponse.json({ error: 'Firebase Admin not configured' }, { status: 503 });
+    }
+
     // Verify admin authentication
     const authHeader = request.headers.get('authorization');
     const { decodedToken } = await verifyAdminAccess(authHeader);
@@ -124,6 +132,10 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    if (!isFirebaseAdminConfigured || !db) {
+      return NextResponse.json({ error: 'Firebase Admin not configured' }, { status: 503 });
+    }
+
     // Verify admin authentication
     const authHeader = request.headers.get('authorization');
     const { decodedToken } = await verifyAdminAccess(authHeader);

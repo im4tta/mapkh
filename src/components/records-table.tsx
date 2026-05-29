@@ -9,6 +9,7 @@ import { Report, SubViolationType, UserInfo } from "@/lib/types"
 import { MoreHorizontal, Trash2, Pencil, Loader2, ArrowUpDown, LayoutGrid, List, Activity, Check, MapPin, Pin, PinOff, Folder, Clock, CalendarClock, ThumbsUp, Link as LinkIcon, User, View, MessageSquare, UploadCloud, FolderPlus, LocateFixed, FileText, ExternalLink, Copy, ShieldCheck, Save, XCircle, Tag, CopyPlus, CheckCircle } from 'lucide-react';
 import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { isAdmin } from '@/lib/admin';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -187,7 +188,7 @@ const ActionsCell = ({ report, onEdit, onActivity, onTogglePin, onVerify, onUplo
                 </a>
             </DropdownMenuItem>
           <DropdownMenuSeparator />
-          {user?.uid === 'ADMIN_UID_REDACTED' && (
+          {isAdmin(user?.uid) && (
             <DropdownMenuItem onClick={() => setShowDeleteDialog(true)} className="text-red-500">
               <Trash2 className="mr-2 h-4 w-4" />
               {t('records.delete')}

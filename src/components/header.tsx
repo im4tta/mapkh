@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from 'next/link';
@@ -28,7 +27,7 @@ import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { collection, doc, getDoc, onSnapshot, query, setDoc, Timestamp, where, updateDoc } from 'firebase/firestore';
 import { NotificationsPopover } from './notifications-popover';
-import { ChatDialog } from './chat-dialog';
+import { isAdmin as checkIsAdmin } from '@/lib/admin';
 
 
 export function Header() {
@@ -36,9 +35,8 @@ export function Header() {
   const router = useRouter();
   const { setTheme, theme } = useTheme();
   const { t, i18n } = useTranslation();
-  const isAdmin = user?.uid === 'ADMIN_UID_REDACTED';
+  const isAdmin = checkIsAdmin(user?.uid);
   const [isMounted, setIsMounted] = useState(false);
-  const [isChatOpen, setIsChatOpen] = useState(false);
   const [unreadPosts, setUnreadPosts] = useState(0);
 
   useEffect(() => {
@@ -68,18 +66,18 @@ export function Header() {
         const userDoc = await getDoc(userDocRef);
         let lastReadTimestamp;
   
-        if (userDoc.exists() && userDoc.data().lastChatReadTimestamp) {
-          lastReadTimestamp = userDoc.data().lastChatReadTimestamp;
+        if (userDoc.exists() && userDoc.data().lastReadTimestamp) {
+          lastReadTimestamp = userDoc.data().lastReadTimestamp;
         } else {
           // If timestamp doesn't exist, set it to now and then use it.
           const now = Timestamp.now();
-          await setDoc(userDocRef, { lastChatReadTimestamp: now }, { merge: true });
+          await setDoc(userDocRef, { lastReadTimestamp: now }, { merge: true });
           lastReadTimestamp = now;
         }
         
         return setupUnreadListener(lastReadTimestamp.toDate());
       } catch (error) {
-        console.error("Failed to check or initialize chat timestamp:", error);
+        console.error("Failed to check or initialize timestamp:", error);
         return () => {}; // Return a no-op unsubscribe function on error
       }
     };
@@ -120,26 +118,6 @@ export function Header() {
     };
     fetchUserLanguage();
   }, [user, loading, i18n]);
-  
-  const handleChatOpen = async () => {
-    setIsChatOpen(true);
-    if (user) {
-        const userDocRef = doc(db, "users", user.uid);
-        try {
-            await setDoc(userDocRef, {
-                lastChatReadTimestamp: Timestamp.now()
-            }, { merge: true });
-            setUnreadPosts(0);
-        } catch (error) {
-            console.error("Failed to update last chat read timestamp:", error);
-        }
-    }
-  }
-  
-  const handleChatDialogChange = (isOpen: boolean) => {
-      setIsChatOpen(isOpen);
-  }
-
 
   if (!isMounted || loading) {
     return (
@@ -150,7 +128,6 @@ export function Header() {
   }
   
   return (
-    <>
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur-sm">
       <div className="container flex h-14 max-w-screen-2xl items-center px-4">
         <div className="mr-4 flex items-center">
@@ -178,24 +155,6 @@ export function Header() {
             {!loading && user ? (
                 <>
                 <NotificationsPopover />
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="relative">
-                        <MessageSquare className="h-5 w-5" />
-                        {unreadPosts > 0 && (
-                            <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs text-white">
-                                {unreadPosts}
-                            </span>
-                        )}
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={handleChatOpen}>
-                      <MessageSquare className="mr-2 h-4 w-4" />
-                      <span>{t('contributions.tabs.talk')}</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-8 w-8 rounded-full">
@@ -253,7 +212,5 @@ export function Header() {
         </div>
       </div>
     </header>
-    <ChatDialog isOpen={isChatOpen} onOpenChange={handleChatDialogChange} />
-    </>
   );
 }

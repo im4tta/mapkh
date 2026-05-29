@@ -77,7 +77,7 @@ const toDate = (value: any): Date | null => {
 };
 
 
-const ADMIN_UID = 'ADMIN_UID_REDACTED';
+import { isAdmin } from '@/lib/admin';
 
 const HistoryPage = () => {
     const { t } = useTranslation();
@@ -90,12 +90,12 @@ const HistoryPage = () => {
     
     // Admin check
     useEffect(() => {
-        if (!loading && (!user || user.uid !== ADMIN_UID)) {
+        if (!loading && (!user || !isAdmin(user.uid))) {
             router.push('/settings');
         }
     }, [user, loading, router]);
     
-    if (loading || !user || user.uid !== ADMIN_UID) {
+    if (loading || !user || !isAdmin(user.uid)) {
         return (
             <div className="flex h-[calc(100vh_-_theme(spacing.14))] w-full items-center justify-center">
                 <Loader2 className="h-8 w-8 animate-spin" />
