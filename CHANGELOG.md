@@ -1,21 +1,5 @@
 # Changelog
 
-All notable changes to MapKH will be documented in this file.
-
-## [Unreleased]
-
-### Security
-- Replace hardcoded Admin UID (`ADMIN_UID_REDACTED`) across 17 files with env var `ADMIN_UIDS`/`NEXT_PUBLIC_ADMIN_UIDS`
-- Create centralized admin utility (`src/lib/admin.ts`) with `isAdmin()` and `requireAdmin()` helpers
-- Remove hardcoded VAPID private key fallbacks from 3 files — keys must now be set via env vars
-- Remove sensitive `console.log` statements in `src/ai/genkit.ts` that leaked API key presence
-- Fix Google Drive folder permissions from public `writer` to `reader`
-- Restrict CORS `Access-Control-Allow-Origin` from wildcard `*` to app domain
-- Move hardcoded Databuddy `clientId` to `NEXT_PUBLIC_DATABUDDY_CLIENT_ID` env var
-- Update Firestore rules: prevent report/tip deletion at database level, enforce `reportedBy` on create
-- Update `.env.example` with new required vars (`ADMIN_UIDS`, `VAPID_*`, `DATABUDDY_CLIENT_ID`)
-- Strengthen `.gitignore` with additional patterns for key files and service account JSON
-
 ## [0.1.0] - 2026-05-29
 
 ### Added
@@ -49,11 +33,4 @@ All notable changes to MapKH will be documented in this file.
 - TypeScript compilation errors for user login tracking
 - Province parsing and translation functionality
 - System History tab filtering
-- Security vulnerabilities CVE-2025-55183 and CVE-2025-55184
 - Floating report button for mobile
-
-### Security
-- Implement free Google Translate with secure API key management
-- Add security headers (X-Content-Type-Options, X-Frame-Options, X-XSS-Protection)
-- Firestore security rules with public read / authenticated write
-- Environment variable template with placeholder values

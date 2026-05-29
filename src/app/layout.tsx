@@ -6,7 +6,7 @@ import { ClientProviders } from '@/components/client-providers';
 import { Analytics } from "@vercel/analytics/next";
 import ErrorBoundary from '@/components/error-boundary';
 import { ForceUpdateHandler } from '@/components/force-update-handler';
-import { Databuddy } from '@databuddy/sdk';
+import { Databuddy } from '@databuddy/sdk/react';
 
 export default function RootLayout({
   children,
@@ -114,16 +114,6 @@ export default function RootLayout({
         <Analytics />
         <Databuddy 
           clientId={process.env.NEXT_PUBLIC_DATABUDDY_CLIENT_ID || ''} 
-          trackHashChanges={true} 
-          trackAttributes={true} 
-          trackOutgoingLinks={true} 
-          trackInteractions={true} 
-          trackEngagement={true} 
-          trackScrollDepth={true} 
-          trackBounceRate={true} 
-          trackWebVitals={true} 
-          trackErrors={true} 
-          enableBatching={true} 
         />
       </body>
     </html>

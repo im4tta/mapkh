@@ -74,9 +74,12 @@ ehthumbs.db
 *.html
 test-*
 
+# Documentation (not needed for open source)
+/docs/
+PROJECT_STRUCTURE.md
+
 # Sensitive key files (defense in depth)
 *.key
-*.pem
 *.p12
 *.pfx
 *credentials.json
